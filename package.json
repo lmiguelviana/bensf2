@@ -1,13 +1,14 @@
 {
-  "name": "sf2-live-sampler-workstation",
+  "name": "bensf2",
   "version": "1.0.0",
-  "description": "Cross-Platform SF2 Sampler Workstation and Live MIDI Keyboard Synth (Electron & Mobile)",
+  "description": "BenSF2 - Live Sampler Workstation and Live MIDI Keyboard Synth (Electron & Mobile)",
   "main": "main.js",
   "scripts": {
     "start": "electron .",
     "web": "npx http-server -p 8080 ."
   },
   "keywords": [
+    "bensf2",
     "soundfont",
     "sf2",
     "midi",

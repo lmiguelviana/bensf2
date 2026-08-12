@@ -1,6 +1,6 @@
 {
-  "short_name": "SF2 Workstation",
-  "name": "SF2 Live Sampler Workstation",
+  "short_name": "BenSF2",
+  "name": "BenSF2 - Live Sampler Workstation",
   "icons": [
     {
       "src": "assets/icon-192.png",

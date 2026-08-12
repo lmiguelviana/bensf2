@@ -5,6 +5,7 @@ let mainWindow;
 
 function createWindow() {
   mainWindow = new BrowserWindow({
+    title: 'BenSF2 - Live Sampler Workstation',
     width: 1380,
     height: 860,
     minWidth: 1024,
@@ -24,7 +25,7 @@ function createWindow() {
   });
 
   mainWindow.loadFile('index.html');
-  Menu.setApplicationMenu(null); // Remover barra de menu padrão do Windows/Linux
+  Menu.setApplicationMenu(null);
 }
 
 app.whenReady().then(() => {

@@ -1,8 +1,8 @@
 {
-  "packageId": "com.sf2workstation.app",
-  "host": "sf2workstation.app",
-  "name": "SF2 Live Sampler Workstation",
-  "launcherName": "SF2 Workstation",
+  "packageId": "com.bensf2.app",
+  "host": "bensf2.app",
+  "name": "BenSF2 - Live Sampler Workstation",
+  "launcherName": "BenSF2",
   "display": "standalone",
   "themeColor": "#07090E",
   "navigationColor": "#07090E",
