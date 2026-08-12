@@ -1,6 +1,6 @@
 /**
  * MASTER APPLICATION CONTROLLER
- * Liga a interface UI ao motor de síntese SF2, Mixer Console, Master FX, FX por Pista com Algoritmos de Reverb Valhalla DSP, Cutoff Filter e Modal de Configurações.
+ * Liga a interface UI ao motor de síntese SF2, Mixer Console, Master FX, FX por Pista com Algoritmos de Reverb Valhalla DSP, Chorus Estéreo, Cutoff Filter e Modal de Configurações.
  */
 
 document.addEventListener('DOMContentLoaded', () => {
@@ -204,13 +204,22 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
-  // 1. MASTER FX CONTROLS & ALGORITMOS VALHALLA (DESLIGADOS POR PADRÃO)
+  // 1. MASTER FX CONTROLS & ALGORITMOS VALHALLA & CHORUS ESTÉREO
   const btnMasterEqToggle = document.getElementById('btnMasterEqToggle');
   if (btnMasterEqToggle) {
     btnMasterEqToggle.addEventListener('click', () => {
       const isAct = btnMasterEqToggle.classList.toggle('active');
       btnMasterEqToggle.textContent = isAct ? 'ON' : 'OFF';
       fxRack.toggleMasterEq(isAct);
+    });
+  }
+
+  const btnMasterChorusToggle = document.getElementById('btnMasterChorusToggle');
+  if (btnMasterChorusToggle) {
+    btnMasterChorusToggle.addEventListener('click', () => {
+      const isAct = btnMasterChorusToggle.classList.toggle('active');
+      btnMasterChorusToggle.textContent = isAct ? 'ON' : 'OFF';
+      fxRack.toggleMasterChorus(isAct);
     });
   }
 
@@ -261,6 +270,14 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
+  const knobMasterChorusMixEl = document.getElementById('knobMasterChorusMix');
+  if (knobMasterChorusMixEl) {
+    new RotaryKnob(knobMasterChorusMixEl, {
+      title: 'CHORUS', min: 0, max: 100, step: 1, value: 30, unit: '%',
+      onChange: (val) => fxRack.setMasterChorusMix(val / 100.0)
+    });
+  }
+
   const knobMasterDelayTimeEl = document.getElementById('knobMasterDelayTime');
   if (knobMasterDelayTimeEl) {
     new RotaryKnob(knobMasterDelayTimeEl, {
@@ -291,7 +308,7 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
-  // 2. PER-TRACK FX CONTROLS & FILTRO CUTOFF & ALGORITMOS VALHALLA (DESLIGADOS POR PADRÃO)
+  // 2. PER-TRACK FX CONTROLS & FILTRO CUTOFF & STEREO CHORUS & ALGORITMOS VALHALLA
   const btnTrackCutoffToggle = document.getElementById('btnTrackCutoffToggle');
   if (btnTrackCutoffToggle) {
     btnTrackCutoffToggle.addEventListener('click', () => {
@@ -307,6 +324,15 @@ document.addEventListener('DOMContentLoaded', () => {
       const isAct = btnTrackEqToggle.classList.toggle('active');
       btnTrackEqToggle.textContent = isAct ? 'ON' : 'OFF';
       fxRack.toggleTrackEq(isAct);
+    });
+  }
+
+  const btnTrackChorusToggle = document.getElementById('btnTrackChorusToggle');
+  if (btnTrackChorusToggle) {
+    btnTrackChorusToggle.addEventListener('click', () => {
+      const isAct = btnTrackChorusToggle.classList.toggle('active');
+      btnTrackChorusToggle.textContent = isAct ? 'ON' : 'OFF';
+      fxRack.toggleTrackChorus(isAct);
     });
   }
 
@@ -335,7 +361,7 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
-  let knobTrackCutoff, knobTrackEqLow, knobTrackEqMid, knobTrackEqHigh, knobTrackDelayTime, knobTrackDelayMix, knobTrackReverbSize, knobTrackReverbMix;
+  let knobTrackCutoff, knobTrackEqLow, knobTrackEqMid, knobTrackEqHigh, knobTrackChorusMix, knobTrackDelayTime, knobTrackDelayMix, knobTrackReverbSize, knobTrackReverbMix;
 
   const knobTrackCutoffEl = document.getElementById('knobTrackCutoff');
   if (knobTrackCutoffEl) {
@@ -389,6 +415,14 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
+  const knobTrackChorusMixEl = document.getElementById('knobTrackChorusMix');
+  if (knobTrackChorusMixEl) {
+    knobTrackChorusMix = new RotaryKnob(knobTrackChorusMixEl, {
+      title: 'CHORUS', min: 0, max: 100, step: 1, value: 30, unit: '%',
+      onChange: (val) => fxRack.setChorusMix(val / 100.0)
+    });
+  }
+
   const knobTrackDelayTimeEl = document.getElementById('knobTrackDelayTime');
   if (knobTrackDelayTimeEl) {
     knobTrackDelayTime = new RotaryKnob(knobTrackDelayTimeEl, {
@@ -421,7 +455,7 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
-  // Atualizar Knobs, Toggles (OFF por padrão) e Modo Reverb da pista selecionada
+  // Atualizar Knobs, Toggles e Modo Reverb da pista selecionada
   fxRack.onSelectionChange((ch, params) => {
     const chName = synth.channels[ch] ? synth.channels[ch].name : `CH ${ch < 10 ? '0' + ch : ch}`;
     if (fxRackTitleEl) {
@@ -437,6 +471,11 @@ document.addEventListener('DOMContentLoaded', () => {
       const isAct = params.eqEnabled === true;
       btnTrackEqToggle.classList.toggle('active', isAct);
       btnTrackEqToggle.textContent = isAct ? 'ON' : 'OFF';
+    }
+    if (btnTrackChorusToggle) {
+      const isAct = params.chorusEnabled === true;
+      btnTrackChorusToggle.classList.toggle('active', isAct);
+      btnTrackChorusToggle.textContent = isAct ? 'ON' : 'OFF';
     }
     if (btnTrackDelayToggle) {
       const isAct = params.delayEnabled === true;
@@ -457,6 +496,7 @@ document.addEventListener('DOMContentLoaded', () => {
     if (knobTrackEqLow) knobTrackEqLow.setValue(params.eqLow);
     if (knobTrackEqMid) knobTrackEqMid.setValue(params.eqMid);
     if (knobTrackEqHigh) knobTrackEqHigh.setValue(params.eqHigh);
+    if (knobTrackChorusMix) knobTrackChorusMix.setValue(params.chorusMix || 30);
     if (knobTrackDelayTime) knobTrackDelayTime.setValue(params.delayTime);
     if (knobTrackDelayMix) knobTrackDelayMix.setValue(params.delayMix);
     if (knobTrackReverbSize) knobTrackReverbSize.setValue(params.reverbSize);
@@ -734,7 +774,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
   setInterval(() => {
     if (voiceCountDisplay) {
-      voiceCountDisplay.textContent = `${synth.getActiveVoicesCount()} / ${synth.isAutoPolyphony ? 'Auto (' + synth.maxPolyphony ? synth.maxPolyphony : '64' + ')' : synth.maxPolyphony}`;
+      voiceCountDisplay.textContent = `${synth.getActiveVoicesCount()} / ${synth.isAutoPolyphony ? 'Auto (' + (synth.maxPolyphony ? synth.maxPolyphony : '64') + ')' : synth.maxPolyphony}`;
     }
   }, 200);
 

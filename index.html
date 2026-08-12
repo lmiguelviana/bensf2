@@ -151,7 +151,7 @@
           <!-- Renderizado dinamicamente via MixerConsoleManager -->
         </div>
 
-        <!-- Painel de Efeitos INDIVIDUAL por Pista (Efeitos desligados por padrão) -->
+        <!-- Painel de Efeitos INDIVIDUAL por Pista (Com Cutoff Filter, Stereo Chorus & Valhalla Reverbs) -->
         <div class="track-fx-subcard" style="background: rgba(12, 16, 25, 0.7); border-radius: var(--radius-md); padding: 10px; border: 1px solid rgba(0, 242, 254, 0.2);">
           <div class="card-title" style="margin-bottom: 8px;">
             <span id="fxRackTitleText" style="color: var(--accent-cyan); font-weight: 800;">EFEITOS DA PISTA - CH 01: LAYER 1</span>
@@ -159,7 +159,7 @@
           </div>
 
           <div class="fx-rack-container">
-            <!-- Módulo Filtro Passa-Baixas Cutoff por Pista (Desligado OFF) -->
+            <!-- Módulo Filtro Passa-Baixas Cutoff por Pista -->
             <div class="fx-module-card" style="align-items: center;">
               <div class="fx-module-title" style="width: 100%;">
                 <span>FILTRO CUTOFF</span>
@@ -170,7 +170,7 @@
               </div>
             </div>
 
-            <!-- Módulo EQ por Pista (Desligado OFF) -->
+            <!-- Módulo EQ por Pista -->
             <div class="fx-module-card" style="align-items: center;">
               <div class="fx-module-title" style="width: 100%;">
                 <span>EQ POR PISTA</span>
@@ -183,7 +183,18 @@
               </div>
             </div>
 
-            <!-- Módulo Delay por Pista (Desligado OFF) -->
+            <!-- Módulo Chorus Estéreo por Pista -->
+            <div class="fx-module-card" style="align-items: center;">
+              <div class="fx-module-title" style="width: 100%;">
+                <span>CHORUS ESTÉREO</span>
+                <button id="btnTrackChorusToggle" class="btn btn-sm btn-fx-toggle">OFF</button>
+              </div>
+              <div style="display: flex; gap: 12px; justify-content: center; width: 100%; margin-top: 4px;">
+                <div id="knobTrackChorusMix"></div>
+              </div>
+            </div>
+
+            <!-- Módulo Delay por Pista -->
             <div class="fx-module-card" style="align-items: center;">
               <div class="fx-module-title" style="width: 100%;">
                 <span>DELAY POR PISTA</span>
@@ -195,7 +206,7 @@
               </div>
             </div>
 
-            <!-- Reverb por Pista com Algoritmos Valhalla (Desligado OFF) -->
+            <!-- Reverb por Pista com Algoritmos Valhalla -->
             <div class="fx-module-card" style="align-items: center;">
               <div class="fx-module-title" style="width: 100%;">
                 <span>REVERB POR PISTA</span>
@@ -226,7 +237,7 @@
         </div>
       </section>
 
-      <!-- Section: Rack de Processamento de Efeitos MASTER GLOBAL (Efeitos desligados por padrão) -->
+      <!-- Section: Rack de Processamento de Efeitos MASTER GLOBAL (Com Valhalla Reverb Modes & Chorus) -->
       <section id="sectionFxRack" class="glass-card" style="display: none;">
         <div class="card-title">
           <span style="color: var(--accent-purple); font-weight: 800; font-size: 14px;">RACK DE EFEITOS MASTER GLOBAL (SAÍDA GERAL)</span>
@@ -235,7 +246,7 @@
 
         <div class="fx-rack-container">
           
-          <!-- Módulo Master EQ (Desligado OFF) -->
+          <!-- Módulo Master EQ -->
           <div class="fx-module-card" style="align-items: center;">
             <div class="fx-module-title" style="width: 100%;">
               <span>Equalizador Master (3-Band)</span>
@@ -249,7 +260,19 @@
             </div>
           </div>
 
-          <!-- Módulo Master Stereo Delay (Desligado OFF) -->
+          <!-- Módulo Master Chorus -->
+          <div class="fx-module-card" style="align-items: center;">
+            <div class="fx-module-title" style="width: 100%;">
+              <span>Stereo Chorus Master</span>
+              <button id="btnMasterChorusToggle" class="btn btn-sm btn-fx-toggle">OFF</button>
+            </div>
+            
+            <div style="display: flex; gap: 16px; justify-content: center; width: 100%; margin-top: 8px;">
+              <div id="knobMasterChorusMix"></div>
+            </div>
+          </div>
+
+          <!-- Módulo Master Stereo Delay -->
           <div class="fx-module-card" style="align-items: center;">
             <div class="fx-module-title" style="width: 100%;">
               <span>Stereo Delay Master</span>
@@ -262,7 +285,7 @@
             </div>
           </div>
 
-          <!-- Módulo Master Reverb (Desligado OFF) -->
+          <!-- Módulo Master Reverb com Algoritmos Valhalla -->
           <div class="fx-module-card" style="align-items: center;">
             <div class="fx-module-title" style="width: 100%;">
               <span>Reverb Estéreo Master</span>

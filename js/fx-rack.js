@@ -1,6 +1,6 @@
 /**
- * MASTER & PER-TRACK FX RACK ENGINE (COM TODOS OS EFEITOS DESLIGADOS POR PADRÃO)
- * Módulo de processamento de efeitos com Master FX Global, FX por pista individual e Filtro Cutoff (Começam OFF por padrão).
+ * MASTER & PER-TRACK FX RACK ENGINE (COM ALGORITMOS VALHALLA, FILTRO CUTOFF & STEREO CHORUS FX)
+ * Módulo de processamento de efeitos com Master FX Global, FX por pista individual, Stereo Chorus e Filtro Cutoff.
  */
 
 class FxRackManager {
@@ -23,17 +23,21 @@ class FxRackManager {
     this.masterEqLow = null;
     this.masterEqMid = null;
     this.masterEqHigh = null;
+    this.masterChorusNode = null;
+    this.masterChorusGain = null;
     this.masterDelayNode = null;
     this.masterDelayGain = null;
     this.masterReverbNode = null;
     this.masterReverbGain = null;
 
     this.masterEqEnabled = false;
+    this.masterChorusEnabled = false;
     this.masterDelayEnabled = false;
     this.masterReverbEnabled = false;
 
     this.masterParams = {
       eqLow: 0, eqMid: 0, eqHigh: 0,
+      chorusRate: 1.5, chorusMix: 30,
       delayTime: 300, delayMix: 20,
       reverbSize: 40, reverbMix: 25,
       reverbMode: 'concert_hall'
@@ -48,7 +52,7 @@ class FxRackManager {
   init() {
     const ctx = this.audioCtx.init();
 
-    // 1. Inicializar Master FX Nodes (Gains em 0 por padrão)
+    // 1. Inicializar Master FX Nodes
     this.masterEqLow = ctx.createBiquadFilter();
     this.masterEqLow.type = 'lowshelf';
     this.masterEqLow.frequency.value = 100;
@@ -67,6 +71,12 @@ class FxRackManager {
 
     this.masterEqLow.connect(this.masterEqMid);
     this.masterEqMid.connect(this.masterEqHigh);
+
+    // Master Stereo Chorus Module
+    const masterChorus = this.createStereoChorusNodes(ctx, 1.5);
+    this.masterChorusNode = masterChorus.inputNode;
+    this.masterChorusGain = masterChorus.outputGain;
+    this.masterChorusGain.gain.value = 0.0; // OFF por padrão
 
     this.masterDelayNode = ctx.createDelay();
     this.masterDelayNode.delayTime.value = 0.3;
@@ -89,6 +99,9 @@ class FxRackManager {
       this.audioCtx.masterGain.disconnect();
       this.audioCtx.masterGain.connect(this.masterEqLow);
       this.masterEqHigh.connect(this.audioCtx.limiterNode);
+
+      this.masterEqHigh.connect(this.masterChorusNode);
+      this.masterChorusGain.connect(this.audioCtx.limiterNode);
 
       this.masterEqHigh.connect(this.masterDelayNode);
       this.masterDelayGain.connect(this.audioCtx.limiterNode);
@@ -124,6 +137,9 @@ class FxRackManager {
       eqLow.connect(eqMid);
       eqMid.connect(eqHigh);
 
+      // Channel Chorus Node
+      const chChorus = this.createStereoChorusNodes(ctx, 1.5);
+
       const delayNode = ctx.createDelay();
       delayNode.delayTime.value = 0.3;
 
@@ -131,7 +147,7 @@ class FxRackManager {
       delayFeedback.gain.value = 0.3;
 
       const delayGain = ctx.createGain();
-      delayGain.gain.value = 0.0; // OFF por padrão
+      delayGain.gain.value = 0.0;
 
       delayNode.connect(delayFeedback);
       delayFeedback.connect(delayNode);
@@ -141,10 +157,11 @@ class FxRackManager {
       reverbNode.buffer = this.createSyntheticImpulse(ctx, this.reverbModes['concert_hall']);
 
       const reverbGain = ctx.createGain();
-      reverbGain.gain.value = 0.0; // OFF por padrão
+      reverbGain.gain.value = 0.0;
 
       reverbNode.connect(reverbGain);
 
+      eqHigh.connect(chChorus.inputNode);
       eqHigh.connect(delayNode);
       eqHigh.connect(reverbNode);
 
@@ -153,6 +170,9 @@ class FxRackManager {
         eqLow,
         eqMid,
         eqHigh,
+        chorusInput: chChorus.inputNode,
+        chorusGain: chChorus.outputGain,
+        chorusLfo: chChorus.lfoNode,
         delayNode,
         delayGain,
         reverbNode,
@@ -161,11 +181,14 @@ class FxRackManager {
           cutoffEnabled: false,
           cutoffFreq: 20000,
           eqEnabled: false,
+          chorusEnabled: false,
           delayEnabled: false,
           reverbEnabled: false,
           eqLow: 0,
           eqMid: 0,
           eqHigh: 0,
+          chorusRate: 1.5,
+          chorusMix: 30,
           delayTime: 300,
           delayMix: 20,
           reverbSize: 40,
@@ -175,7 +198,47 @@ class FxRackManager {
       });
     }
 
-    console.log('[FxRack] Motor de Efeitos Master e Canais inicializados (TODOS OS EFEITOS DESLIGADOS POR PADRÃO).');
+    console.log('[FxRack] Motor de Efeitos Master, Chorus Estéreo, Cutoff e Canais inicializados.');
+  }
+
+  // Gerador de Módulo Chorus Estéreo (Dual Delay Line Modulada via LFO)
+  createStereoChorusNodes(ctx, rateHz = 1.5) {
+    const inputNode = ctx.createGain();
+    const outputGain = ctx.createGain();
+
+    const delayL = ctx.createDelay();
+    delayL.delayTime.value = 0.020; // 20ms
+
+    const delayR = ctx.createDelay();
+    delayR.delayTime.value = 0.025; // 25ms
+
+    const lfoNode = ctx.createOscillator();
+    lfoNode.type = 'sine';
+    lfoNode.frequency.value = rateHz;
+
+    const depthL = ctx.createGain();
+    depthL.gain.value = 0.002;
+
+    const depthR = ctx.createGain();
+    depthR.gain.value = -0.002; // Inversão de fase para efeito 3D estéreo
+
+    lfoNode.connect(depthL);
+    lfoNode.connect(depthR);
+
+    depthL.connect(delayL.delayTime);
+    depthR.connect(delayR.delayTime);
+
+    inputNode.connect(delayL);
+    inputNode.connect(delayR);
+
+    const splitter = ctx.createChannelMerger(2);
+    delayL.connect(splitter, 0, 0);
+    delayR.connect(splitter, 0, 1);
+
+    splitter.connect(outputGain);
+    lfoNode.start();
+
+    return { inputNode, outputGain, lfoNode };
   }
 
   // Gerador de Resposta de Impulso Sintético estilo Valhalla DSP
@@ -233,6 +296,12 @@ class FxRackManager {
     this.masterEqHigh.gain.setTargetAtTime(gainHigh, this.audioCtx.getCurrentTime(), 0.01);
   }
 
+  toggleMasterChorus(enabled) {
+    this.masterChorusEnabled = enabled;
+    const targetGain = enabled ? (this.masterParams.chorusMix / 100.0) : 0;
+    this.masterChorusGain.gain.setTargetAtTime(targetGain, this.audioCtx.getCurrentTime(), 0.01);
+  }
+
   toggleMasterDelay(enabled) {
     this.masterDelayEnabled = enabled;
     const targetGain = enabled ? (this.masterParams.delayMix / 100.0) : 0;
@@ -264,6 +333,13 @@ class FxRackManager {
     this.masterParams.eqHigh = gainDb;
     if (this.masterEqEnabled) {
       this.masterEqHigh.gain.setTargetAtTime(gainDb, this.audioCtx.getCurrentTime(), 0.01);
+    }
+  }
+
+  setMasterChorusMix(mixNorm) {
+    this.masterParams.chorusMix = Math.round(mixNorm * 100);
+    if (this.masterChorusEnabled) {
+      this.masterChorusGain.gain.setTargetAtTime(mixNorm, this.audioCtx.getCurrentTime(), 0.01);
     }
   }
 
@@ -353,6 +429,15 @@ class FxRackManager {
     }
   }
 
+  toggleTrackChorus(enabled, channel = this.selectedChannel) {
+    const fx = this.channelFx.get(channel);
+    if (fx) {
+      fx.params.chorusEnabled = enabled;
+      const targetGain = enabled ? (fx.params.chorusMix / 100.0) : 0;
+      fx.chorusGain.gain.setTargetAtTime(targetGain, this.audioCtx.getCurrentTime(), 0.01);
+    }
+  }
+
   toggleTrackDelay(enabled, channel = this.selectedChannel) {
     const fx = this.channelFx.get(channel);
     if (fx) {
@@ -398,6 +483,16 @@ class FxRackManager {
       fx.params.eqHigh = gainDb;
       if (fx.params.eqEnabled) {
         fx.eqHigh.gain.setTargetAtTime(gainDb, this.audioCtx.getCurrentTime(), 0.01);
+      }
+    }
+  }
+
+  setChorusMix(mixNorm, channel = this.selectedChannel) {
+    const fx = this.channelFx.get(channel);
+    if (fx) {
+      fx.params.chorusMix = Math.round(mixNorm * 100);
+      if (fx.params.chorusEnabled) {
+        fx.chorusGain.gain.setTargetAtTime(mixNorm, this.audioCtx.getCurrentTime(), 0.01);
       }
     }
   }
@@ -461,6 +556,7 @@ class FxRackManager {
     sourceGainNode.connect(fx.cutoffFilter);
 
     fx.eqHigh.connect(targetPannerNode);
+    fx.chorusGain.connect(targetPannerNode);
     fx.delayGain.connect(targetPannerNode);
     fx.reverbGain.connect(targetPannerNode);
   }
