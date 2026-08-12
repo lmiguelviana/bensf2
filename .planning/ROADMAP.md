@@ -2,12 +2,12 @@
 
 ## Overview
 
-The SF2 & MIDI Workstation project is divided into 4 execution phases designed to iteratively build the core audio engine, UI mixer, preset manager, and cross-platform Electron integration.
+The SF2 Live Sampler Workstation project is divided into 4 execution phases focused on building a high-performance live instrument rack for USB/Bluetooth MIDI keyboards with preset saving.
 
 ---
 
 ## Phase 1: Core Project Setup, Audio Engine & SF2 Sampler Engine
-**Goal**: Set up project structure, Web Audio API context, SoundFont (SF2) binary parser, wavetable synthesis engine, ADSR envelope, polyphony management, and basic audio test interface.
+**Goal**: Set up project structure, Web Audio API context, SoundFont (SF2) binary parser, wavetable synthesis engine, ADSR envelope, polyphony management, and audio test interface.
 
 ### Deliverables:
 - Project manifest (`package.json`, Electron main process setup).
@@ -27,13 +27,13 @@ The SF2 & MIDI Workstation project is divided into 4 execution phases designed t
 
 ---
 
-## Phase 3: MIDI Player, Interactive Keyboard & Preset Management System
-**Goal**: Implement MIDI file player (`.mid`), interactive multi-touch/QWERTY piano keyboard with WebMIDI USB support, and complete Preset Saving/Loading System (`js/preset-manager.js`).
+## Phase 3: WebMIDI USB/Bluetooth Keyboard Engine, Touch Keyboard & Preset Management
+**Goal**: Implement real-time WebMIDI controller input handler (Note On/Off, Pitch Bend, CC1, CC64, Program Change), touch/QWERTY piano keyboard, and complete Preset Saving/Loading System (`js/preset-manager.js`).
 
 ### Deliverables:
-- MIDI parser & transport player (`js/midi-parser.js`, `js/player.js`).
-- Piano keyboard component (`js/keyboard.js`, `js/web-midi.js`).
-- Preset Manager with Save, Load, Export/Import JSON, and LocalStorage persistence.
+- WebMIDI input manager (`js/web-midi.js`).
+- Multi-touch & QWERTY piano keyboard (`js/keyboard.js`).
+- Preset Manager with Save, Load, Export/Import JSON, and LocalStorage/Electron persistence.
 
 ---
 
