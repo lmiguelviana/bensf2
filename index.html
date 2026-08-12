@@ -18,73 +18,83 @@
 </head>
 <body>
 
-  <!-- App Header & Top Navigation Bar -->
+  <!-- App Header & Top Navigation Bar (2 Linhas Limpas) -->
   <header class="app-header">
-    <div class="app-brand">
-      <div class="app-logo-icon">S</div>
-      <div>
-        <h1 class="app-title">SF2 WORKSTATION</h1>
+    
+    <!-- Linha Superior (Marca + Abas + Status MIDI/Audio) -->
+    <div class="header-top-row">
+      <div class="app-brand">
+        <div class="app-logo-icon">S</div>
+        <div>
+          <h1 class="app-title">SF2 WORKSTATION</h1>
+        </div>
+        <span class="badge-tag">LIVE RIG</span>
       </div>
-      <span class="badge-tag">LIVE RIG</span>
+
+      <!-- View Switcher Tabs (Mixer, FX, Teclado) -->
+      <div class="view-tabs-bar">
+        <button id="tabMixer" class="tab-btn active">🎛️ Mixer & Layers</button>
+        <button id="tabFxRack" class="tab-btn">🏛️ Rack FX & EQ</button>
+        <button id="tabMidi" class="tab-btn">🎹 Teclado & MIDI</button>
+      </div>
+
+      <!-- Indicador de Teclado MIDI Conectado & Status Audio -->
+      <div style="display: flex; align-items: center; gap: 12px;">
+        <div style="display: flex; align-items: center; gap: 6px; font-size: 11px; background: rgba(0, 242, 254, 0.08); padding: 4px 8px; border-radius: var(--radius-sm); border: 1px solid rgba(0, 242, 254, 0.2);">
+          <span>🎹 Control:</span>
+          <span id="midiDeviceStatusText" style="color: var(--accent-cyan); font-weight: 700;">Nenhum</span>
+        </div>
+
+        <div class="audio-status">
+          <div id="audioStatusDot" class="status-dot"></div>
+          <span id="audioStatusText">Áudio: Inativo</span>
+        </div>
+      </div>
     </div>
 
-    <!-- View Switcher Tabs (Mobile & Desktop) -->
-    <div class="view-tabs-bar">
-      <button id="tabMixer" class="tab-btn active">🎛️ Mixer & Layers</button>
-      <button id="tabFxRack" class="tab-btn">🏛️ Rack FX & EQ</button>
-      <button id="tabMidi" class="tab-btn">🎹 Teclado & MIDI</button>
-    </div>
+    <!-- Linha Inferior (Barra de Ferramentas & Presets) -->
+    <div class="header-bottom-row">
+      <div class="top-toolbar">
+        <div class="preset-selector-group">
+          <span class="preset-label">Preset:</span>
+          <select id="presetSelect" class="preset-select">
+            <option value="factory_1">01 - Grand Piano + Soft Strings</option>
+            <option value="factory_2">02 - EPiano Stage + Stereo Reverb</option>
+            <option value="factory_3">03 - Lead Synth + Brass Layer</option>
+          </select>
+        </div>
 
-    <!-- Indicador de Teclado MIDI Conectado (USB/Bluetooth) -->
-    <div style="display: flex; align-items: center; gap: 8px; font-size: 12px; background: rgba(0, 242, 254, 0.08); padding: 4px 10px; border-radius: var(--radius-md); border: 1px solid rgba(0, 242, 254, 0.2);">
-      <span>🎹 Control:</span>
-      <span id="midiDeviceStatusText" style="color: var(--accent-cyan); font-weight: 700;">Nenhum</span>
-    </div>
+        <button id="btnSavePreset" class="btn btn-accent" title="Salvar Preset Atual (Ctrl+S)">
+          💾 Salvar
+        </button>
 
-    <!-- Presets Toolbar (Salvar & Carregar Presets) -->
-    <div class="top-toolbar">
-      <div class="preset-selector-group">
-        <span class="preset-label">Preset:</span>
-        <select id="presetSelect" class="preset-select">
-          <option value="factory_1">01 - Grand Piano + Soft Strings</option>
-          <option value="factory_2">02 - EPiano Stage + Stereo Reverb</option>
-          <option value="factory_3">03 - Lead Synth + Brass Layer</option>
-        </select>
+        <button id="btnLoadPreset" class="btn" title="Importar arquivo de Preset (.json)">
+          📂 Carregar
+        </button>
+        <input type="file" id="presetFileInput" accept=".json" style="display: none;">
       </div>
 
       <!-- Configurações de Polifonia e Velocidade -->
-      <div class="preset-selector-group">
-        <span class="preset-label">Polifonia:</span>
-        <select id="polyphonySelect" class="preset-select">
-          <option value="auto" selected>Auto (Recomendado)</option>
-          <option value="16">16 Vozes</option>
-          <option value="32">32 Vozes</option>
-          <option value="64">64 Vozes</option>
-          <option value="128">128 Vozes</option>
-        </select>
-      </div>
+      <div class="top-toolbar">
+        <div class="preset-selector-group">
+          <span class="preset-label">Polifonia:</span>
+          <select id="polyphonySelect" class="preset-select">
+            <option value="auto" selected>Auto (Recomendado)</option>
+            <option value="16">16 Vozes</option>
+            <option value="32">32 Vozes</option>
+            <option value="64">64 Vozes</option>
+            <option value="128">128 Vozes</option>
+          </select>
+        </div>
 
-      <div class="preset-selector-group">
-        <span class="preset-label">Toque:</span>
-        <select id="velocityCurveSelect" class="preset-select">
-          <option value="soft">Suave (Soft)</option>
-          <option value="normal" selected>Normal</option>
-          <option value="hard">Dura (Hard)</option>
-        </select>
-      </div>
-
-      <button id="btnSavePreset" class="btn btn-accent" title="Salvar Preset Atual (Ctrl+S)">
-        💾 Salvar
-      </button>
-
-      <button id="btnLoadPreset" class="btn" title="Importar arquivo de Preset (.json)">
-        📂 Carregar
-      </button>
-      <input type="file" id="presetFileInput" accept=".json" style="display: none;">
-
-      <div class="audio-status">
-        <div id="audioStatusDot" class="status-dot"></div>
-        <span id="audioStatusText">Áudio: Inativo</span>
+        <div class="preset-selector-group">
+          <span class="preset-label">Toque:</span>
+          <select id="velocityCurveSelect" class="preset-select">
+            <option value="soft">Suave (Soft)</option>
+            <option value="normal" selected>Normal</option>
+            <option value="hard">Dura (Hard)</option>
+          </select>
+        </div>
       </div>
     </div>
   </header>
