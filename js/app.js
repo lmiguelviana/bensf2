@@ -832,28 +832,74 @@ document.addEventListener('DOMContentLoaded', () => {
     updateTrackVelUI(ch);
   });
 
+  // Instanciar Gerenciador de Banco de Dados SQLite
+  const dbManager = (window.BenDatabaseManager) ? new window.BenDatabaseManager() : null;
+
   // Track Velocity Visualizer & Controls Setup
   const trackVelCanvas = document.getElementById('trackVelCanvas');
   const selectTrackVelMode = document.getElementById('selectTrackVelMode');
   const trackVelModuleTitle = document.getElementById('trackVelModuleTitle');
   const btnTrackVelToggle = document.getElementById('btnTrackVelToggle');
+  const btnSaveCustomVelCurve = document.getElementById('btnSaveCustomVelCurve');
+
+  const inputTrackVelMin = document.getElementById('inputTrackVelMin');
+  const inputTrackVelMax = document.getElementById('inputTrackVelMax');
+  const inputTrackVelPower = document.getElementById('inputTrackVelPower');
+  const lblVelMin = document.getElementById('lblVelMin');
+  const lblVelMax = document.getElementById('lblVelMax');
+  const lblVelPower = document.getElementById('lblVelPower');
+  const customVelControlsGroup = document.getElementById('customVelControlsGroup');
+
+  // Modal para Salvar Curva no SQLite DB
+  const saveVelCurveModal = document.getElementById('saveVelCurveModal');
+  const inputVelCurveName = document.getElementById('inputVelCurveName');
+  const btnConfirmVelCurveModal = document.getElementById('btnConfirmVelCurveModal');
+  const btnCancelVelCurveModal = document.getElementById('btnCancelVelCurveModal');
+
   let trackVelocityVisualizer = null;
 
   if (trackVelCanvas && window.VelocityVisualizerManager && synth) {
     trackVelocityVisualizer = new VelocityVisualizerManager(trackVelCanvas, synth);
   }
 
+  function populateVelocityCurveDropdown() {
+    if (!selectTrackVelMode || !dbManager) return;
+    const curves = dbManager.getVelocityCurves();
+
+    let html = `<option value="global">🌐 Usar Padrão Global</option>`;
+    html += `<option value="normal">Standard (Normal)</option>`;
+    html += `<option value="soft">Soft (Sensível / Leve)</option>`;
+    html += `<option value="hard">Hard (Forte / Pesado)</option>`;
+    html += `<option value="compressed">Comprimido (Dyn Compress)</option>`;
+    html += `<option value="fixed">Fixo (Velocidade 120)</option>`;
+
+    if (curves.length > 0) {
+      html += `<optgroup label="💾 CURVAS SALVAS NO SQLITE DB">`;
+      curves.forEach(c => {
+        if (!c.isFactory) {
+          html += `<option value="${c.id}">💾 ${c.name}</option>`;
+        }
+      });
+      html += `</optgroup>`;
+    }
+    html += `<option value="custom">✏️ Personalizado (Sliders)</option>`;
+    selectTrackVelMode.innerHTML = html;
+  }
+
+  setTimeout(() => populateVelocityCurveDropdown(), 200);
+
   function updateTrackVelUI(ch) {
     const chObj = synth.channels[ch];
     if (!chObj) return;
     if (!chObj.velocitySettings) {
-      chObj.velocitySettings = { useGlobal: true, mode: 'normal', minVel: 1, maxVel: 127 };
+      chObj.velocitySettings = { useGlobal: true, mode: 'normal', minVel: 1, maxVel: 127, curvePower: 2.0, fixedVel: 120 };
     }
 
-    const isGlobal = chObj.velocitySettings.useGlobal;
+    const vel = chObj.velocitySettings;
+    const isGlobal = vel.useGlobal;
 
     if (selectTrackVelMode) {
-      selectTrackVelMode.value = isGlobal ? 'global' : (chObj.velocitySettings.mode || 'normal');
+      selectTrackVelMode.value = isGlobal ? 'global' : (vel.curveId || vel.mode || 'normal');
     }
 
     if (btnTrackVelToggle) {
@@ -868,13 +914,101 @@ document.addEventListener('DOMContentLoaded', () => {
       trackVelModuleTitle.textContent = `VELOCITY DA PISTA (${chName})`;
     }
 
+    if (inputTrackVelMin) {
+      inputTrackVelMin.value = vel.minVel !== undefined ? vel.minVel : 1;
+      if (lblVelMin) lblVelMin.textContent = inputTrackVelMin.value;
+    }
+    if (inputTrackVelMax) {
+      inputTrackVelMax.value = vel.maxVel !== undefined ? vel.maxVel : 127;
+      if (lblVelMax) lblVelMax.textContent = inputTrackVelMax.value;
+    }
+    if (inputTrackVelPower) {
+      inputTrackVelPower.value = vel.curvePower !== undefined ? vel.curvePower : 2.0;
+      if (lblVelPower) lblVelPower.textContent = inputTrackVelPower.value;
+    }
+
     if (trackVelocityVisualizer) {
-      const currentSettings = isGlobal ? synth.globalVelocitySettings : chObj.velocitySettings;
+      const currentSettings = isGlobal ? synth.globalVelocitySettings : vel;
       trackVelocityVisualizer.render(currentSettings);
     }
   }
 
   window.updateTrackVelUI = updateTrackVelUI;
+
+  // Listeners para Sliders da Curva Personalizada
+  function onSliderVelChange() {
+    const activeCh = fxRack ? fxRack.selectedChannel : 1;
+    const chObj = synth.channels[activeCh];
+    if (!chObj) return;
+
+    if (!chObj.velocitySettings) {
+      chObj.velocitySettings = { useGlobal: false, mode: 'custom', minVel: 1, maxVel: 127, curvePower: 2.0 };
+    }
+
+    chObj.velocitySettings.useGlobal = false;
+    chObj.velocitySettings.mode = 'custom';
+    chObj.velocitySettings.minVel = parseInt(inputTrackVelMin.value, 10);
+    chObj.velocitySettings.maxVel = parseInt(inputTrackVelMax.value, 10);
+    chObj.velocitySettings.curvePower = parseFloat(inputTrackVelPower.value);
+
+    if (lblVelMin) lblVelMin.textContent = inputTrackVelMin.value;
+    if (lblVelMax) lblVelMax.textContent = inputTrackVelMax.value;
+    if (lblVelPower) lblVelPower.textContent = inputTrackVelPower.value;
+
+    if (selectTrackVelMode) selectTrackVelMode.value = 'custom';
+    if (mixerConsole) mixerConsole.updateChannelVelocityBadge(activeCh);
+    updateTrackVelUI(activeCh);
+  }
+
+  if (inputTrackVelMin) inputTrackVelMin.addEventListener('input', onSliderVelChange);
+  if (inputTrackVelMax) inputTrackVelMax.addEventListener('input', onSliderVelChange);
+  if (inputTrackVelPower) inputTrackVelPower.addEventListener('input', onSliderVelChange);
+
+  // Modal para Salvar no SQLite
+  if (btnSaveCustomVelCurve) {
+    btnSaveCustomVelCurve.addEventListener('click', () => {
+      if (saveVelCurveModal) {
+        if (inputVelCurveName) {
+          inputVelCurveName.value = `Curva Persona ${dbManager ? dbManager.getVelocityCurves().length + 1 : 1}`;
+        }
+        saveVelCurveModal.style.display = 'flex';
+        setTimeout(() => inputVelCurveName && inputVelCurveName.focus(), 100);
+      }
+    });
+  }
+
+  if (btnCancelVelCurveModal) {
+    btnCancelVelCurveModal.addEventListener('click', () => {
+      if (saveVelCurveModal) saveVelCurveModal.style.display = 'none';
+    });
+  }
+
+  if (btnConfirmVelCurveModal) {
+    btnConfirmVelCurveModal.addEventListener('click', async () => {
+      const name = inputVelCurveName ? inputVelCurveName.value.trim() : '';
+      if (!name || !dbManager) return;
+
+      const activeCh = fxRack ? fxRack.selectedChannel : 1;
+      const chObj = synth.channels[activeCh];
+      const vel = (chObj && chObj.velocitySettings) ? chObj.velocitySettings : { minVel: 1, maxVel: 127, curvePower: 2.0, mode: 'custom' };
+
+      const saved = await dbManager.addCustomVelocityCurve({
+        name: name,
+        minVel: vel.minVel,
+        maxVel: vel.maxVel,
+        curvePower: vel.curvePower,
+        mode: vel.mode || 'custom'
+      });
+
+      if (saved) {
+        populateVelocityCurveDropdown();
+        if (selectTrackVelMode) selectTrackVelMode.value = saved.id;
+        showToastNotification('Curva Salva no SQLite DB!', `Curva "${name}" armazenada no banco de dados SQLite.`, 'success');
+      }
+
+      if (saveVelCurveModal) saveVelCurveModal.style.display = 'none';
+    });
+  }
 
   if (btnTrackVelToggle) {
     btnTrackVelToggle.addEventListener('click', () => {
@@ -917,6 +1051,18 @@ document.addEventListener('DOMContentLoaded', () => {
       const val = e.target.value;
       if (val === 'global') {
         chObj.velocitySettings.useGlobal = true;
+      } else if (val.startsWith('custom_') || val.startsWith('fact_')) {
+        chObj.velocitySettings.useGlobal = false;
+        chObj.velocitySettings.curveId = val;
+        if (dbManager) {
+          const found = dbManager.getVelocityCurves().find(c => c.id === val);
+          if (found) {
+            chObj.velocitySettings.minVel = found.minVel;
+            chObj.velocitySettings.maxVel = found.maxVel;
+            chObj.velocitySettings.curvePower = found.curvePower;
+            chObj.velocitySettings.mode = found.mode;
+          }
+        }
       } else {
         chObj.velocitySettings.useGlobal = false;
         chObj.velocitySettings.mode = val;

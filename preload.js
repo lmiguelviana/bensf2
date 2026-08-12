@@ -6,5 +6,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
   showSaveDialog: (options) => ipcRenderer.invoke('show-save-dialog', options),
   showOpenDialog: (options) => ipcRenderer.invoke('show-open-dialog', options),
   writeFile: (filePath, content) => ipcRenderer.invoke('write-file', filePath, content),
-  readFile: (filePath) => ipcRenderer.invoke('read-file', filePath)
+  readFile: (filePath) => ipcRenderer.invoke('read-file', filePath),
+  dbGetVelocityCurves: () => ipcRenderer.invoke('db-get-velocity-curves'),
+  dbSaveVelocityCurves: (curves) => ipcRenderer.invoke('db-save-velocity-curves', curves)
 });

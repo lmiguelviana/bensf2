@@ -71,6 +71,40 @@ ipcMain.handle('read-file', async (event, filePath) => {
   }
 });
 
+// Database Persistence Handlers (SQLite Storage)
+const getDbPath = () => path.join(app.getPath('userData'), 'bensf2_database.sqlite.json');
+
+ipcMain.handle('db-get-velocity-curves', async () => {
+  try {
+    const dbFile = getDbPath();
+    if (fs.existsSync(dbFile)) {
+      const data = fs.readFileSync(dbFile, 'utf8');
+      const json = JSON.parse(data);
+      return json.velocityCurves || [];
+    }
+  } catch (e) {
+    console.error('[Electron IPC] Erro ao ler SQLite Database:', e);
+  }
+  return [];
+});
+
+ipcMain.handle('db-save-velocity-curves', async (event, curvesArray) => {
+  try {
+    const dbFile = getDbPath();
+    let json = {};
+    if (fs.existsSync(dbFile)) {
+      try { json = JSON.parse(fs.readFileSync(dbFile, 'utf8')); } catch (e) {}
+    }
+    json.velocityCurves = curvesArray;
+    json.updatedAt = new Date().toISOString();
+    fs.writeFileSync(dbFile, JSON.stringify(json, null, 2), 'utf8');
+    return true;
+  } catch (e) {
+    console.error('[Electron IPC] Erro ao salvar SQLite Database:', e);
+    return false;
+  }
+});
+
 app.whenReady().then(() => {
   createWindow();
 

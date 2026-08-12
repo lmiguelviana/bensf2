@@ -161,22 +161,47 @@
           </div>
 
           <div id="trackFxBodyContainer" class="fx-rack-container">
-            <!-- Módulo Curva de Velocity por Pista (Com Gráfico 128 Barras e Seleção) -->
-            <div class="fx-module-card" style="align-items: center; flex: 1.2; min-width: 280px;">
+            <!-- Módulo Curva de Velocity por Pista (Com SQLite DB & Personalização) -->
+            <div class="fx-module-card" style="align-items: center; flex: 1.4; min-width: 320px;">
               <div class="fx-module-title" style="width: 100%;">
                 <span id="trackVelModuleTitle" style="color: var(--accent-cyan); font-weight: 800;">VELOCITY DA PISTA</span>
                 <button id="btnTrackVelToggle" class="btn btn-sm btn-fx-toggle">OFF</button>
               </div>
+
               <div style="display: flex; flex-direction: column; width: 100%; gap: 6px; margin-top: 4px;">
-                <select id="selectTrackVelMode" class="preset-select" style="width: 100%; font-size: 10px; padding: 3px;">
-                  <option value="global">🌐 Usar Padrão Global</option>
-                  <option value="normal">Standard (Normal)</option>
-                  <option value="soft">Soft (Sensível / Leve)</option>
-                  <option value="hard">Hard (Forte / Pesado)</option>
-                  <option value="compressed">Comprimido (Dyn Compress)</option>
-                  <option value="fixed">Fixo (Velocidade 120)</option>
-                </select>
-                <canvas id="trackVelCanvas" width="280" height="54" style="width: 100%; height: 54px; border-radius: 4px; border: 1px solid rgba(0, 242, 254, 0.25); background: #0a0d14;"></canvas>
+                <!-- Seletor de Curvas em SQLite DB -->
+                <div style="display: flex; gap: 6px; align-items: center;">
+                  <select id="selectTrackVelMode" class="preset-select" style="flex: 1; font-size: 10px; padding: 3px;">
+                    <option value="global">🌐 Usar Padrão Global</option>
+                    <option value="normal">Standard (Normal)</option>
+                    <option value="soft">Soft (Sensível / Leve)</option>
+                    <option value="hard">Hard (Forte / Pesado)</option>
+                    <option value="compressed">Comprimido (Dyn Compress)</option>
+                    <option value="fixed">Fixo (Velocidade 120)</option>
+                    <option value="custom">✏️ Personalizado (Sliders abaixo)</option>
+                  </select>
+                  <button id="btnSaveCustomVelCurve" class="btn btn-sm btn-accent" title="Salvar esta curva no Banco de Dados SQLite" style="font-size: 9px; padding: 3px 8px; font-weight: 800;">
+                    💾 Salvar DB
+                  </button>
+                </div>
+
+                <!-- Sliders de Ajuste Fino da Curva Personalizada -->
+                <div id="customVelControlsGroup" style="display: flex; gap: 10px; width: 100%; font-size: 9px; color: var(--text-muted); background: rgba(0,0,0,0.3); padding: 4px 6px; border-radius: 4px; border: 1px solid rgba(255,255,255,0.05);">
+                  <div style="flex: 1;">
+                    <div style="display: flex; justify-content: space-between;"><span>MIN VEL</span><span id="lblVelMin">1</span></div>
+                    <input type="range" id="inputTrackVelMin" min="1" max="127" value="1" style="width: 100%; height: 4px;">
+                  </div>
+                  <div style="flex: 1;">
+                    <div style="display: flex; justify-content: space-between;"><span>MAX VEL</span><span id="lblVelMax">127</span></div>
+                    <input type="range" id="inputTrackVelMax" min="1" max="127" value="127" style="width: 100%; height: 4px;">
+                  </div>
+                  <div style="flex: 1;">
+                    <div style="display: flex; justify-content: space-between;"><span>CURVA (POWER)</span><span id="lblVelPower">2.0</span></div>
+                    <input type="range" id="inputTrackVelPower" min="0.3" max="4.0" step="0.1" value="2.0" style="width: 100%; height: 4px;">
+                  </div>
+                </div>
+
+                <canvas id="trackVelCanvas" width="320" height="54" style="width: 100%; height: 54px; border-radius: 4px; border: 1px solid rgba(0, 242, 254, 0.25); background: #0a0d14;"></canvas>
               </div>
             </div>
             <!-- Módulo Envelope ADSR por Pista -->
@@ -581,7 +606,25 @@
     </div>
   </div>
 
+  <!-- Modal Personalizado para Salvar Curva de Velocity no SQLite DB -->
+  <div id="saveVelCurveModal" class="modal-backdrop" style="display: none; align-items: center; justify-content: center; z-index: 10000;">
+    <div class="glass-modal-card" style="width: 400px; padding: 24px; border-radius: 12px; background: rgba(10, 13, 20, 0.96); border: 1px solid var(--accent-cyan); box-shadow: 0 0 30px rgba(0, 242, 254, 0.3);">
+      <div style="font-family: var(--font-heading); font-size: 16px; font-weight: 800; color: #fff; margin-bottom: 6px;">
+        💾 Salvar Curva no Banco SQLite DB
+      </div>
+      <div style="font-size: 12px; color: var(--text-muted); margin-bottom: 16px;">
+        Digite um nome para armazenar esta curva de velocidade no banco de dados SQLite:
+      </div>
+      <input type="text" id="inputVelCurveName" placeholder="Ex: Roland Piano Touch Sensível" style="width: 100%; padding: 10px 12px; font-size: 13px; background: rgba(255,255,255,0.06); border: 1px solid rgba(0, 242, 254, 0.4); border-radius: 6px; color: #fff; outline: none; margin-bottom: 20px;">
+      <div style="display: flex; justify-content: flex-end; gap: 10px;">
+        <button id="btnCancelVelCurveModal" class="btn" style="padding: 6px 16px; font-size: 12px;">Cancelar</button>
+        <button id="btnConfirmVelCurveModal" class="btn btn-accent" style="padding: 6px 20px; font-size: 12px; font-weight: 800;">Salvar no SQLite DB</button>
+      </div>
+    </div>
+  </div>
+
   <!-- Scripts JavaScript -->
+  <script src="js/database.js"></script>
   <script src="js/audio-context.js"></script>
   <script src="js/sf2-parser.js"></script>
   <script src="js/synth-engine.js"></script>
