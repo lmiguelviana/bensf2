@@ -127,8 +127,6 @@ document.addEventListener('DOMContentLoaded', () => {
   const sf2FileInput = document.getElementById('sf2FileInput');
   const presetListEl = document.getElementById('presetList');
   const sf2PresetCount = document.getElementById('sf2PresetCount');
-  const polyphonySelect = document.getElementById('polyphonySelect');
-  const velocityCurveSelect = document.getElementById('velocityCurveSelect');
 
   const mixerChannelCountSelect = document.getElementById('mixerChannelCountSelect');
   const btnAddChannel = document.getElementById('btnAddChannel');
@@ -429,15 +427,6 @@ document.addEventListener('DOMContentLoaded', () => {
       }
     });
   }
-
-  // Configurações de Polifonia e Velocidade
-  polyphonySelect.addEventListener('change', (e) => {
-    synth.setMaxPolyphony(e.target.value);
-  });
-
-  velocityCurveSelect.addEventListener('change', (e) => {
-    synth.setVelocityCurve(e.target.value);
-  });
 
   // Seletor de Extensão de Teclado (24, 61, 88 teclas)
   if (keyboardRangeSelect) {

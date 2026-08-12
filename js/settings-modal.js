@@ -50,27 +50,15 @@ class SettingsModalManager {
       this.btnSave.addEventListener('click', () => this.applySettings());
     }
 
-    // Sincronizar escolhas de polifonia e velocity com o topo
-    const topPolySelect = document.getElementById('polyphonySelect');
-    const topVelSelect = document.getElementById('velocityCurveSelect');
-
-    if (this.modalPolyphonySelect && topPolySelect) {
+    if (this.modalPolyphonySelect && this.synth) {
       this.modalPolyphonySelect.addEventListener('change', (e) => {
-        topPolySelect.value = e.target.value;
-        if (this.synth) this.synth.setMaxPolyphony(e.target.value);
-      });
-      topPolySelect.addEventListener('change', (e) => {
-        this.modalPolyphonySelect.value = e.target.value;
+        this.synth.setMaxPolyphony(e.target.value);
       });
     }
 
-    if (this.modalVelocityCurveSelect && topVelSelect) {
+    if (this.modalVelocityCurveSelect && this.synth) {
       this.modalVelocityCurveSelect.addEventListener('change', (e) => {
-        topVelSelect.value = e.target.value;
-        if (this.synth) this.synth.setVelocityCurve(e.target.value);
-      });
-      topVelSelect.addEventListener('change', (e) => {
-        this.modalVelocityCurveSelect.value = e.target.value;
+        this.synth.setVelocityCurve(e.target.value);
       });
     }
 
@@ -80,14 +68,11 @@ class SettingsModalManager {
   openModal() {
     if (!this.modalBackdrop) return;
 
-    // Atualizar seletores do modal com o estado atual do synth
-    const topPolySelect = document.getElementById('polyphonySelect');
-    const topVelSelect = document.getElementById('velocityCurveSelect');
-    if (this.modalPolyphonySelect && topPolySelect) {
-      this.modalPolyphonySelect.value = topPolySelect.value;
+    if (this.modalPolyphonySelect && this.synth) {
+      this.modalPolyphonySelect.value = this.synth.isAutoPolyphony ? 'auto' : this.synth.maxPolyphony;
     }
-    if (this.modalVelocityCurveSelect && topVelSelect) {
-      this.modalVelocityCurveSelect.value = topVelSelect.value;
+    if (this.modalVelocityCurveSelect && this.synth) {
+      this.modalVelocityCurveSelect.value = this.synth.velocityCurve || 'normal';
     }
 
     this.populateAudioOutputDevices();
