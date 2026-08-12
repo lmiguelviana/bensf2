@@ -60,25 +60,35 @@ Este arquivo contém o registro histórico detalhado, decisões arquiteturais, p
 - **Abas Flutuantes Neon**: `📁 BIBLIOTECA ▶` na borda esquerda e `🎹 EXIBIR TECLADO PIANO ▲` no rodapé.
 - **Ícone Transparente**: Imagens PNG Photoroom sem moldura/caixa branca na barra de tarefas do Windows.
 
+### 8. 🎹 Especificação Oficial SF2 de Zonas de Geradores & Eliminação de Distorção
+- **Parser de Geradores SF2 (`js/sf2-parser.js`)**: Leitura completa dos geradores das zonas de instrumentos e presets (`keyRange` oper 43, `velRange` oper 44, `initialAttenuation` oper 48, `coarseTune` oper 51, `fineTune` oper 52, `sampleModes` oper 54 e `overridingRootKey` oper 58).
+- **Síntese Fiel sem Distorção (`js/synth-engine.js`)**: Mapeamento dinâmico de amostras por zona exata de nota e velocidade. Elimina o aliasing de 3+ oitavas e o clipping digital aplicando a atenuação nativa em centibels ($10^{-\text{cB}/200}$).
+- **Labels de Áudio Reais do Windows**: Enumeração de dispositivos de áudio com permissões desbloqueadas no Electron (`audioCapture`/`microphone`), exibindo nomes reais (*Alto-falantes HK2*, etc.).
+- **Gestão de Controladores MIDI Físicos**: Botões `● ATIVO` / `○ INATIVO` e roteamento de canal por teclado controlador conectado.
+- **MIDI Learn Ampliado em Botões**: Mapeamento por clique com botão direito em todos os botões ON/OFF de efeitos por pista, Master FX, Mute e Solo.
+- **Truncamento Estético de Presets (`...`)**: Estilo ajustado no CSS para evitar que nomes extensos de SoundFont estourem o container do Mixer, com tooltip no hover.
+
 ---
 
 ## 📂 Mapeamento de Arquivos Principais
 
 | Arquivo/Pasta | Responsabilidade no Projeto |
 | :--- | :--- |
-| [js/setlist-manager.js](file:///c:/Users/user/Documents/sf2/js/setlist-manager.js) | Gerenciador do Setlist Mode com Instant Snapshot e Seamless Patch Change |
-| [js/audio-worklet-processor.js](file:///c:/Users/user/Documents/sf2/js/audio-worklet-processor.js) | Engine DSP de baixa latência em AudioWorklet |
-| [js/sf2-parser.js](file:///c:/Users/user/Documents/sf2/js/sf2-parser.js) | Parser binário de SoundFonts SF2 e SF3 comprimidos |
-| [js/synth-engine.js](file:///c:/Users/user/Documents/sf2/js/synth-engine.js) | Motor de síntese Web Audio e Velocity Layer Crossfading |
-| [js/database.js](file:///c:/Users/user/Documents/sf2/js/database.js) | Gerenciador do banco de dados SQLite local |
-| [js/settings-modal.js](file:///c:/Users/user/Documents/sf2/js/settings-modal.js) | Painel de Configurações, áudio, polifonia e seletor de temas |
-| [js/preset-manager.js](file:///c:/Users/user/Documents/sf2/js/preset-manager.js) | Integração com diálogos nativos do Windows (`showSaveDialog`) |
-| [js/mixer.js](file:///c:/Users/user/Documents/sf2/js/mixer.js) | Console do Mixer de 16 canais, semitones (0 a 12) e badges |
-| [vst3/](file:///c:/Users/user/Documents/sf2/vst3) | Código nativo do plugin VST3 em C++ JUCE 8 |
-| [build/installer.nsh](file:///c:/Users/user/Documents/sf2/build/installer.nsh) | Script do Instalador Duplo NSIS (App + VST3) |
-| [index.html](file:///c:/Users/user/Documents/sf2/index.html) | Interface principal, modais e abas flutuantes |
-| [css/main.css](file:///c:/Users/user/Documents/sf2/css/main.css) | Estilos Glassmorphism, temas (Nord Red) e Grid responsivo |
-| [js/app.js](file:///c:/Users/user/Documents/sf2/js/app.js) | Controlador master, atalhos de palco e alternador de views |
+| [js/setlist-manager.js](file:///d:/Sistemas/bensf2/js/setlist-manager.js) | Gerenciador do Setlist Mode com Instant Snapshot e Seamless Patch Change |
+| [js/audio-worklet-processor.js](file:///d:/Sistemas/bensf2/js/audio-worklet-processor.js) | Engine DSP de baixa latência em AudioWorklet |
+| [js/sf2-parser.js](file:///d:/Sistemas/bensf2/js/sf2-parser.js) | Parser binário de SoundFonts SF2 e SF3 com suporte a Geradores de Zona |
+| [js/synth-engine.js](file:///d:/Sistemas/bensf2/js/synth-engine.js) | Motor de síntese Web Audio com filtragem de zonas SF2 e atenuação nativa |
+| [js/web-midi.js](file:///d:/Sistemas/bensf2/js/web-midi.js) | Gerenciador WebMIDI para múltiplos controladores com toggles de ativacao |
+| [js/midi-learn.js](file:///d:/Sistemas/bensf2/js/midi-learn.js) | Automação MIDI Learn em sliders e botões ON/OFF |
+| [js/database.js](file:///d:/Sistemas/bensf2/js/database.js) | Gerenciador do banco de dados SQLite local |
+| [js/settings-modal.js](file:///d:/Sistemas/bensf2/js/settings-modal.js) | Painel de Configurações, áudio com labels reais, polifonia e seletor de temas |
+| [js/preset-manager.js](file:///d:/Sistemas/bensf2/js/preset-manager.js) | Integração com diálogos nativos do Windows (`showSaveDialog`) |
+| [js/mixer.js](file:///d:/Sistemas/bensf2/js/mixer.js) | Console do Mixer de 16 canais, semitones (0 a 12) e badges |
+| [vst3/](file:///d:/Sistemas/bensf2/vst3) | Código nativo do plugin VST3 em C++ JUCE 8 |
+| [build/installer.nsh](file:///d:/Sistemas/bensf2/build/installer.nsh) | Script do Instalador Duplo NSIS (App + VST3) |
+| [index.html](file:///d:/Sistemas/bensf2/index.html) | Interface principal, modais e abas flutuantes |
+| [css/main.css](file:///d:/Sistemas/bensf2/css/main.css) | Estilos Glassmorphism, temas (Nord Red) e Grid responsivo |
+| [js/app.js](file:///d:/Sistemas/bensf2/js/app.js) | Controlador master, atalhos de palco e alternador de views |
 
 ---
 
