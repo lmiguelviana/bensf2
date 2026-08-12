@@ -1,6 +1,6 @@
 /**
  * MASTER APPLICATION CONTROLLER
- * Liga a interface UI ao motor de síntese SF2, Mixer Console, Master FX, FX por Pista com MIDI Learn universal em TODOS os knobs/controles.
+ * Liga a interface UI ao motor de síntese SF2, Mixer Console, Master FX, FX por Pista com atribuição independente de timbres à pista selecionada.
  */
 
 document.addEventListener('DOMContentLoaded', () => {
@@ -1086,7 +1086,17 @@ document.addEventListener('DOMContentLoaded', () => {
       item.addEventListener('click', () => {
         presetListEl.querySelectorAll('.preset-item').forEach(el => el.classList.remove('active'));
         item.classList.add('active');
-        console.log(`[UI] Preset selecionado: ${p.name}`);
+
+        // Atribuir o timbre clicado EXCLUSIVAMENTE à PISTA SELECIONADA no Mixer!
+        const activeCh = fxRack ? fxRack.selectedChannel : 1;
+        synth.setChannelPreset(activeCh, idx);
+
+        if (mixerConsole) {
+          mixerConsole.updateChannelPresetDropdown(activeCh, idx);
+        }
+
+        const chName = synth.channels[activeCh] ? synth.channels[activeCh].name : `CH ${activeCh}`;
+        showToastNotification('Timbre Atribuído', `"${p.name}" atribuído à pista ${chName}.`, 'info');
       });
       presetListEl.appendChild(item);
     });

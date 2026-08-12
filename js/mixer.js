@@ -1,6 +1,6 @@
 /**
- * MULTITIMBRIC MIXER CONSOLE MANAGER (WITH ALL-LAYERS DEFAULT, SEMITONE TRANSPOSE, INLINE RENAMING & MIDI LEARN)
- * Gerenciador dinâmico de 16 pistas de canais MIDI com todas as faixas configuradas para 'TODOS (Layer)' por padrão.
+ * MULTITIMBRIC MIXER CONSOLE MANAGER (WITH INDIVIDUAL CHANNEL PRESET ASSIGNMENT, MIDI LEARN & TRACK REMOVAL)
+ * Gerenciador dinâmico de 16 pistas de canais MIDI com atruibuição independente de timbres por faixa.
  */
 
 class MixerConsoleManager {
@@ -46,6 +46,17 @@ class MixerConsoleManager {
     }
   }
 
+  updateChannelPresetDropdown(ch, presetIdx) {
+    if (!this.container) return;
+    const strip = this.container.querySelector(`.mixer-channel-strip[data-channel="${ch}"]`);
+    if (strip) {
+      const select = strip.querySelector('.ch-preset-select');
+      if (select) {
+        select.value = presetIdx;
+      }
+    }
+  }
+
   renderMixer() {
     if (!this.container) return;
     this.container.innerHTML = '';
@@ -78,7 +89,7 @@ class MixerConsoleManager {
       solo: false, 
       transpose: 0, 
       semitoneTranspose: 0,
-      assignedPresetIndex: (ch - 1),
+      assignedPresetIndex: ((ch - 1) % 16),
       assignedMidiChannel: 'all' 
     };
 
