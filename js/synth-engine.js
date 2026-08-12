@@ -203,7 +203,8 @@ class SynthEngine {
             hasLoop,
             loopStart: loopStartSec,
             loopEnd: loopEndSec,
-            originalPitch: sh.originalPitch || 60
+            originalPitch: sh.originalPitch || 60,
+            fineTuningSemitones: sh.fineTuningSemitones || 0  // pitchCorrection em semitones fracionários
           });
         }
       });
@@ -310,9 +311,12 @@ class SynthEngine {
 
       const now = ctx.currentTime;
       const gainNode = ctx.createGain();
-      let velGain = this.calculateVelocityGain(velocity, ch);
 
-      // BUG FIX: assignedSampleIndices DEVE ser declarado ANTES de ser usado no bloco crossfade
+      // Velocidade → gain linear normalizado (já aplica a curva de dinâmica configurada)
+      // Clampeado em 0.9 para garantir headroom e evitar clipping por vozes sobrepostas
+      let velGain = Math.min(0.9, this.calculateVelocityGain(velocity, ch));
+
+      // BUG FIX: assignedSampleIndices DEVE ser declarado ANTES de ser usado
       let assignedSampleIndices = [];
       if (this.parsedSf2Data && this.parsedSf2Data.presets && this.parsedSf2Data.presets[chConfig.assignedPresetIndex]) {
         const presetObj = this.parsedSf2Data.presets[chConfig.assignedPresetIndex];
@@ -325,17 +329,12 @@ class SynthEngine {
         assignedSampleIndices = Array.from(this.decodedAudioBuffers.keys());
       }
 
-      // Velocity Layer Crossfading (Equal-Power Transition) — agora usa assignedSampleIndices já declarado
-      if (assignedSampleIndices.length > 1) {
-        const velNorm = velocity / 127.0;
-        const crossfadeFactor = Math.sin(velNorm * (Math.PI / 2.0));
-        velGain *= (0.5 + 0.5 * crossfadeFactor);
-      }
-
+      // ADSR: attack de 10ms evita click/pop inicial, sustain em 0.85 fiel ao timbre original
       const adsr = chConfig.adsr || this.adsr;
-      const attackEnd = now + Math.max(0.001, adsr.attack);
-      const decayEnd = attackEnd + Math.max(0.01, adsr.decay);
-      const sustainLevel = Math.max(0.001, velGain * adsr.sustain);
+      const attackTime = Math.max(0.008, adsr.attack); // mín 8ms para evitar click de onset
+      const attackEnd = now + attackTime;
+      const decayEnd = attackEnd + Math.max(0.05, adsr.decay);
+      const sustainLevel = Math.max(0.0001, velGain * Math.min(0.95, adsr.sustain));
 
       gainNode.gain.setValueAtTime(0.0001, now);
       gainNode.gain.linearRampToValueAtTime(velGain, attackEnd);
@@ -371,7 +370,8 @@ class SynthEngine {
 
       const currentBend = this.pitchBendSemi.get(ch) || 0;
       const basePitch = sampleObj.originalPitch || 60;
-      const totalNoteShift = (actualNote + currentBend) - basePitch;
+      const fineTune = sampleObj.fineTuningSemitones || 0; // ajuste fino do SF2 (pitchCorrection em cents)
+      const totalNoteShift = (actualNote + currentBend + fineTune) - basePitch;
       const pitchRatio = Math.pow(2, totalNoteShift / 12);
       sourceNode.playbackRate.value = pitchRatio;
 

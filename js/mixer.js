@@ -173,7 +173,7 @@ class MixerConsoleManager {
 
       <div class="knob-group" style="width: 100%; margin-top: 4px;">
         <div class="knob-label">TIMBRE SOUNDFONT</div>
-        <select class="ch-preset-select preset-select" data-channel="${ch}">
+        <select class="ch-preset-select preset-select" data-channel="${ch}" title="Nenhum timbre carregado">
           ${presetOptionsHtml}
         </select>
       </div>
@@ -360,13 +360,21 @@ class MixerConsoleManager {
     });
 
     const presetSelect = strip.querySelector('.ch-preset-select');
+    // Atualizar title do select com nome completo do timbre (para tooltip quando truncado)
+    const updatePresetTitle = () => {
+      const selOpt = presetSelect.options[presetSelect.selectedIndex];
+      presetSelect.title = selOpt ? selOpt.text : 'Nenhum timbre carregado';
+    };
+    updatePresetTitle();
     presetSelect.addEventListener('change', (e) => {
       if (e.target.value === '' || e.target.value === null || e.target.value === 'none') {
         this.synth.setChannelPreset(ch, null);
+        presetSelect.title = 'Nenhum timbre carregado';
         return;
       }
       const idx = parseInt(e.target.value, 10);
       this.synth.setChannelPreset(ch, idx);
+      updatePresetTitle();
     });
 
     const velSelect = strip.querySelector('.ch-velocity-select');
@@ -611,8 +619,18 @@ class MixerConsoleManager {
     });
 
     if (this.midiLearn) {
-      this.midiLearn.attach(muteBtn, `Mute Pista ${chConfig.name}`, () => {});
-      this.midiLearn.attach(soloBtn, `Solo Pista ${chConfig.name}`, () => {});
+      // MIDI Learn Mute: CC > 64 = toggle Mute ON/OFF
+      this.midiLearn.attach(muteBtn, `Mute Pista ${chConfig.name}`, (normVal) => {
+        if (normVal > 0.5) {
+          muteBtn.click();
+        }
+      });
+      // MIDI Learn Solo: CC > 64 = toggle Solo ON/OFF
+      this.midiLearn.attach(soloBtn, `Solo Pista ${chConfig.name}`, (normVal) => {
+        if (normVal > 0.5) {
+          soloBtn.click();
+        }
+      });
     }
 
     return strip;

@@ -17,19 +17,23 @@ class AudioEngineContext {
     const AudioCtx = window.AudioContext || window.webkitAudioContext;
     this.ctx = new AudioCtx();
 
-    // Node de Limiter Master (Compressor de pico de áudio)
+    // Node de Limiter Master — configuração transparente estilo mastering (sem pumping)
+    // threshold: -3dB (headroom seguro), knee: 6dB (curva suave), ratio: 4:1 (limiter leve)
     this.masterLimiter = this.ctx.createDynamicsCompressor();
-    this.masterLimiter.threshold.setValueAtTime(-1.0, this.ctx.currentTime); // Previne clipping acima de -1dB
-    this.masterLimiter.knee.setValueAtTime(3.0, this.ctx.currentTime);
-    this.masterLimiter.ratio.setValueAtTime(20.0, this.ctx.currentTime);
-    this.masterLimiter.attack.setValueAtTime(0.003, this.ctx.currentTime);
-    this.masterLimiter.release.setValueAtTime(0.1, this.ctx.currentTime);
+    this.masterLimiter.threshold.setValueAtTime(-3.0, this.ctx.currentTime);
+    this.masterLimiter.knee.setValueAtTime(6.0, this.ctx.currentTime);
+    this.masterLimiter.ratio.setValueAtTime(4.0, this.ctx.currentTime);
+    this.masterLimiter.attack.setValueAtTime(0.005, this.ctx.currentTime);
+    this.masterLimiter.release.setValueAtTime(0.2, this.ctx.currentTime);
 
-    // Node de Gain Master (Volume Geral)
+    // Alias para compatibilidade com FxRack (usa this.audioCtx.limiterNode)
+    this.limiterNode = this.masterLimiter;
+
+    // Node de Gain Master — 0.65 dá headroom suficiente para polifonia sem distorção
     this.masterGain = this.ctx.createGain();
-    this.masterGain.gain.setValueAtTime(0.8, this.ctx.currentTime);
+    this.masterGain.gain.setValueAtTime(0.65, this.ctx.currentTime);
 
-    // Conexão do fluxo de áudio: MasterGain -> MasterLimiter -> AudioDestination (Alto-falantes)
+    // Conexão do fluxo de áudio: MasterGain -> MasterLimiter -> AudioDestination
     this.masterGain.connect(this.masterLimiter);
     this.masterLimiter.connect(this.ctx.destination);
 

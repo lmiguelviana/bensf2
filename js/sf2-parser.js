@@ -198,6 +198,10 @@ class SoundFont2Parser {
 
           if (name && name !== 'EOS') {
             const isCompressed = (sampleType & 0x10) !== 0;
+            // pitchCorrection: ajuste fino de afinação em cents (-99 a +99)
+            // Convertido para semitones fracionários: cents / 100
+            const fineTuningSemitones = (pitchCorrection && pitchCorrection !== 0) ? (pitchCorrection / 100.0) : 0;
+
             this.sampleHeaders.push({
               name: this.cleanString(name), 
               start, 
@@ -206,6 +210,7 @@ class SoundFont2Parser {
               endLoop, 
               sampleRate, 
               originalPitch: validPitch,
+              fineTuningSemitones,  // ← ajuste fino de pitch em semitones fracionários
               sampleType,
               isCompressed
             });
