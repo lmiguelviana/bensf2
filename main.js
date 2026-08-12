@@ -3,10 +3,10 @@ const path = require('path');
 
 function createWindow() {
   const mainWindow = new BrowserWindow({
-    width: 1360,
-    height: 860,
-    minWidth: 1100,
-    minHeight: 740,
+    width: 1240,
+    height: 780,
+    minWidth: 1040,
+    minHeight: 680,
     center: true,
     title: 'BenSF2 - Live Sampler Workstation',
     titleBarStyle: 'hidden',
@@ -26,7 +26,7 @@ function createWindow() {
 
   mainWindow.loadFile('index.html');
 
-  // Opcional: Remover menu de aplicativo padrão do Windows para manter estética pura DAW
+  // Remover menu de aplicativo padrão do Windows para manter estética pura DAW
   mainWindow.setMenuBarVisibility(false);
 }
 
