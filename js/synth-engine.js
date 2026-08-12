@@ -108,12 +108,25 @@ class SynthEngine {
     return Math.pow(normVel, 2.0);
   }
 
-  loadSoundFont(sf2ParsedObj) {
+  loadSoundFont(sf2ParsedObj, fileName = 'SoundFont') {
     this.stopAllVoices();
-    this.parsedSf2Data = sf2ParsedObj;
-    this.decodedAudioBuffers.clear();
+
+    if (!this.parsedSf2Data) {
+      this.parsedSf2Data = { presets: [] };
+    }
+    if (!this.parsedSf2Data.presets) {
+      this.parsedSf2Data.presets = [];
+    }
 
     const ctx = this.audioCtx.init();
+
+    // Encontrar próximo offset de índice de amostra para não sobrescrever amostras de SF2s anteriores
+    let sampleOffset = 0;
+    this.decodedAudioBuffers.forEach((_, key) => {
+      if (typeof key === 'number' && key >= sampleOffset) {
+        sampleOffset = key + 1;
+      }
+    });
 
     if (sf2ParsedObj.sampleData && sf2ParsedObj.sampleHeaders) {
       sf2ParsedObj.sampleHeaders.forEach((sh, idx) => {
@@ -137,7 +150,8 @@ class SynthEngine {
           const loopStartSec = hasLoop ? (sh.startLoop - sh.start) / validSampleRate : 0;
           const loopEndSec = hasLoop ? (sh.endLoop - sh.start) / validSampleRate : 0;
 
-          this.decodedAudioBuffers.set(idx, {
+          const globalSampleIdx = sampleOffset + idx;
+          this.decodedAudioBuffers.set(globalSampleIdx, {
             audioBuffer: audioBuf,
             hasLoop,
             loopStart: loopStartSec,
@@ -148,17 +162,26 @@ class SynthEngine {
       });
     }
 
-    // NÃO atribuir timbre automaticamente a todas as pistas.
-    // O usuário deve selecionar a pista e clicar no timbre desejado no banco.
-    // Apenas o canal 1 (padrão) recebe o primeiro timbre como ponto de partida.
+    // Mapear e acumular os novos presets no banco global de timbres
+    const cleanFileName = fileName.replace(/\.sf2$/i, '');
     if (sf2ParsedObj.presets && sf2ParsedObj.presets.length > 0) {
-      this.channels[1].assignedPresetIndex = 0;
-      for (let ch = 2; ch <= 16; ch++) {
-        this.channels[ch].assignedPresetIndex = null; // sem timbre até o usuário escolher
-      }
+      sf2ParsedObj.presets.forEach((p) => {
+        const mappedSampleIndices = (p.sampleIndices || []).map(sIdx => sampleOffset + sIdx);
+        this.parsedSf2Data.presets.push({
+          ...p,
+          sampleIndices: mappedSampleIndices,
+          sf2Source: cleanFileName
+        });
+      });
     }
 
-    console.log(`[SynthEngine] Banco SF2 carregado com ${sf2ParsedObj.presets ? sf2ParsedObj.presets.length : 0} timbres atribuíveis.`);
+    // Apenas se o canal 1 ainda não tiver timbre atribuído, atribuir o primeiro
+    if (this.channels[1].assignedPresetIndex === null && this.parsedSf2Data.presets.length > 0) {
+      this.channels[1].assignedPresetIndex = 0;
+    }
+
+    console.log(`[SynthEngine] Banco SF2 "${cleanFileName}" carregado. Total de timbres na biblioteca: ${this.parsedSf2Data.presets.length}.`);
+    return this.parsedSf2Data.presets;
   }
 
   setChannelPreset(channel, presetIndex) {

@@ -139,7 +139,8 @@ class MixerConsoleManager {
       presetOptionsHtml += this.synth.parsedSf2Data.presets.map((p, idx) => {
         const isSelected = !noTimbreSelected && idx === chConfig.assignedPresetIndex ? 'selected' : '';
         const cleanName = (p.name || `Preset #${idx}`).replace(/[^\x20-\x7E]/g, '').trim() || `Preset ${p.bank}:${p.preset}`;
-        return `<option value="${idx}" ${isSelected}>${cleanName} (${p.bank}:${p.preset})</option>`;
+        const sourceTag = p.sf2Source ? ` [${p.sf2Source}]` : '';
+        return `<option value="${idx}" ${isSelected}>${cleanName}${sourceTag} (${p.bank}:${p.preset})</option>`;
       }).join('');
     }
 

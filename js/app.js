@@ -1035,46 +1035,53 @@ document.addEventListener('DOMContentLoaded', () => {
     e.preventDefault();
     sf2DropZone.style.borderColor = '';
     if (e.dataTransfer.files.length > 0) {
-      handleSf2File(e.dataTransfer.files[0]);
+      handleSf2Files(e.dataTransfer.files);
     }
   });
 
   sf2FileInput.addEventListener('change', (e) => {
     if (e.target.files.length > 0) {
-      handleSf2File(e.target.files[0]);
+      handleSf2Files(e.target.files);
     }
   });
 
-  function handleSf2File(file) {
-    if (!file.name.toLowerCase().endsWith('.sf2')) {
-      showToastNotification('Arquivo Inválido', 'Por favor, selecione um arquivo válido com extensão .sf2', 'warning');
+  function handleSf2Files(filesList) {
+    const files = Array.from(filesList).filter(f => f.name.toLowerCase().endsWith('.sf2'));
+    if (files.length === 0) {
+      showToastNotification('Arquivo Inválido', 'Por favor, selecione arquivos válidos com extensão .sf2', 'warning');
       return;
     }
 
-    const reader = new FileReader();
-    reader.onload = (evt) => {
-      try {
-        const arrayBuffer = evt.target.result;
-        const parser = new SoundFont2Parser(arrayBuffer);
-        const parsedData = parser.parse();
+    let loadedCount = 0;
+    files.forEach((file) => {
+      const reader = new FileReader();
+      reader.onload = (evt) => {
+        try {
+          const arrayBuffer = evt.target.result;
+          const parser = new SoundFont2Parser(arrayBuffer);
+          const parsedData = parser.parse();
 
-        synth.loadSoundFont(parsedData);
-        updatePresetListUI(parsedData.presets);
+          const allPresets = synth.loadSoundFont(parsedData, file.name);
+          updatePresetListUI(allPresets);
 
-        mixerConsole.renderMixer();
+          if (mixerConsole) {
+            mixerConsole.renderMixer();
+          }
 
-        const count = parsedData.presets ? parsedData.presets.length : 0;
-        showToastNotification(
-          'SoundFont Carregado!',
-          `Banco "${file.name}" carregado com sucesso (${count} timbres prontos nas pistas).`,
-          'success'
-        );
-      } catch (err) {
-        console.error('Erro ao ler arquivo SF2:', err);
-        showToastNotification('Erro ao Carregar SF2', err.message, 'warning');
-      }
-    };
-    reader.readAsArrayBuffer(file);
+          loadedCount++;
+          const addedCount = parsedData.presets ? parsedData.presets.length : 0;
+          showToastNotification(
+            'SoundFont Adicionado!',
+            `"${file.name}" adicionado com sucesso (+${addedCount} timbres na biblioteca). Total: ${allPresets.length} timbres.`,
+            'success'
+          );
+        } catch (err) {
+          console.error(`Erro ao ler arquivo SF2 (${file.name}):`, err);
+          showToastNotification('Erro ao Carregar SF2', `Falha ao carregar "${file.name}": ${err.message}`, 'warning');
+        }
+      };
+      reader.readAsArrayBuffer(file);
+    });
   }
 
   function updatePresetListUI(presets) {
@@ -1084,16 +1091,19 @@ document.addEventListener('DOMContentLoaded', () => {
     presets.forEach((p, idx) => {
       const item = document.createElement('div');
       item.className = `preset-item ${idx === 0 ? 'active' : ''}`;
+      const sourceBadge = p.sf2Source ? `<span style="font-size: 9px; color: var(--accent-cyan); font-weight: 700; opacity: 0.8; display: block;">${p.sf2Source}</span>` : '';
       item.innerHTML = `
-        <span>${p.name}</span>
-        <span style="font-family: var(--font-mono); font-size: 10px; color: var(--text-muted);">${p.bank}:${p.preset}</span>
+        <div style="display: flex; flex-direction: column; overflow: hidden; flex: 1;">
+          <span style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${p.name}</span>
+          ${sourceBadge}
+        </div>
+        <span style="font-family: var(--font-mono); font-size: 10px; color: var(--text-muted); font-weight: 700;">${p.bank}:${p.preset}</span>
       `;
       item.addEventListener('click', () => {
         presetListEl.querySelectorAll('.preset-item').forEach(el => el.classList.remove('active'));
         item.classList.add('active');
 
         // Atribuir o timbre clicado EXCLUSIVAMENTE à PISTA SELECIONADA no Mixer!
-        // Usar mixerConsole.selectedChannel como fonte canônica (não fxRack.selectedChannel)
         const activeCh = mixerConsole ? mixerConsole.selectedChannel : 1;
         synth.setChannelPreset(activeCh, idx);
 
