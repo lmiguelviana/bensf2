@@ -167,20 +167,20 @@ class MixerConsoleManager {
           <div class="ch-name-container" style="display: flex; align-items: center; justify-content: center; flex: 1; overflow: hidden; margin-right: 2px;">
             <span class="ch-name-text" style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${chConfig.name}</span>
           </div>
-          <button class="btn-remove-ch" data-channel="${ch}" title="Remover esta pista do Mixer" style="background: transparent; border: none; color: var(--accent-danger); font-size: 12px; font-weight: 800; cursor: pointer; padding: 0 2px; line-height: 1;">✕</button>
+          <button class="btn-remove-track" data-channel="${ch}" title="Remover esta pista do Mixer" style="background: transparent; border: none; color: var(--accent-danger); font-size: 12px; font-weight: 800; cursor: pointer; padding: 0 2px; line-height: 1;">✕</button>
         </div>
       </div>
 
       <div class="knob-group" style="width: 100%; margin-top: 4px;">
         <div class="knob-label">TIMBRE SOUNDFONT</div>
-        <select class="ch-preset preset-select" data-channel="${ch}">
+        <select class="ch-preset-select preset-select" data-channel="${ch}">
           ${presetOptionsHtml}
         </select>
       </div>
 
       <div class="knob-group" style="width: 100%; margin-top: 3px;">
         <div class="knob-label">ROTEAMENTO MIDI</div>
-        <select class="ch-midi-chan preset-select" data-channel="${ch}">
+        <select class="ch-midi-select preset-select" data-channel="${ch}">
           ${midiChanOptionsHtml}
         </select>
       </div>
