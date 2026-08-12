@@ -1,13 +1,14 @@
 {
   "name": "bensf2",
   "version": "1.0.0",
-  "description": "BenSF2 - Live Sampler Workstation and Live MIDI Keyboard Synth (Electron & Mobile)",
+  "description": "BenSF2 - Live Sampler Workstation and Live MIDI Keyboard Synth (Electron, Mobile & VST3)",
   "main": "main.js",
   "scripts": {
     "start": "electron .",
     "web": "npx http-server -p 8080 .",
     "pack:dir": "electron-builder --dir",
-    "dist": "electron-builder"
+    "dist": "electron-builder",
+    "build:vst3": "cmake -B vst3/build -S vst3 && cmake --build vst3/build --config Release"
   },
   "keywords": [
     "bensf2",
@@ -18,7 +19,8 @@
     "electron",
     "workstation",
     "sampler",
-    "synth"
+    "synth",
+    "vst3"
   ],
   "author": "Developer",
   "license": "MIT",
@@ -43,8 +45,17 @@
       "sw.js"
     ],
     "win": {
-      "target": "portable",
+      "target": [
+        "nsis",
+        "portable"
+      ],
       "icon": "assets/icon-512.png"
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "include": "build/installer.nsh",
+      "artifactName": "${productName}-Setup-${version}.${ext}"
     }
   }
 }
