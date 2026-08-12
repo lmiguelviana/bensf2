@@ -1,6 +1,6 @@
 /**
- * MULTITIMBRIC MIXER CONSOLE MANAGER (WITH INDIVIDUAL CHANNEL PRESET ASSIGNMENT, MIDI LEARN & TRACK REMOVAL)
- * Gerenciador dinâmico de 16 pistas de canais MIDI com atruibuição independente de timbres por faixa.
+ * MULTITIMBRIC MIXER CONSOLE MANAGER (WITH KEY ZONE RANGE SPLIT C-1..G9, INDIVIDUAL PRESET ASSIGNMENT & MIDI LEARN)
+ * Gerenciador dinâmico de 16 pistas com seletor de Zona de Teclado (Split Min/Max), Transposição, Mute/Solo e Remoção.
  */
 
 class MixerConsoleManager {
@@ -90,7 +90,9 @@ class MixerConsoleManager {
       transpose: 0, 
       semitoneTranspose: 0,
       assignedPresetIndex: ((ch - 1) % 16),
-      assignedMidiChannel: 'all' 
+      assignedMidiChannel: 'all',
+      keyRangeLow: 0,
+      keyRangeHigh: 127
     };
 
     let presetOptionsHtml = `<option value="0">Default Sound</option>`;
@@ -107,6 +109,27 @@ class MixerConsoleManager {
       const isSelected = (chConfig.assignedMidiChannel === m) ? 'selected' : '';
       midiChanOptionsHtml += `<option value="${m}" ${isSelected}>MIDI CH ${m < 10 ? '0' + m : m}</option>`;
     }
+
+    // Tabela de Notas para Zona de Split (Key Zone Split)
+    const noteOptions = [
+      { val: 0, label: 'C-1 (Min)' },
+      { val: 12, label: 'C0' },
+      { val: 24, label: 'C1' },
+      { val: 36, label: 'C2' },
+      { val: 48, label: 'C3' },
+      { val: 60, label: 'C4 (Dó3)' },
+      { val: 72, label: 'C5' },
+      { val: 84, label: 'C6' },
+      { val: 96, label: 'C7' },
+      { val: 108, label: 'C8' },
+      { val: 127, label: 'G9 (Max)' }
+    ];
+
+    const lowVal = chConfig.keyRangeLow !== undefined ? chConfig.keyRangeLow : 0;
+    const highVal = chConfig.keyRangeHigh !== undefined ? chConfig.keyRangeHigh : 127;
+
+    const splitMinHtml = noteOptions.map(n => `<option value="${n.val}" ${n.val === lowVal ? 'selected' : ''}>${n.label}</option>`).join('');
+    const splitMaxHtml = noteOptions.map(n => `<option value="${n.val}" ${n.val === highVal ? 'selected' : ''}>${n.label}</option>`).join('');
 
     strip.innerHTML = `
       <div class="channel-header" title="Clique duas vezes sobre o nome para editar">
@@ -173,7 +196,24 @@ class MixerConsoleManager {
         </div>
       </div>
 
-      <div class="button-group-row">
+      <!-- ZONA DE SPLIT DO TECLADO (MIN - MAX) -->
+      <div style="display: flex; gap: 4px; width: 100%; margin-top: 2px;">
+        <div class="knob-group" style="flex: 1;">
+          <div class="knob-label" style="color: var(--accent-cyan);">SPLIT MIN</div>
+          <select class="ch-split-min preset-select" data-channel="${ch}" style="font-size: 9px; padding: 2px;">
+            ${splitMinHtml}
+          </select>
+        </div>
+
+        <div class="knob-group" style="flex: 1;">
+          <div class="knob-label" style="color: var(--accent-cyan);">SPLIT MAX</div>
+          <select class="ch-split-max preset-select" data-channel="${ch}" style="font-size: 9px; padding: 2px;">
+            ${splitMaxHtml}
+          </select>
+        </div>
+      </div>
+
+      <div class="button-group-row" style="margin-top: 4px;">
         <button class="btn btn-mute ${chConfig.muted ? 'active' : ''}" data-channel="${ch}">M</button>
         <button class="btn btn-solo ${chConfig.solo ? 'active' : ''}" data-channel="${ch}">S</button>
       </div>
@@ -342,6 +382,27 @@ class MixerConsoleManager {
         const val = parseInt(e.target.value, 10);
         if (this.synth.channels[ch]) {
           this.synth.channels[ch].semitoneTranspose = val;
+        }
+      });
+    }
+
+    // Split Min & Max Change Listeners
+    const splitMinSelect = strip.querySelector('.ch-split-min');
+    if (splitMinSelect) {
+      splitMinSelect.addEventListener('change', (e) => {
+        const val = parseInt(e.target.value, 10);
+        if (this.synth.channels[ch]) {
+          this.synth.channels[ch].keyRangeLow = val;
+        }
+      });
+    }
+
+    const splitMaxSelect = strip.querySelector('.ch-split-max');
+    if (splitMaxSelect) {
+      splitMaxSelect.addEventListener('change', (e) => {
+        const val = parseInt(e.target.value, 10);
+        if (this.synth.channels[ch]) {
+          this.synth.channels[ch].keyRangeHigh = val;
         }
       });
     }

@@ -8,8 +8,8 @@
 }
 
 .mixer-channel-strip {
-  width: 140px;
-  min-width: 140px;
+  width: 150px;
+  min-width: 150px;
   background: rgba(16, 21, 33, 0.85);
   border: 1px solid var(--bg-card-border);
   border-radius: var(--radius-lg);

@@ -1,6 +1,6 @@
 /**
- * POLYPHONIC WAVETABLE SYNTHESIZER ENGINE (MULTITIMBRIC WITH ADSR ENVELOPES, SEMITONE TRANSPOSE & ALL-LAYERS DEFAULT)
- * Processador de síntese polifônica com suporte a envelopes ADSR customizáveis por pista, transposição por semitões e canais definidos para 'TODOS (Layer)' por padrão.
+ * POLYPHONIC WAVETABLE SYNTHESIZER ENGINE (WITH KEY ZONE RANGE SPLIT, ADSR & MULTITIMBRIC LAYERS)
+ * Processador de síntese polifônica com filtragem de notas por Zona de Teclado (Split Min/Max), envelopes ADSR e camadas multitímbricas.
  */
 
 class SynthEngine {
@@ -59,7 +59,9 @@ class SynthEngine {
         semitoneTranspose: 0, // Semitões (-12 a +12)
         adsr: { attack: 0.005, decay: 0.1, sustain: 0.75, release: 0.25 },
         assignedPresetIndex: 0,
-        assignedMidiChannel: 'all' // Todos os canais começam em 'TODOS (Layer)' por padrão!
+        assignedMidiChannel: 'all', // Todos os canais começam em 'TODOS (Layer)' por padrão!
+        keyRangeLow: 0,   // Dó-1 (Nota MIDI 0)
+        keyRangeHigh: 127 // Sol9 (Nota MIDI 127)
       };
 
       this.pitchBendSemi.set(ch, 0);
@@ -189,6 +191,13 @@ class SynthEngine {
 
       const isMatchingChannel = chConfig.assignedMidiChannel === 'all' || chConfig.assignedMidiChannel === channel || ch === channel;
       if (!isMatchingChannel) continue;
+
+      // Filtragem por Zona de Teclado (Split Min/Max)
+      const lowLimit = chConfig.keyRangeLow !== undefined ? chConfig.keyRangeLow : 0;
+      const highLimit = chConfig.keyRangeHigh !== undefined ? chConfig.keyRangeHigh : 127;
+      if (note < lowLimit || note > highLimit) {
+        continue; // Nota fora da região permitida para esta pista!
+      }
 
       const actualNote = Math.max(0, Math.min(127, note + (chConfig.transpose * 12) + (chConfig.semitoneTranspose || 0)));
       const voiceKey = `${ch}_${note}`;
