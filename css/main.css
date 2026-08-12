@@ -87,21 +87,15 @@ body {
 .app-brand {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 10px;
 }
 
-.app-logo-icon {
-  width: 30px;
-  height: 30px;
-  background: linear-gradient(135deg, var(--accent-cyan), var(--accent-purple));
-  border-radius: var(--radius-md);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: #fff;
-  font-weight: 800;
-  font-size: 16px;
-  box-shadow: 0 0 15px rgba(0, 242, 254, 0.4);
+.app-logo-img {
+  height: 32px;
+  width: 32px;
+  object-fit: contain;
+  mix-blend-mode: screen;
+  filter: drop-shadow(0 0 6px rgba(0, 242, 254, 0.4));
 }
 
 .app-title {
