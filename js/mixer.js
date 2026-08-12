@@ -1,7 +1,44 @@
 /**
- * MULTITIMBRIC MIXER CONSOLE MANAGER (WITH KEY ZONE RANGE SPLIT C-1..G9, INDIVIDUAL PRESET ASSIGNMENT & MIDI LEARN)
- * Gerenciador dinâmico de 16 pistas com seletor de Zona de Teclado (Split Min/Max), Transposição, Mute/Solo e Remoção.
+ * MULTITIMBRIC MIXER CONSOLE MANAGER (WITH KEYBOARD CAPTURE & TYPED SPLIT C0..C7)
+ * Gerenciador dinâmico de 16 pistas com marcação de Zona de Teclado (Split Min/Max) via clique no controlador MIDI físico ou digitação direta (ex: C0, C7).
  */
+
+function midiToNoteName(midiNum) {
+  if (midiNum === undefined || midiNum === null || isNaN(midiNum)) return 'C-1';
+  const noteNames = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'];
+  const octave = Math.floor(midiNum / 12) - 1;
+  const noteName = noteNames[midiNum % 12];
+  return `${noteName}${octave}`;
+}
+
+function noteNameToMidi(str) {
+  if (typeof str === 'number') return Math.max(0, Math.min(127, Math.round(str)));
+  if (!str) return null;
+  const clean = String(str).trim().toUpperCase()
+    .replace('DB', 'C#')
+    .replace('EB', 'D#')
+    .replace('GB', 'F#')
+    .replace('AB', 'G#')
+    .replace('BB', 'A#')
+    .replace('DO', 'C')
+    .replace('RE', 'D')
+    .replace('MI', 'E')
+    .replace('FA', 'F')
+    .replace('SOL', 'G')
+    .replace('LA', 'A')
+    .replace('SI', 'B');
+
+  const match = clean.match(/^([A-G]#?)(-?\d+)$/);
+  if (!match) return null;
+
+  const noteNames = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'];
+  const noteIndex = noteNames.indexOf(match[1]);
+  if (noteIndex === -1) return null;
+
+  const octave = parseInt(match[2], 10);
+  const midiNum = (octave + 1) * 12 + noteIndex;
+  return Math.max(0, Math.min(127, midiNum));
+}
 
 class MixerConsoleManager {
   constructor(synthEngine, vuMeterManager) {
@@ -110,26 +147,8 @@ class MixerConsoleManager {
       midiChanOptionsHtml += `<option value="${m}" ${isSelected}>MIDI CH ${m < 10 ? '0' + m : m}</option>`;
     }
 
-    // Tabela de Notas para Zona de Split (Key Zone Split)
-    const noteOptions = [
-      { val: 0, label: 'C-1 (Min)' },
-      { val: 12, label: 'C0' },
-      { val: 24, label: 'C1' },
-      { val: 36, label: 'C2' },
-      { val: 48, label: 'C3' },
-      { val: 60, label: 'C4 (Dó3)' },
-      { val: 72, label: 'C5' },
-      { val: 84, label: 'C6' },
-      { val: 96, label: 'C7' },
-      { val: 108, label: 'C8' },
-      { val: 127, label: 'G9 (Max)' }
-    ];
-
     const lowVal = chConfig.keyRangeLow !== undefined ? chConfig.keyRangeLow : 0;
     const highVal = chConfig.keyRangeHigh !== undefined ? chConfig.keyRangeHigh : 127;
-
-    const splitMinHtml = noteOptions.map(n => `<option value="${n.val}" ${n.val === lowVal ? 'selected' : ''}>${n.label}</option>`).join('');
-    const splitMaxHtml = noteOptions.map(n => `<option value="${n.val}" ${n.val === highVal ? 'selected' : ''}>${n.label}</option>`).join('');
 
     strip.innerHTML = `
       <div class="channel-header" title="Clique duas vezes sobre o nome para editar">
@@ -196,20 +215,13 @@ class MixerConsoleManager {
         </div>
       </div>
 
-      <!-- ZONA DE SPLIT DO TECLADO (MIN - MAX) -->
-      <div style="display: flex; gap: 4px; width: 100%; margin-top: 2px;">
-        <div class="knob-group" style="flex: 1;">
-          <div class="knob-label" style="color: var(--accent-cyan);">SPLIT MIN</div>
-          <select class="ch-split-min preset-select" data-channel="${ch}" style="font-size: 9px; padding: 2px;">
-            ${splitMinHtml}
-          </select>
-        </div>
-
-        <div class="knob-group" style="flex: 1;">
-          <div class="knob-label" style="color: var(--accent-cyan);">SPLIT MAX</div>
-          <select class="ch-split-max preset-select" data-channel="${ch}" style="font-size: 9px; padding: 2px;">
-            ${splitMaxHtml}
-          </select>
+      <!-- ZONA DE SPLIT DO TECLADO (DIGITAR EX: C0, C7 OU TOCAR NO CONTROLADOR MIDI) -->
+      <div class="knob-group" style="width: 100%; margin-top: 2px;">
+        <div class="knob-label" style="color: var(--accent-cyan);">SPLIT TECLADO</div>
+        <div style="display: flex; gap: 4px; width: 100%; align-items: center; justify-content: center;">
+          <input type="text" class="ch-split-low" data-channel="${ch}" value="${midiToNoteName(lowVal)}" placeholder="Início" title="Clique ou pressione uma tecla no controlador físico para gravar o Início (ex: C0, C2, C4)" style="width: 48%; text-align: center; font-family: var(--font-heading); font-weight: 800; font-size: 10px; padding: 2px 2px; background: rgba(0, 242, 254, 0.1); color: var(--accent-cyan); border: 1px solid rgba(0, 242, 254, 0.4); border-radius: 4px; outline: none; transition: all 0.2s ease;">
+          <span style="font-size: 8px; color: var(--text-muted); font-weight: 800;">à</span>
+          <input type="text" class="ch-split-high" data-channel="${ch}" value="${midiToNoteName(highVal)}" placeholder="Fim" title="Clique ou pressione uma tecla no controlador físico para gravar o Fim (ex: B3, C7, G9)" style="width: 48%; text-align: center; font-family: var(--font-heading); font-weight: 800; font-size: 10px; padding: 2px 2px; background: rgba(0, 242, 254, 0.1); color: var(--accent-cyan); border: 1px solid rgba(0, 242, 254, 0.4); border-radius: 4px; outline: none; transition: all 0.2s ease;">
         </div>
       </div>
 
@@ -386,23 +398,100 @@ class MixerConsoleManager {
       });
     }
 
-    // Split Min & Max Change Listeners
-    const splitMinSelect = strip.querySelector('.ch-split-min');
-    if (splitMinSelect) {
-      splitMinSelect.addEventListener('change', (e) => {
-        const val = parseInt(e.target.value, 10);
-        if (this.synth.channels[ch]) {
-          this.synth.channels[ch].keyRangeLow = val;
+    // Split Low Input: Digitação + Captura via Teclado Físico / Virtual
+    const splitLowInput = strip.querySelector('.ch-split-low');
+    if (splitLowInput) {
+      const updateLowVal = (newMidi) => {
+        if (newMidi !== null && newMidi >= 0 && newMidi <= 127) {
+          this.synth.channels[ch].keyRangeLow = newMidi;
+          splitLowInput.value = midiToNoteName(newMidi);
+          if (window.showToastNotification) {
+            window.showToastNotification('Split Início Definido', `Pista CH ${ch}: Início gravado em "${midiToNoteName(newMidi)}"`, 'info');
+          }
+        } else {
+          splitLowInput.value = midiToNoteName(this.synth.channels[ch].keyRangeLow);
+        }
+      };
+
+      const startLearnLow = () => {
+        splitLowInput.value = 'TOCAR...';
+        splitLowInput.style.borderColor = 'var(--accent-cyan)';
+        splitLowInput.style.boxShadow = '0 0 10px var(--accent-cyan)';
+
+        if (window.webMidi) {
+          window.webMidi.setNoteLearningCallback((noteNum) => {
+            splitLowInput.style.borderColor = '';
+            splitLowInput.style.boxShadow = '';
+            updateLowVal(noteNum);
+          });
+        }
+      };
+
+      splitLowInput.addEventListener('click', (e) => {
+        e.stopPropagation();
+        startLearnLow();
+      });
+
+      splitLowInput.addEventListener('change', (e) => {
+        const parsed = noteNameToMidi(e.target.value);
+        updateLowVal(parsed);
+      });
+
+      splitLowInput.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') {
+          e.preventDefault();
+          const parsed = noteNameToMidi(e.target.value);
+          updateLowVal(parsed);
+          splitLowInput.blur();
         }
       });
     }
 
-    const splitMaxSelect = strip.querySelector('.ch-split-max');
-    if (splitMaxSelect) {
-      splitMaxSelect.addEventListener('change', (e) => {
-        const val = parseInt(e.target.value, 10);
-        if (this.synth.channels[ch]) {
-          this.synth.channels[ch].keyRangeHigh = val;
+    // Split High Input: Digitação + Captura via Teclado Físico / Virtual
+    const splitHighInput = strip.querySelector('.ch-split-high');
+    if (splitHighInput) {
+      const updateHighVal = (newMidi) => {
+        if (newMidi !== null && newMidi >= 0 && newMidi <= 127) {
+          this.synth.channels[ch].keyRangeHigh = newMidi;
+          splitHighInput.value = midiToNoteName(newMidi);
+          if (window.showToastNotification) {
+            window.showToastNotification('Split Fim Definido', `Pista CH ${ch}: Fim gravado em "${midiToNoteName(newMidi)}"`, 'info');
+          }
+        } else {
+          splitHighInput.value = midiToNoteName(this.synth.channels[ch].keyRangeHigh);
+        }
+      };
+
+      const startLearnHigh = () => {
+        splitHighInput.value = 'TOCAR...';
+        splitHighInput.style.borderColor = 'var(--accent-purple)';
+        splitHighInput.style.boxShadow = '0 0 10px var(--accent-purple)';
+
+        if (window.webMidi) {
+          window.webMidi.setNoteLearningCallback((noteNum) => {
+            splitHighInput.style.borderColor = '';
+            splitHighInput.style.boxShadow = '';
+            updateHighVal(noteNum);
+          });
+        }
+      };
+
+      splitHighInput.addEventListener('click', (e) => {
+        e.stopPropagation();
+        startLearnHigh();
+      });
+
+      splitHighInput.addEventListener('change', (e) => {
+        const parsed = noteNameToMidi(e.target.value);
+        updateHighVal(parsed);
+      });
+
+      splitHighInput.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') {
+          e.preventDefault();
+          const parsed = noteNameToMidi(e.target.value);
+          updateHighVal(parsed);
+          splitHighInput.blur();
         }
       });
     }

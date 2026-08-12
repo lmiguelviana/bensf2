@@ -1,6 +1,6 @@
 /**
- * WEBMIDI CONTROLLER MANAGER (MULTI-DEVICE & MIDI LEARN)
- * Suporte a múltiplos teclados controladores MIDI (USB-OTG e Bluetooth) e automação MIDI Learn em tempo real.
+ * WEBMIDI CONTROLLER MANAGER (MULTI-DEVICE, MIDI LEARN & KEY RANGE LEARNING)
+ * Suporte a múltiplos teclados controladores MIDI (USB-OTG e Bluetooth), automação MIDI CC Learn e Aprendizado de Notas de Split em tempo real.
  */
 
 class WebMidiManager {
@@ -14,6 +14,7 @@ class WebMidiManager {
 
     this.ccCustomMappings = new Map(); // ccNum -> callback(normVal)
     this.learningCallback = null;
+    this.noteLearningCallback = null;
   }
 
   init(statusCallback) {
@@ -93,8 +94,13 @@ class WebMidiManager {
     this.learningCallback = callback;
   }
 
+  setNoteLearningCallback(callback) {
+    this.noteLearningCallback = callback;
+  }
+
   cancelLearning() {
     this.learningCallback = null;
+    this.noteLearningCallback = null;
   }
 
   addCcMapping(ccNum, callback) {
@@ -120,6 +126,14 @@ class WebMidiManager {
     switch (command) {
       case 0x90: // Note On
         if (velocityOrVal > 0) {
+          // Se houver um manipulador de aprendizado de Nota de Split (Key Zone Learn), acionar!
+          if (this.noteLearningCallback) {
+            const cb = this.noteLearningCallback;
+            this.noteLearningCallback = null;
+            cb(noteOrCc);
+            return;
+          }
+
           this.synth.noteOn(noteOrCc, velocityOrVal, targetChannel);
         } else {
           this.synth.noteOff(noteOrCc, targetChannel);
