@@ -151,7 +151,7 @@
           <!-- Renderizado dinamicamente via MixerConsoleManager -->
         </div>
 
-        <!-- Painel de Efeitos INDIVIDUAL por Pista (Com ADSR, Cutoff Filter, Stereo Chorus & Valhalla Reverbs) -->
+        <!-- Painel de Efeitos INDIVIDUAL por Pista (Com botões Reset ↺ para restaurar padrão) -->
         <div class="track-fx-subcard" style="background: rgba(12, 16, 25, 0.7); border-radius: var(--radius-md); padding: 10px; border: 1px solid rgba(0, 242, 254, 0.2);">
           <div class="card-title" style="margin-bottom: 8px;">
             <span id="fxRackTitleText" style="color: var(--accent-cyan); font-weight: 800;">EFEITOS DA PISTA - CH 01: LAYER 1</span>
@@ -163,7 +163,7 @@
             <div class="fx-module-card" style="align-items: center;">
               <div class="fx-module-title" style="width: 100%;">
                 <span>ENVELOPE ADSR (SOM)</span>
-                <span style="font-size: 9px; color: var(--accent-cyan);">AMPLITUDE</span>
+                <button id="btnResetTrackAdsr" class="btn btn-reset-fx" title="Restaurar envelope padrão">↺ Reset</button>
               </div>
               <div style="display: flex; gap: 8px; justify-content: center; width: 100%; margin-top: 4px;">
                 <div id="knobTrackAdsrAttack"></div>
@@ -177,7 +177,10 @@
             <div class="fx-module-card" style="align-items: center;">
               <div class="fx-module-title" style="width: 100%;">
                 <span>FILTRO CUTOFF</span>
-                <button id="btnTrackCutoffToggle" class="btn btn-sm btn-fx-toggle">OFF</button>
+                <div style="display: flex; gap: 6px; align-items: center;">
+                  <button id="btnResetTrackCutoff" class="btn btn-reset-fx" title="Restaurar Cutoff padrão">↺ Reset</button>
+                  <button id="btnTrackCutoffToggle" class="btn btn-sm btn-fx-toggle">OFF</button>
+                </div>
               </div>
               <div style="display: flex; gap: 12px; justify-content: center; width: 100%; margin-top: 4px;">
                 <div id="knobTrackCutoff"></div>
@@ -188,7 +191,10 @@
             <div class="fx-module-card" style="align-items: center;">
               <div class="fx-module-title" style="width: 100%;">
                 <span>EQ POR PISTA</span>
-                <button id="btnTrackEqToggle" class="btn btn-sm btn-fx-toggle">OFF</button>
+                <div style="display: flex; gap: 6px; align-items: center;">
+                  <button id="btnResetTrackEq" class="btn btn-reset-fx" title="Restaurar EQ padrão">↺ Reset</button>
+                  <button id="btnTrackEqToggle" class="btn btn-sm btn-fx-toggle">OFF</button>
+                </div>
               </div>
               <div style="display: flex; gap: 12px; justify-content: center; width: 100%; margin-top: 4px;">
                 <div id="knobTrackEqLow"></div>
@@ -201,7 +207,10 @@
             <div class="fx-module-card" style="align-items: center;">
               <div class="fx-module-title" style="width: 100%;">
                 <span>CHORUS ESTÉREO</span>
-                <button id="btnTrackChorusToggle" class="btn btn-sm btn-fx-toggle">OFF</button>
+                <div style="display: flex; gap: 6px; align-items: center;">
+                  <button id="btnResetTrackChorus" class="btn btn-reset-fx" title="Restaurar Chorus padrão">↺ Reset</button>
+                  <button id="btnTrackChorusToggle" class="btn btn-sm btn-fx-toggle">OFF</button>
+                </div>
               </div>
               <div style="display: flex; gap: 12px; justify-content: center; width: 100%; margin-top: 4px;">
                 <div id="knobTrackChorusMix"></div>
@@ -212,7 +221,10 @@
             <div class="fx-module-card" style="align-items: center;">
               <div class="fx-module-title" style="width: 100%;">
                 <span>DELAY POR PISTA</span>
-                <button id="btnTrackDelayToggle" class="btn btn-sm btn-fx-toggle">OFF</button>
+                <div style="display: flex; gap: 6px; align-items: center;">
+                  <button id="btnResetTrackDelay" class="btn btn-reset-fx" title="Restaurar Delay padrão">↺ Reset</button>
+                  <button id="btnTrackDelayToggle" class="btn btn-sm btn-fx-toggle">OFF</button>
+                </div>
               </div>
               <div style="display: flex; gap: 16px; justify-content: center; width: 100%; margin-top: 4px;">
                 <div id="knobTrackDelayTime"></div>
@@ -224,7 +236,10 @@
             <div class="fx-module-card" style="align-items: center;">
               <div class="fx-module-title" style="width: 100%;">
                 <span>REVERB POR PISTA</span>
-                <button id="btnTrackReverbToggle" class="btn btn-sm btn-fx-toggle">OFF</button>
+                <div style="display: flex; gap: 6px; align-items: center;">
+                  <button id="btnResetTrackReverb" class="btn btn-reset-fx" title="Restaurar Reverb padrão">↺ Reset</button>
+                  <button id="btnTrackReverbToggle" class="btn btn-sm btn-fx-toggle">OFF</button>
+                </div>
               </div>
 
               <!-- Seletor de Modo Valhalla -->
@@ -251,7 +266,7 @@
         </div>
       </section>
 
-      <!-- Section: Rack de Processamento de Efeitos MASTER GLOBAL (Com Valhalla Reverb Modes & Chorus) -->
+      <!-- Section: Rack de Processamento de Efeitos MASTER GLOBAL (Com Valhalla Reverb Modes, Chorus e Reset) -->
       <section id="sectionFxRack" class="glass-card" style="display: none;">
         <div class="card-title">
           <span style="color: var(--accent-purple); font-weight: 800; font-size: 14px;">RACK DE EFEITOS MASTER GLOBAL (SAÍDA GERAL)</span>
@@ -264,7 +279,10 @@
           <div class="fx-module-card" style="align-items: center;">
             <div class="fx-module-title" style="width: 100%;">
               <span>Equalizador Master (3-Band)</span>
-              <button id="btnMasterEqToggle" class="btn btn-sm btn-fx-toggle">OFF</button>
+              <div style="display: flex; gap: 6px; align-items: center;">
+                <button id="btnResetMasterEq" class="btn btn-reset-fx" title="Restaurar EQ Master padrão">↺ Reset</button>
+                <button id="btnMasterEqToggle" class="btn btn-sm btn-fx-toggle">OFF</button>
+              </div>
             </div>
             
             <div style="display: flex; gap: 16px; justify-content: center; width: 100%; margin-top: 8px;">
@@ -278,7 +296,10 @@
           <div class="fx-module-card" style="align-items: center;">
             <div class="fx-module-title" style="width: 100%;">
               <span>Stereo Chorus Master</span>
-              <button id="btnMasterChorusToggle" class="btn btn-sm btn-fx-toggle">OFF</button>
+              <div style="display: flex; gap: 6px; align-items: center;">
+                <button id="btnResetMasterChorus" class="btn btn-reset-fx" title="Restaurar Chorus Master padrão">↺ Reset</button>
+                <button id="btnMasterChorusToggle" class="btn btn-sm btn-fx-toggle">OFF</button>
+              </div>
             </div>
             
             <div style="display: flex; gap: 16px; justify-content: center; width: 100%; margin-top: 8px;">
@@ -290,7 +311,10 @@
           <div class="fx-module-card" style="align-items: center;">
             <div class="fx-module-title" style="width: 100%;">
               <span>Stereo Delay Master</span>
-              <button id="btnMasterDelayToggle" class="btn btn-sm btn-fx-toggle">OFF</button>
+              <div style="display: flex; gap: 6px; align-items: center;">
+                <button id="btnResetMasterDelay" class="btn btn-reset-fx" title="Restaurar Delay Master padrão">↺ Reset</button>
+                <button id="btnMasterDelayToggle" class="btn btn-sm btn-fx-toggle">OFF</button>
+              </div>
             </div>
             
             <div style="display: flex; gap: 20px; justify-content: center; width: 100%; margin-top: 8px;">
@@ -303,7 +327,10 @@
           <div class="fx-module-card" style="align-items: center;">
             <div class="fx-module-title" style="width: 100%;">
               <span>Reverb Estéreo Master</span>
-              <button id="btnMasterReverbToggle" class="btn btn-sm btn-fx-toggle">OFF</button>
+              <div style="display: flex; gap: 6px; align-items: center;">
+                <button id="btnResetMasterReverb" class="btn btn-reset-fx" title="Restaurar Reverb Master padrão">↺ Reset</button>
+                <button id="btnMasterReverbToggle" class="btn btn-sm btn-fx-toggle">OFF</button>
+              </div>
             </div>
             
             <!-- Seletor de Modo Valhalla Master -->

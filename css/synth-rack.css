@@ -51,6 +51,29 @@
   box-shadow: 0 0 8px rgba(0, 230, 118, 0.3);
 }
 
+.btn-reset-fx {
+  padding: 2px 6px;
+  font-size: 10px;
+  font-weight: 800;
+  border-radius: 4px;
+  background: rgba(255, 255, 255, 0.05);
+  color: var(--text-muted);
+  border: 1px solid var(--bg-card-border);
+  cursor: pointer;
+  transition: all 0.2s ease;
+  line-height: 1;
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+}
+
+.btn-reset-fx:hover {
+  background: rgba(0, 242, 254, 0.15);
+  color: var(--accent-cyan);
+  border-color: var(--accent-cyan);
+  box-shadow: 0 0 8px rgba(0, 242, 254, 0.3);
+}
+
 .fx-control-row {
   display: flex;
   align-items: center;

@@ -1,6 +1,6 @@
 /**
  * MASTER APPLICATION CONTROLLER
- * Liga a interface UI ao motor de síntese SF2, Mixer Console, Master FX, FX por Pista com Envelope ADSR, Algoritmos Valhalla, Chorus Estéreo, Cutoff e Modal de Configurações.
+ * Liga a interface UI ao motor de síntese SF2, Mixer Console, Master FX, FX por Pista com Envelope ADSR, Algoritmos Valhalla, Chorus Estéreo, Cutoff, Botões Reset e Modal de Configurações.
  */
 
 document.addEventListener('DOMContentLoaded', () => {
@@ -204,7 +204,7 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
-  // 1. MASTER FX CONTROLS & ALGORITMOS VALHALLA & CHORUS ESTÉREO
+  // 1. MASTER FX CONTROLS & ALGORITMOS VALHALLA & CHORUS ESTÉREO & BOTÕES RESET
   const btnMasterEqToggle = document.getElementById('btnMasterEqToggle');
   if (btnMasterEqToggle) {
     btnMasterEqToggle.addEventListener('click', () => {
@@ -248,23 +248,25 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
+  let knobMasterLow, knobMasterMid, knobMasterHigh, knobMasterChorusMix, knobMasterDelayTime, knobMasterDelayMix, knobMasterReverbSize, knobMasterReverbMix;
+
   const knobMasterLowEl = document.getElementById('knobMasterEqLow');
   if (knobMasterLowEl) {
-    new RotaryKnob(knobMasterLowEl, {
+    knobMasterLow = new RotaryKnob(knobMasterLowEl, {
       title: 'GRAVE', min: -12, max: 12, step: 0.5, value: 0, unit: 'dB',
       onChange: (val) => fxRack.setMasterEqLowGain(val)
     });
   }
   const knobMasterMidEl = document.getElementById('knobMasterEqMid');
   if (knobMasterMidEl) {
-    new RotaryKnob(knobMasterMidEl, {
+    knobMasterMid = new RotaryKnob(knobMasterMidEl, {
       title: 'MÉDIO', min: -12, max: 12, step: 0.5, value: 0, unit: 'dB',
       onChange: (val) => fxRack.setMasterEqMidGain(val)
     });
   }
   const knobMasterHighEl = document.getElementById('knobMasterEqHigh');
   if (knobMasterHighEl) {
-    new RotaryKnob(knobMasterHighEl, {
+    knobMasterHigh = new RotaryKnob(knobMasterHighEl, {
       title: 'AGUDO', min: -12, max: 12, step: 0.5, value: 0, unit: 'dB',
       onChange: (val) => fxRack.setMasterEqHighGain(val)
     });
@@ -272,7 +274,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
   const knobMasterChorusMixEl = document.getElementById('knobMasterChorusMix');
   if (knobMasterChorusMixEl) {
-    new RotaryKnob(knobMasterChorusMixEl, {
+    knobMasterChorusMix = new RotaryKnob(knobMasterChorusMixEl, {
       title: 'CHORUS', min: 0, max: 100, step: 1, value: 30, unit: '%',
       onChange: (val) => fxRack.setMasterChorusMix(val / 100.0)
     });
@@ -280,14 +282,14 @@ document.addEventListener('DOMContentLoaded', () => {
 
   const knobMasterDelayTimeEl = document.getElementById('knobMasterDelayTime');
   if (knobMasterDelayTimeEl) {
-    new RotaryKnob(knobMasterDelayTimeEl, {
+    knobMasterDelayTime = new RotaryKnob(knobMasterDelayTimeEl, {
       title: 'TEMPO', min: 50, max: 1000, step: 10, value: 300, unit: 'ms',
       onChange: (val) => fxRack.setMasterDelayTime(val / 1000.0)
     });
   }
   const knobMasterDelayMixEl = document.getElementById('knobMasterDelayMix');
   if (knobMasterDelayMixEl) {
-    new RotaryKnob(knobMasterDelayMixEl, {
+    knobMasterDelayMix = new RotaryKnob(knobMasterDelayMixEl, {
       title: 'MISTURA', min: 0, max: 100, step: 1, value: 20, unit: '%',
       onChange: (val) => fxRack.setMasterDelayMix(val / 100.0)
     });
@@ -295,20 +297,87 @@ document.addEventListener('DOMContentLoaded', () => {
 
   const knobMasterReverbSizeEl = document.getElementById('knobMasterReverbSize');
   if (knobMasterReverbSizeEl) {
-    new RotaryKnob(knobMasterReverbSizeEl, {
+    knobMasterReverbSize = new RotaryKnob(knobMasterReverbSizeEl, {
       title: 'SALA', min: 10, max: 100, step: 1, value: 40, unit: '%',
       onChange: (val) => fxRack.setMasterReverbSize(val / 100.0)
     });
   }
   const knobMasterReverbMixEl = document.getElementById('knobMasterReverbMix');
   if (knobMasterReverbMixEl) {
-    new RotaryKnob(knobMasterReverbMixEl, {
+    knobMasterReverbMix = new RotaryKnob(knobMasterReverbMixEl, {
       title: 'MISTURA', min: 0, max: 100, step: 1, value: 25, unit: '%',
       onChange: (val) => fxRack.setMasterReverbMix(val / 100.0)
     });
   }
 
-  // 2. PER-TRACK FX CONTROLS & ENVELOPE ADSR & FILTRO CUTOFF & STEREO CHORUS & ALGORITMOS VALHALLA
+  // Master Resets
+  const btnResetMasterEq = document.getElementById('btnResetMasterEq');
+  if (btnResetMasterEq) {
+    btnResetMasterEq.addEventListener('click', () => {
+      fxRack.setMasterEqLowGain(0);
+      fxRack.setMasterEqMidGain(0);
+      fxRack.setMasterEqHighGain(0);
+      fxRack.toggleMasterEq(false);
+      if (knobMasterLow) knobMasterLow.setValue(0);
+      if (knobMasterMid) knobMasterMid.setValue(0);
+      if (knobMasterHigh) knobMasterHigh.setValue(0);
+      if (btnMasterEqToggle) {
+        btnMasterEqToggle.classList.remove('active');
+        btnMasterEqToggle.textContent = 'OFF';
+      }
+      showToastNotification('EQ Master Restaurado', 'Equalizador Master zerado em 0dB (OFF).', 'info');
+    });
+  }
+
+  const btnResetMasterChorus = document.getElementById('btnResetMasterChorus');
+  if (btnResetMasterChorus) {
+    btnResetMasterChorus.addEventListener('click', () => {
+      fxRack.setMasterChorusMix(0.3);
+      fxRack.toggleMasterChorus(false);
+      if (knobMasterChorusMix) knobMasterChorusMix.setValue(30);
+      if (btnMasterChorusToggle) {
+        btnMasterChorusToggle.classList.remove('active');
+        btnMasterChorusToggle.textContent = 'OFF';
+      }
+      showToastNotification('Chorus Master Restaurado', 'Chorus Master reiniciado para 30% (OFF).', 'info');
+    });
+  }
+
+  const btnResetMasterDelay = document.getElementById('btnResetMasterDelay');
+  if (btnResetMasterDelay) {
+    btnResetMasterDelay.addEventListener('click', () => {
+      fxRack.setMasterDelayTime(0.3);
+      fxRack.setMasterDelayMix(0.2);
+      fxRack.toggleMasterDelay(false);
+      if (knobMasterDelayTime) knobMasterDelayTime.setValue(300);
+      if (knobMasterDelayMix) knobMasterDelayMix.setValue(20);
+      if (btnMasterDelayToggle) {
+        btnMasterDelayToggle.classList.remove('active');
+        btnMasterDelayToggle.textContent = 'OFF';
+      }
+      showToastNotification('Delay Master Restaurado', 'Delay Master reiniciado para 300ms / 20% (OFF).', 'info');
+    });
+  }
+
+  const btnResetMasterReverb = document.getElementById('btnResetMasterReverb');
+  if (btnResetMasterReverb) {
+    btnResetMasterReverb.addEventListener('click', () => {
+      fxRack.setMasterReverbMode('concert_hall');
+      fxRack.setMasterReverbSize(0.4);
+      fxRack.setMasterReverbMix(0.25);
+      fxRack.toggleMasterReverb(false);
+      if (selectMasterReverbMode) selectMasterReverbMode.value = 'concert_hall';
+      if (knobMasterReverbSize) knobMasterReverbSize.setValue(40);
+      if (knobMasterReverbMix) knobMasterReverbMix.setValue(25);
+      if (btnMasterReverbToggle) {
+        btnMasterReverbToggle.classList.remove('active');
+        btnMasterReverbToggle.textContent = 'OFF';
+      }
+      showToastNotification('Reverb Master Restaurado', 'Reverb Master retornado ao Concert Hall 40%/25% (OFF).', 'info');
+    });
+  }
+
+  // 2. PER-TRACK FX CONTROLS & ADSR & CUTOFF & CHORUS & VALHALLA REVERBS & BOTÕES RESET
   let knobTrackAdsrAttack, knobTrackAdsrDecay, knobTrackAdsrSustain, knobTrackAdsrRelease;
 
   const knobAttackEl = document.getElementById('knobTrackAdsrAttack');
@@ -506,6 +575,102 @@ document.addEventListener('DOMContentLoaded', () => {
     knobTrackReverbMix = new RotaryKnob(knobTrackReverbMixEl, {
       title: 'MISTURA', min: 0, max: 100, step: 1, value: 25, unit: '%',
       onChange: (val) => fxRack.setReverbMix(val / 100.0)
+    });
+  }
+
+  // Per-Track Resets
+  const btnResetTrackAdsr = document.getElementById('btnResetTrackAdsr');
+  if (btnResetTrackAdsr) {
+    btnResetTrackAdsr.addEventListener('click', () => {
+      const ch = fxRack.selectedChannel;
+      if (synth.channels[ch]) {
+        synth.channels[ch].adsr = { attack: 0.005, decay: 0.1, sustain: 0.75, release: 0.25 };
+        if (knobTrackAdsrAttack) knobTrackAdsrAttack.setValue(5);
+        if (knobTrackAdsrDecay) knobTrackAdsrDecay.setValue(100);
+        if (knobTrackAdsrSustain) knobTrackAdsrSustain.setValue(75);
+        if (knobTrackAdsrRelease) knobTrackAdsrRelease.setValue(250);
+        showToastNotification('ADSR Restaurado', 'Envelope retornado ao padrão (5ms A, 100ms D, 75% S, 250ms R).', 'info');
+      }
+    });
+  }
+
+  const btnResetTrackCutoff = document.getElementById('btnResetTrackCutoff');
+  if (btnResetTrackCutoff) {
+    btnResetTrackCutoff.addEventListener('click', () => {
+      fxRack.setCutoffFrequency(20000);
+      fxRack.toggleTrackCutoff(false);
+      if (knobTrackCutoff) knobTrackCutoff.setValue(20000);
+      if (btnTrackCutoffToggle) {
+        btnTrackCutoffToggle.classList.remove('active');
+        btnTrackCutoffToggle.textContent = 'OFF';
+      }
+      showToastNotification('Cutoff Restaurado', 'Filtro reiniciado para 20.000Hz (OFF).', 'info');
+    });
+  }
+
+  const btnResetTrackEq = document.getElementById('btnResetTrackEq');
+  if (btnResetTrackEq) {
+    btnResetTrackEq.addEventListener('click', () => {
+      fxRack.setEqLowGain(0);
+      fxRack.setEqMidGain(0);
+      fxRack.setEqHighGain(0);
+      fxRack.toggleTrackEq(false);
+      if (knobTrackEqLow) knobTrackEqLow.setValue(0);
+      if (knobTrackEqMid) knobTrackEqMid.setValue(0);
+      if (knobTrackEqHigh) knobTrackEqHigh.setValue(0);
+      if (btnTrackEqToggle) {
+        btnTrackEqToggle.classList.remove('active');
+        btnTrackEqToggle.textContent = 'OFF';
+      }
+      showToastNotification('EQ Restaurado', 'Equalizador zerado em 0dB (OFF).', 'info');
+    });
+  }
+
+  const btnResetTrackChorus = document.getElementById('btnResetTrackChorus');
+  if (btnResetTrackChorus) {
+    btnResetTrackChorus.addEventListener('click', () => {
+      fxRack.setChorusMix(0.3);
+      fxRack.toggleTrackChorus(false);
+      if (knobTrackChorusMix) knobTrackChorusMix.setValue(30);
+      if (btnTrackChorusToggle) {
+        btnTrackChorusToggle.classList.remove('active');
+        btnTrackChorusToggle.textContent = 'OFF';
+      }
+      showToastNotification('Chorus Restaurado', 'Chorus reiniciado para 30% (OFF).', 'info');
+    });
+  }
+
+  const btnResetTrackDelay = document.getElementById('btnResetTrackDelay');
+  if (btnResetTrackDelay) {
+    btnResetTrackDelay.addEventListener('click', () => {
+      fxRack.setDelayTime(0.3);
+      fxRack.setDelayMix(0.2);
+      fxRack.toggleTrackDelay(false);
+      if (knobTrackDelayTime) knobTrackDelayTime.setValue(300);
+      if (knobTrackDelayMix) knobTrackDelayMix.setValue(20);
+      if (btnTrackDelayToggle) {
+        btnTrackDelayToggle.classList.remove('active');
+        btnTrackDelayToggle.textContent = 'OFF';
+      }
+      showToastNotification('Delay Restaurado', 'Delay reiniciado para 300ms / 20% (OFF).', 'info');
+    });
+  }
+
+  const btnResetTrackReverb = document.getElementById('btnResetTrackReverb');
+  if (btnResetTrackReverb) {
+    btnResetTrackReverb.addEventListener('click', () => {
+      fxRack.setTrackReverbMode('concert_hall');
+      fxRack.setReverbSize(0.4);
+      fxRack.setReverbMix(0.25);
+      fxRack.toggleTrackReverb(false);
+      if (selectTrackReverbMode) selectTrackReverbMode.value = 'concert_hall';
+      if (knobTrackReverbSize) knobTrackReverbSize.setValue(40);
+      if (knobTrackReverbMix) knobTrackReverbMix.setValue(25);
+      if (btnTrackReverbToggle) {
+        btnTrackReverbToggle.classList.remove('active');
+        btnTrackReverbToggle.textContent = 'OFF';
+      }
+      showToastNotification('Reverb Restaurado', 'Reverb retornado ao Concert Hall 40%/25% (OFF).', 'info');
     });
   }
 
