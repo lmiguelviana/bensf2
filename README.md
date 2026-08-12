@@ -1,116 +1,114 @@
 # 🎹 BenSF2 - Live Sampler Workstation & Synthesizer Rig
 
-![BenSF2 Banner](assets/icon-512.png)
+<p align="center">
+  <img src="assets/icon-512.png" alt="BenSF2 Logo" width="160" style="border-radius: 24px; box-shadow: 0 10px 30px rgba(0,242,254,0.3);" />
+</p>
 
-**BenSF2** é uma **Workstation de Síntese Sampler de SF2 e Rack de Efeitos** de alta performance, desenvolvida para execução ao vivo com teclados controladores MIDI físicos (USB-OTG e Bluetooth) em ambiente **Desktop (Electron)** e **Mobile (PWA / Google Play Store TWA)**.
+<p align="center">
+  <b>Uma Workstation Profissional de Síntese Sampler SoundFont (SF2), Split de Teclado & Rack de Efeitos DSP em Tempo Real.</b>
+</p>
 
----
-
-## ✨ Principais Funcionalidades
-
-### 🔊 1. Motor de Síntese Polyphonic SF2 Wavetable
-- **Parser Binário Direto**: Leitura e parsing binário nativo em JavaScript de arquivos `.sf2` (SoundFont 2) com alinhamento exato de 46 bytes no bloco `shdr`.
-- **Pontos de Looping Infinito**: Suporte automático a `startLoop` e `endLoop` para sustentação contínua de órgãos, pads, cordas e sintetizadores.
-- **Polifonia Dinâmica**: Ajuste automático (32 vozes em mobile, 64/128 vozes em desktop) ou limite customizável pelo usuário.
-- **Sensibilidade ao Toque**: Curvas de velocidade customizáveis (*Soft*, *Normal*, *Hard*).
-- **Pitch Bend em Tempo Real**: Deslocamento suave de tom por semitons sem interrupção das amostras ativas.
-
-### 🎛️ 2. Mixer Console Multitimbrico (16 Canais & Layers)
-- **Seleção de Timbres por Pista**: Cada uma das 16 faixas possui seu próprio menu suspenso para atribuição individual de qualquer instrumento do banco SF2.
-- **Roteamento de Canais MIDI**: Cada pista pode escutar um canal MIDI específico (`CH 01` a `CH 16`) ou `TODOS (Layer)` para empilhamento de timbres.
-- **Controles de Mixagem**: Fader vertical de volume (0 a 100%), slider de Panorama (PAN L/R), Transposição de Oitava (-2 a +2 oitavas), Mute (M) e Solo (S).
-- **VU Meters Estéreo**: VU meters individuais em Canvas de alta taxa de atualização com gradientes de LED cyan-para-amarelo e clip indicador.
-- **Seleção Dinâmica de Pistas**: Alternância rápida entre visualização de 4, 8, 12 ou 16 pistas completas.
-
-### 🏛️ 3. Rack de Processamento de Efeitos Master (FX Rack)
-- **Equalizador 3-Bandas**: Controles VST com Knobs 3D metálicos interativos (Grave 100Hz, Médio 1kHz, Agudo 8kHz).
-- **Stereo Delay / Echo**: Tempo ajustável (50ms a 1000ms) e controle de mistura Wet/Dry.
-- **Reverb Estéreo**: Resposta de impulso convolutora sintética com tamanho de sala ajustável (10 a 100%) e mistura Wet/Dry.
-- **Master Limiter (🛡️ Proteção Ativa -1.0 dB)**: Prevenção automática de distorção ou *clipping* em alto-falantes de dispositivos móveis.
-
-### 🔌 4. WebMIDI API & Suporte a Múltiplos Controladores Físicos
-- **Detecção Automática Plug-and-Play**: Conexão rápida via cabo USB-OTG ou Bluetooth MIDI.
-- **Múltiplos Controladores Simultâneos**: Permite atribuir diferentes teclados físicos a canais MIDI independentes (ex: Controlador A na Pista 1, Controlador B na Pista 2).
-- **Suporte Completo a CC**: Mapeamento de Pedal de Sustain (CC64), ModWheel (CC1), Volume Master (CC7) e Pitch Bend.
-- **Iluminação em Tempo Real**: Feedback visual instantâneo das teclas pressionadas no controlador físico.
-
-### ⚙️ 5. Painel de Configurações (`⚙️ Configurações`)
-- **Dispositivo de Saída de Áudio**: Seleção dinâmica de alto-falantes/fones via `setSinkId`.
-- **Taxa de Amostragem (*Sample Rate*)**: Suporte a 44.1 kHz, 48.0 kHz e 96.0 kHz.
-- **Buffer de Áudio / Latência**: Opções de 128 amostras (~2.9ms), 256 amostras (~5.8ms), 512 amostras e 1024 amostras.
-- **Mapeamento de Controladores**: Painel dinâmico para gerenciamento de dispositivos MIDI conectados.
-
-### 🎹 6. Teclado Virtual 100% Fluido & Responsivo
-- **Extensão Configurável**: Alternância entre 2 Oitavas (24 teclas), 5 Oitavas (61 teclas - padrão sintetizador) e 7 Oitavas (88 teclas - piano completo).
-- **Layout Adaptável**: Teclas em porcentagem relativa (`flex: 1 1 0%`) para preenchimento de ponta a ponta sem espaços pretos vazios.
-- **Atalhos QWERTY**: Mapeamento para tocar no teclado do computador (`A-S-D-F` para brancas, `W-E-T-Y` para pretas, `Z/X` para oitavas, `Espaço` para Mute).
-
-### 💾 7. Sistema de Presets & Performance Handoff
-- **Salvamento Local e Exportação JSON**: Presets salvos via LocalStorage ou exportados como arquivos `.json` reutilizáveis.
-- **Atalho Rápido**: `Ctrl+S` / `Cmd+S` para salvar o preset do rig atual instantaneamente.
+<p align="center">
+  <b>Desenvolvido por <a href="https://github.com/lmiguelviana">Miguel Viana</a></b>
+</p>
 
 ---
 
-## 🛠️ Arquitetura do Projeto
+## 🌟 Sobre o Projeto
+
+O **BenSF2** é uma **Workstation Multitímbrica de Áudio (DAW / Live Rig)** de ultra-baixa latência desenvolvida para performances ao vivo e produções musicais. O sistema permite carregar qualquer arquivo `.sf2` (SoundFont 2), empilhar camadas (*Layers*), dividir zonas de notas no teclado (*Split*), aplicar efeitos DSP em cada faixa e automatizar parâmetros via controladores MIDI físicos (USB-OTG e Bluetooth) em ambiente **Desktop (Electron)** ou **Web/Mobile (PWA / TWA)**.
+
+---
+
+## ✨ Destaques & Principais Funcionalidades
+
+### 👨‍💻 Criador & Desenvolvedor Principal
+- **Desenvolvido por:** **Miguel Viana** ([@lmiguelviana](https://github.com/lmiguelviana))
+- **Foco de Engenharia:** Síntese Web Audio DSP, WebMIDI API, Parsing Binário SF2 e Interface Glassmorphic para Performance ao Vivo.
+
+---
+
+### 🎹 1. Split Interativo de Teclado & Key Zones (`C0..C7`)
+- **Divisão Flexível de Zonas**: Cada uma das 16 pistas possui definição independente de faixa de notas (`SPLIT MIN` e `SPLIT MAX`).
+- **Gravação Automática no Controlador Físico**: Clique no campo e toque qualquer tecla no seu teclado MIDI (USB/Bluetooth) ou teclado virtual para definir o limite instantaneamente!
+- **Digitação Direta**: Suporta notação universal em inglês (`C0`, `C7`, `B3`, `F#4`) e em português (`DO2`, `RE4`, `SOL5`).
+- **Layering Global (`TODOS`)**: Por padrão, todas as pistas começam prontas para empilhamento layered no controlador.
+
+### 🔊 2. Motor de Síntese SoundFont 2 (SF2) de Baixa Latência
+- **Parser Binário Direto**: Leitura binária nativa de arquivos `.sf2` com alinhamento preciso de blocos de áudio.
+- **Sustentação Limpa (Zero Lag)**: Sistema inteligente de cancelamento de vozes anteriores (*Voice Stealing & Fade-ramp*) que elimina engasgos, estalos e lag em instrumentos sustentados (p. ex., Violinos, Strings e Organ).
+- **Atribuição Direta e Exclusiva de Timbres**: Clique em um instrumento do banco para atribuí-lo diretamente à pista selecionada.
+
+### 🎛️ 3. Mixer Multitímbrico de 16 Pistas
+- **Controles Completos por Canal**: Volume com VU Meter em Canvas a 60 FPS, PAN Estéreo, Transposição por Oitava (-2 a +2) e Semitom (-12 a +12 semitons).
+- **Controle de Release & ADSR**: Ajuste dinâmico de ataque, decaimento, sustentação e tempo de liberação do som por faixa.
+- **Funções Mute (M), Solo (S) e Edição Inline**: Edite o nome de cada faixa com duplo clique e gerencie pistas com facilidade.
+
+### 🏛️ 4. Efeitos DSP Individuais & Master FX Rack
+- **Módulos FX por Pista e Master**: Envelope ADSR, Cutoff Filter, Equalizador 3-Bandas, Chorus Estéreo 3D, Delay/Echo e Reverb Convolutor.
+- **Botões de Reset Instantâneo (`↺ Reset`)**: Volte qualquer módulo aos valores padrão com apenas um clique.
+- **Master Limiter Incorporado**: Proteção ativa contra *clipping* e distorção em alto-falantes e fones.
+
+### 🔌 5. Automação & MIDI Learn Universal
+- **Mapeamento via Botão Direito**: Clique com o botão direito em qualquer knob do sistema para mapear rapidamente a um fader, knob ou slider do seu controlador MIDI físico.
+- **Conectividade Total**: Suporte Plug-and-Play para pedais de sustain (CC64), ModWheel (CC1), Pitch Bend e volume de canal.
+
+---
+
+## 📁 Estrutura de Arquivos
 
 ```
-sf2/
-├── assets/
-│   ├── icon-192.png
-│   └── icon-512.png
-├── css/
-│   ├── main.css          # Design system Dark Glassmorphic e layout fluido
-│   ├── mixer.css         # Estilos do Mixer Console e faders
-│   ├── synth-rack.css    # Layout dos módulos do FX Rack
-│   └── knob.css          # Estilização dos Knobs 3D metallizados
-├── js/
+bensf2/
+├── assets/               # Ícones e recursos visuais
+├── css/                  # Estilos CSS Vanilla Glassmorphism
+│   ├── main.css          # Tema principal e design system dark
+│   ├── mixer.css         # Console do mixer de 16 pistas
+│   ├── synth-rack.css    # Rack de efeitos FX
+│   └── knob.css          # Estilo dos knobs 3D
+├── js/                   # Arquivos de Lógica & Engine
 │   ├── audio-context.js  # Gerenciador global do Web Audio Context
-│   ├── sf2-parser.js     # Parser binário SF2 com alinhamento 46-byte shdr
-│   ├── synth-engine.js   # Motor de síntese polifônica e envelopes ADSR
-│   ├── fx-rack.js        # Módulos de EQ 3-Band, Delay, Reverb e Limiter
-│   ├── vu-meter.js       # VU meters estéreo em Canvas 60 FPS
-│   ├── mixer.js          # Console do Mixer Multitimbrico de 16 canais
-│   ├── web-midi.js       # Gerenciador WebMIDI com suporte a múltiplos controladores
-│   ├── settings-modal.js # Gerenciador do Modal de Configurações de Áudio & MIDI
-│   ├── preset-manager.js # Gerenciador de Presets (JSON & LocalStorage)
-│   ├── knob-component.js # Componente de Knob Giratório 3D
-│   └── app.js            # Controller mestre do aplicativo UI
-├── index.html            # Estrutura principal com abas e janela Electron
-├── main.js               # Processo principal Electron (janela frameless)
-├── preload.js            # Script de preload seguro do Electron
-├── manifest.json         # PWA Manifest para instalação web/Android
-├── twa-manifest.json     # Configuração Bubblewrap para Google Play Store (.aab)
-└── package.json          # Dependências do projeto Electron
+│   ├── sf2-parser.js     # Parser binário SF2 em JS puro
+│   ├── synth-engine.js   # Motor de síntese polifônica e envelopes
+│   ├── fx-rack.js        # Módulos de efeitos DSP e Rack
+│   ├── mixer.js          # Console do Mixer (16 Canais & Split C0..C7)
+│   ├── web-midi.js       # Comunicação WebMIDI e MIDI Learn
+│   ├── preset-manager.js # Salvamento e exportação de presets em JSON
+│   └── app.js            # Inicialização e controle principal da UI
+├── index.html            # Interface de usuário principal
+├── main.js               # Processo Electron para Desktop
+└── package.json          # Configuração e scripts Node.js
 ```
 
 ---
 
-## 🚀 Como Executar o Projeto
+## 💻 Como Executar
 
-### 💻 1. Rodar a Aplicação Desktop (Electron)
+### 1. Clonar o Repositório
 ```bash
-# Instalar dependências
-npm install
+git clone https://github.com/lmiguelviana/bensf2.git
+cd bensf2
+```
 
-# Iniciar o aplicativo Electron
+### 2. Instalar Dependências
+```bash
+npm install
+```
+
+### 3. Rodar a Aplicação Desktop (Electron)
+```bash
 npm start
 ```
 
-### 🌐 2. Rodar como Servidor Web / PWA
-```bash
-# Executar servidor local HTTP
-npm run web
+---
 
-# Acesse no seu navegador: http://localhost:8080
-```
+## 👤 Autor
 
-### 📱 3. Gerar Pacote Android (.aab) para a Google Play Store
-```bash
-# Executar compilação via Bubblewrap CLI
-npx @bubblewrap/cli build
-```
+**Miguel Viana**
+- 🐙 GitHub: [@lmiguelviana](https://github.com/lmiguelviana)
+- 🎹 Projeto: **BenSF2 Live Sampler Workstation**
 
 ---
 
 ## 📜 Licença
-Distribuído sob a licença **MIT**. Veja `LICENSE` para mais informações.
+
+Este projeto é distribuído sob a licença **MIT**. Veja o arquivo `LICENSE` para mais detalhes.
