@@ -116,6 +116,7 @@ class MixerConsoleManager {
   createChannelStripElement(ch) {
     const strip = document.createElement('div');
     strip.className = 'mixer-channel-strip';
+    strip.id = `channelStrip_${ch}`;
     strip.dataset.channel = ch;
 
     const chConfig = this.synth.channels[ch] || { 
@@ -673,9 +674,7 @@ class MixerConsoleManager {
   }
 
   updateChannelVelocityBadge(ch) {
-    const strip = document.getElementById(`channelStrip_${ch}`);
-    if (!strip) return;
-    const badge = strip.querySelector(`.ch-vel-badge-${ch}`);
+    const badge = document.querySelector(`.ch-vel-badge-${ch}`);
     if (!badge) return;
     const chConfig = this.synth.channels[ch];
     const isCustom = chConfig && chConfig.velocitySettings && !chConfig.velocitySettings.useGlobal;
