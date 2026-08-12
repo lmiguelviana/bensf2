@@ -29,11 +29,10 @@
         <span class="badge-tag">LIVE RIG</span>
       </div>
 
-      <!-- View Switcher Tabs (Mixer, FX Master, Teclado) -->
+      <!-- View Switcher Tabs (Mixer & Layers, FX Master) -->
       <div class="view-tabs-bar">
         <button id="tabMixer" class="tab-btn active">🎛️ Mixer & Layers</button>
         <button id="tabFxRack" class="tab-btn">🏛️ Rack FX Master</button>
-        <button id="tabMidi" class="tab-btn">🎹 Teclado & MIDI</button>
       </div>
 
       <!-- Indicador de Teclado MIDI Conectado & Status Audio -->
@@ -56,9 +55,7 @@
         <div class="preset-selector-group">
           <span class="preset-label">Preset:</span>
           <select id="presetSelect" class="preset-select">
-            <option value="factory_1">01 - Grand Piano + Soft Strings</option>
-            <option value="factory_2">02 - EPiano Stage + Stereo Reverb</option>
-            <option value="factory_3">03 - Lead Synth + Brass Layer</option>
+            <option value="" disabled selected>(nenhum preset salvo)</option>
           </select>
         </div>
 

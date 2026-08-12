@@ -175,19 +175,17 @@ document.addEventListener('DOMContentLoaded', () => {
   const fxRackTitleEl = document.getElementById('fxRackTitleText');
 
   // Tab View Switcher
-  function switchView(activeTab, showMixer, showFx, showMidi) {
-    [tabMixer, tabFxRack, tabMidi].forEach(t => t && t.classList.remove('active'));
+  function switchView(activeTab, showMixer, showFx) {
+    [tabMixer, tabFxRack].forEach(t => t && t.classList.remove('active'));
     if (activeTab) activeTab.classList.add('active');
 
     if (sectionMixer) sectionMixer.style.display = showMixer ? 'flex' : 'none';
     if (sectionFxRack) sectionFxRack.style.display = showFx ? 'block' : 'none';
-    // Bug fix: anteriormente showMidi era ignorado e sempre mostrava 'flex'
-    if (sectionMidiKeyboard) sectionMidiKeyboard.style.display = showMidi ? 'flex' : 'none';
+    if (sectionMidiKeyboard) sectionMidiKeyboard.style.display = 'flex'; // Teclado sempre visível abaixo
   }
 
-  if (tabMixer) tabMixer.addEventListener('click', () => switchView(tabMixer, true, false, true));
-  if (tabFxRack) tabFxRack.addEventListener('click', () => switchView(tabFxRack, false, true, true));
-  if (tabMidi) tabMidi.addEventListener('click', () => switchView(tabMidi, true, false, true));
+  if (tabMixer) tabMixer.addEventListener('click', () => switchView(tabMixer, true, false));
+  if (tabFxRack) tabFxRack.addEventListener('click', () => switchView(tabFxRack, false, true));
 
   // Seletor de Quantidade de Canais do Mixer (4, 8, 12, 16)
   if (mixerChannelCountSelect) {

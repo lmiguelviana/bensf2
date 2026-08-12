@@ -1,6 +1,7 @@
 /**
  * PRESET MANAGEMENT SYSTEM
- * Gerenciador de Presets: Salvar, Carregar, Importar/Exportar JSON e Persistência LocalStorage (com nomes de pistas customizados).
+ * Gerenciador de Presets Completo: Captura 100% do estado do Live Rig (pistas visíveis, timbres, faders, knobs FX, botões M/S, splits, transposição, ADSR, master FX)
+ * com alerta amigável de localização de arquivo .SF2 quando um timbre não estiver presente na biblioteca.
  */
 
 class PresetManager {
@@ -10,64 +11,33 @@ class PresetManager {
     this.mixer = mixerManager;
 
     this.userPresets = new Map(); // name -> presetData
-    this.factoryPresets = new Map();
-
-    this.initFactoryPresets();
     this.loadUserPresetsFromStorage();
-  }
-
-  initFactoryPresets() {
-    this.factoryPresets.set('factory_1', {
-      name: '01 - Grand Piano + Soft Strings',
-      polyphony: 'auto',
-      velocityCurve: 'normal',
-      channels: {
-        1: { name: 'Grand Piano', volume: 0.85, pan: 0, muted: false, solo: false, transpose: 0 },
-        2: { name: 'Soft Strings', volume: 0.45, pan: 0.2, muted: false, solo: false, transpose: 0 }
-      },
-      fx: {
-        eqLow: 2.0, eqMid: 0, eqHigh: 1.5,
-        delayTime: 0.3, delayMix: 0.15,
-        reverbSize: 0.4, reverbMix: 0.25
-      }
-    });
-
-    this.factoryPresets.set('factory_2', {
-      name: '02 - EPiano Stage + Stereo Reverb',
-      polyphony: 'auto',
-      velocityCurve: 'soft',
-      channels: {
-        1: { name: 'EPiano Stage', volume: 0.9, pan: -0.1, muted: false, solo: false, transpose: 0 },
-        2: { name: 'Pad Layer', volume: 0, pan: 0, muted: true, solo: false, transpose: 0 }
-      },
-      fx: {
-        eqLow: 1.0, eqMid: 1.5, eqHigh: 3.0,
-        delayTime: 0.25, delayMix: 0.25,
-        reverbSize: 0.6, reverbMix: 0.45
-      }
-    });
-
-    this.factoryPresets.set('factory_3', {
-      name: '03 - Lead Synth + Brass Layer',
-      polyphony: 'auto',
-      velocityCurve: 'hard',
-      channels: {
-        1: { name: 'Lead Synth', volume: 0.95, pan: -0.25, muted: false, solo: false, transpose: 0 },
-        2: { name: 'Brass Solo', volume: 0.75, pan: 0.25, muted: false, solo: false, transpose: 1 }
-      },
-      fx: {
-        eqLow: 3.0, eqMid: 2.0, eqHigh: 2.0,
-        delayTime: 0.4, delayMix: 0.35,
-        reverbSize: 0.5, reverbMix: 0.3
-      }
-    });
+    this.updatePresetDropdownUI();
   }
 
   getCurrentState(presetName = 'Novo Preset') {
     const channelsState = {};
-    for (let ch = 1; ch <= this.mixer.totalChannels; ch++) {
+    const visibleCount = this.mixer ? this.mixer.totalChannels : 4;
+
+    for (let ch = 1; ch <= 16; ch++) {
       const chData = this.synth.channels[ch];
       if (chData) {
+        // Capturar metadados do timbre atribuído à pista
+        let timbreInfo = null;
+        if (chData.assignedPresetIndex !== null && chData.assignedPresetIndex !== undefined &&
+            this.synth.parsedSf2Data && this.synth.parsedSf2Data.presets &&
+            this.synth.parsedSf2Data.presets[chData.assignedPresetIndex]) {
+          const p = this.synth.parsedSf2Data.presets[chData.assignedPresetIndex];
+          timbreInfo = {
+            name: p.name,
+            bank: p.bank,
+            preset: p.preset,
+            sf2Source: p.sf2Source || ''
+          };
+        }
+
+        const trackFxData = (this.fxRack && this.fxRack.trackParams && this.fxRack.trackParams[ch]) ? { ...this.fxRack.trackParams[ch] } : {};
+
         channelsState[ch] = {
           name: chData.name || `CH ${ch < 10 ? '0' + ch : ch}: LAYER ${ch}`,
           volume: chData.volume,
@@ -75,32 +45,33 @@ class PresetManager {
           muted: chData.muted,
           solo: chData.solo,
           transpose: chData.transpose,
+          semitoneTranspose: chData.semitoneTranspose || 0,
+          keyRangeLow: chData.keyRangeLow !== undefined ? chData.keyRangeLow : 0,
+          keyRangeHigh: chData.keyRangeHigh !== undefined ? chData.keyRangeHigh : 127,
+          assignedMidiChannel: chData.assignedMidiChannel,
           assignedPresetIndex: chData.assignedPresetIndex,
-          assignedMidiChannel: chData.assignedMidiChannel
+          timbreInfo: timbreInfo,
+          adsr: chData.adsr ? { ...chData.adsr } : { attack: 0.005, decay: 0.1, sustain: 0.75, release: 0.25 },
+          trackFx: trackFxData
         };
       }
     }
+
+    const masterFxState = (this.fxRack && this.fxRack.masterParams) ? { ...this.fxRack.masterParams } : {};
 
     return {
       name: presetName,
       timestamp: new Date().toISOString(),
       polyphony: this.synth.isAutoPolyphony ? 'auto' : this.synth.maxPolyphony,
       velocityCurve: this.synth.velocityCurve,
+      totalChannels: visibleCount,
       channels: channelsState,
-      masterFx: {
-        eqLow: this.fxRack.masterParams ? this.fxRack.masterParams.eqLow : 0,
-        eqMid: this.fxRack.masterParams ? this.fxRack.masterParams.eqMid : 0,
-        eqHigh: this.fxRack.masterParams ? this.fxRack.masterParams.eqHigh : 0,
-        delayTime: this.fxRack.masterParams ? this.fxRack.masterParams.delayTime : 300,
-        delayMix: this.fxRack.masterParams ? this.fxRack.masterParams.delayMix : 20,
-        reverbSize: this.fxRack.masterParams ? this.fxRack.masterParams.reverbSize : 40,
-        reverbMix: this.fxRack.masterParams ? this.fxRack.masterParams.reverbMix : 25
-      }
+      masterFx: masterFxState
     };
   }
 
   savePreset(name) {
-    if (!name || name.trim() === '') {
+    if (!name || typeof name !== 'string' || name.trim() === '') {
       name = prompt('Digite um nome para o seu Preset personalizado:', 'Meu Preset Live');
     }
     if (!name) return;
@@ -108,9 +79,9 @@ class PresetManager {
     const presetData = this.getCurrentState(name.trim());
     this.userPresets.set(name.trim(), presetData);
     this.saveUserPresetsToStorage();
+    this.updatePresetDropdownUI();
 
     this.exportPresetToJson(presetData);
-    alert(`Preset "${name}" salvo com sucesso!`);
     return presetData;
   }
 
@@ -119,6 +90,14 @@ class PresetManager {
 
     console.log(`[PresetManager] Carregando preset: ${presetData.name}`);
 
+    // 1. Restaurar quantidade de canais visíveis no Mixer
+    if (presetData.totalChannels && this.mixer) {
+      this.mixer.setVisibleChannelCount(presetData.totalChannels);
+      const chanSelect = document.getElementById('mixerChannelCountSelect');
+      if (chanSelect) chanSelect.value = presetData.totalChannels;
+    }
+
+    // 2. Restaurar Polifonia e Curva de Velocidade
     if (presetData.polyphony) {
       this.synth.setMaxPolyphony(presetData.polyphony);
       const polySelect = document.getElementById('polyphonySelect');
@@ -131,28 +110,133 @@ class PresetManager {
       if (velSelect) velSelect.value = presetData.velocityCurve;
     }
 
+    // 3. Restaurar Master FX (Efeitos e Estados dos Botões ON/OFF)
+    if (presetData.masterFx && this.fxRack) {
+      const m = presetData.masterFx;
+      if (m.eqEnabled !== undefined) this.fxRack.toggleMasterEq(m.eqEnabled);
+      if (m.eqLow !== undefined) this.fxRack.setMasterEqLowGain(m.eqLow);
+      if (m.eqMid !== undefined) this.fxRack.setMasterEqMidGain(m.eqMid);
+      if (m.eqHigh !== undefined) this.fxRack.setMasterEqHighGain(m.eqHigh);
+
+      if (m.chorusEnabled !== undefined) this.fxRack.toggleMasterChorus(m.chorusEnabled);
+      if (m.chorusMix !== undefined) this.fxRack.setMasterChorusMix(m.chorusMix);
+
+      if (m.delayEnabled !== undefined) this.fxRack.toggleMasterDelay(m.delayEnabled);
+      if (m.delayTime !== undefined) this.fxRack.setMasterDelayTime(m.delayTime / 1000.0);
+      if (m.delayMix !== undefined) this.fxRack.setMasterDelayMix(m.delayMix);
+
+      if (m.reverbEnabled !== undefined) this.fxRack.toggleMasterReverb(m.reverbEnabled);
+      if (m.reverbMode !== undefined) this.fxRack.setMasterReverbMode(m.reverbMode);
+      if (m.reverbSize !== undefined) this.fxRack.setMasterReverbSize(m.reverbSize);
+      if (m.reverbMix !== undefined) this.fxRack.setMasterReverbMix(m.reverbMix);
+    }
+
+    // 4. Restaurar Canais (1..16)
+    const missingTimbres = [];
+
     if (presetData.channels) {
       Object.keys(presetData.channels).forEach((chKey) => {
         const ch = parseInt(chKey, 10);
         const chData = presetData.channels[chKey];
 
-        if (chData.name) {
-          this.synth.setChannelName(ch, chData.name);
-        }
-        this.synth.setChannelVolume(ch, chData.volume);
-        this.synth.setChannelPan(ch, chData.pan);
-        this.synth.setChannelMute(ch, chData.muted);
         if (this.synth.channels[ch]) {
-          this.synth.channels[ch].transpose = chData.transpose;
-          if (chData.assignedPresetIndex !== undefined) {
-            this.synth.setChannelPreset(ch, chData.assignedPresetIndex);
+          if (chData.name) this.synth.setChannelName(ch, chData.name);
+          if (chData.volume !== undefined) this.synth.setChannelVolume(ch, chData.volume);
+          if (chData.pan !== undefined) this.synth.setChannelPan(ch, chData.pan);
+          if (chData.muted !== undefined) this.synth.setChannelMute(ch, chData.muted);
+
+          this.synth.channels[ch].solo = !!chData.solo;
+          this.synth.channels[ch].transpose = chData.transpose !== undefined ? chData.transpose : 0;
+          this.synth.channels[ch].semitoneTranspose = chData.semitoneTranspose !== undefined ? chData.semitoneTranspose : 0;
+          this.synth.channels[ch].keyRangeLow = chData.keyRangeLow !== undefined ? chData.keyRangeLow : 0;
+          this.synth.channels[ch].keyRangeHigh = chData.keyRangeHigh !== undefined ? chData.keyRangeHigh : 127;
+          this.synth.channels[ch].assignedMidiChannel = chData.assignedMidiChannel !== undefined ? chData.assignedMidiChannel : 'all';
+
+          // Restaurar ADSR da pista
+          if (chData.adsr) {
+            this.synth.channels[ch].adsr = { ...chData.adsr };
           }
-          if (chData.assignedMidiChannel !== undefined) {
-            this.synth.channels[ch].assignedMidiChannel = chData.assignedMidiChannel;
+
+          // Restaurar FX da pista
+          if (chData.trackFx && this.fxRack && this.fxRack.trackParams[ch]) {
+            const tf = chData.trackFx;
+            Object.assign(this.fxRack.trackParams[ch], tf);
           }
+
+          // Localizar timbre no banco atual ou marcar como ausente
+          let resolvedIndex = null;
+
+          if (chData.timbreInfo) {
+            if (this.synth.parsedSf2Data && this.synth.parsedSf2Data.presets) {
+              const matchedIdx = this.synth.parsedSf2Data.presets.findIndex(p => {
+                const nameMatch = p.name === chData.timbreInfo.name;
+                const sourceMatch = !chData.timbreInfo.sf2Source || !p.sf2Source || p.sf2Source === chData.timbreInfo.sf2Source;
+                return nameMatch && sourceMatch;
+              });
+
+              if (matchedIdx !== -1) {
+                resolvedIndex = matchedIdx;
+              } else {
+                missingTimbres.push({
+                  ch: ch,
+                  name: chData.timbreInfo.name,
+                  sf2Source: chData.timbreInfo.sf2Source
+                });
+              }
+            } else {
+              missingTimbres.push({
+                ch: ch,
+                name: chData.timbreInfo.name,
+                sf2Source: chData.timbreInfo.sf2Source
+              });
+            }
+          } else if (chData.assignedPresetIndex !== undefined && chData.assignedPresetIndex !== null) {
+            if (this.synth.parsedSf2Data && this.synth.parsedSf2Data.presets && this.synth.parsedSf2Data.presets[chData.assignedPresetIndex]) {
+              resolvedIndex = chData.assignedPresetIndex;
+            }
+          }
+
+          this.synth.setChannelPreset(ch, resolvedIndex);
         }
       });
+    }
+
+    // 5. Renderizar o Mixer com faders, botões e valores atualizados
+    if (this.mixer) {
       this.mixer.renderMixer();
+    }
+
+    if (this.fxRack) {
+      this.fxRack.notifySelectionChange();
+    }
+
+    this.updatePresetDropdownUI();
+    const selectEl = document.getElementById('presetSelect');
+    if (selectEl && presetData.name) {
+      selectEl.value = presetData.name;
+    }
+
+    // 6. Se houver timbres ausentes (arquivo SF2 não carregado), alertar o usuário
+    if (missingTimbres.length > 0) {
+      const missingList = missingTimbres.map(m => `Pista CH ${m.ch}: "${m.name}" (${m.sf2Source ? m.sf2Source + '.sf2' : 'SF2'})`).join('\n');
+
+      if (window.showToastNotification) {
+        window.showToastNotification(
+          'Timbres Ausentes no Banco',
+          `${missingTimbres.length} timbre(s) do preset não foram encontrados na biblioteca. Por favor, carregue os arquivos .SF2!`,
+          'warning'
+        );
+      }
+
+      setTimeout(() => {
+        const wantsToLoad = confirm(
+          `⚠️ Os seguintes timbres do Preset "${presetData.name}" não foram encontrados no banco atual:\n\n${missingList}\n\nDeseja abrir o seletor para carregar os arquivos .SF2 agora?`
+        );
+        if (wantsToLoad) {
+          const sf2Input = document.getElementById('sf2FileInput');
+          if (sf2Input) sf2Input.click();
+        }
+      }, 400);
     }
   }
 
@@ -177,7 +261,9 @@ class PresetManager {
           this.userPresets.set(presetData.name, presetData);
           this.saveUserPresetsToStorage();
           this.loadPreset(presetData);
-          alert(`Preset "${presetData.name}" importado e carregado com sucesso!`);
+          if (window.showToastNotification) {
+            window.showToastNotification('Preset Importado!', `Preset "${presetData.name}" carregado com sucesso.`);
+          }
         } else {
           alert('Arquivo de preset inválido.');
         }
@@ -204,6 +290,29 @@ class PresetManager {
       }
     } catch (e) {}
   }
+
+  updatePresetDropdownUI() {
+    const selectEl = document.getElementById('presetSelect');
+    if (!selectEl) return;
+
+    const currentVal = selectEl.value;
+    selectEl.innerHTML = '';
+
+    const userPresetList = Array.from(this.userPresets.values());
+
+    if (userPresetList.length === 0) {
+      selectEl.innerHTML = `<option value="" disabled selected>(nenhum preset salvo)</option>`;
+    } else {
+      userPresetList.forEach((p) => {
+        const option = document.createElement('option');
+        option.value = p.name;
+        option.textContent = p.name;
+        if (p.name === currentVal) option.selected = true;
+        selectEl.appendChild(option);
+      });
+    }
+  }
 }
 
 window.PresetManager = PresetManager;
+
