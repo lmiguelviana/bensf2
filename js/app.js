@@ -1,6 +1,6 @@
 /**
  * MASTER APPLICATION CONTROLLER
- * Liga a interface UI ao motor de síntese SF2, Mixer Console com FX Dinâmico por Pista, WebMIDI, SettingsModal, PresetManager e MidiLearn.
+ * Liga a interface UI ao motor de síntese SF2, Mixer Console, Master FX com ON/OFF toggles e FX por pista individual.
  */
 
 document.addEventListener('DOMContentLoaded', () => {
@@ -85,7 +85,7 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
-  // Interceptar NoteOn/NoteOff do Synth para iluminação visual do teclado
+  // Intercept NoteOn/NoteOff do Synth para iluminação visual do teclado
   const originalNoteOn = synth.noteOn.bind(synth);
   synth.noteOn = function(note, velocity, channel) {
     originalNoteOn(note, velocity, channel);
@@ -150,14 +150,14 @@ document.addEventListener('DOMContentLoaded', () => {
     [tabMixer, tabFxRack, tabMidi].forEach(t => t && t.classList.remove('active'));
     if (activeTab) activeTab.classList.add('active');
 
-    if (sectionMixer) sectionMixer.style.display = showMixer ? 'block' : 'none';
+    if (sectionMixer) sectionMixer.style.display = showMixer ? 'flex' : 'none';
     if (sectionFxRack) sectionFxRack.style.display = showFx ? 'block' : 'none';
     if (sectionMidiKeyboard) sectionMidiKeyboard.style.display = showMidi ? 'flex' : 'flex';
   }
 
-  if (tabMixer) tabMixer.addEventListener('click', () => switchView(tabMixer, true, true, true));
+  if (tabMixer) tabMixer.addEventListener('click', () => switchView(tabMixer, true, false, true));
   if (tabFxRack) tabFxRack.addEventListener('click', () => switchView(tabFxRack, false, true, true));
-  if (tabMidi) tabMidi.addEventListener('click', () => switchView(tabMidi, true, false, true));
+  if (tabMidi) tabMidi.addEventListener('click', () => switchView(tabMidi, true, true, true));
 
   // Seletor de Quantidade de Canais do Mixer (4, 8, 12, 16)
   if (mixerChannelCountSelect) {
@@ -175,117 +175,173 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
-  // Instanciar Knobs 3D VST para o FX Rack com Suporte a FX Por Pista e MIDI Learn
-  let knobEqLow, knobEqMid, knobEqHigh, knobDelayTime, knobDelayMix, knobReverbSize, knobReverbMix;
+  // 1. INSTANCIAR RACK DE EFEITOS MASTER GLOBAL (Com Interruptores ON/OFF)
+  const btnMasterEqToggle = document.getElementById('btnMasterEqToggle');
+  if (btnMasterEqToggle) {
+    btnMasterEqToggle.addEventListener('click', () => {
+      const isAct = btnMasterEqToggle.classList.toggle('active');
+      btnMasterEqToggle.textContent = isAct ? 'ON' : 'OFF';
+      fxRack.toggleMasterEq(isAct);
+    });
+  }
 
-  const knobLowEl = document.getElementById('knobEqLow');
-  if (knobLowEl) {
-    knobEqLow = new RotaryKnob(knobLowEl, {
-      title: 'GRAVE (100Hz)',
-      min: -12, max: 12, step: 0.5, value: 0, unit: 'dB',
+  const btnMasterDelayToggle = document.getElementById('btnMasterDelayToggle');
+  if (btnMasterDelayToggle) {
+    btnMasterDelayToggle.addEventListener('click', () => {
+      const isAct = btnMasterDelayToggle.classList.toggle('active');
+      btnMasterDelayToggle.textContent = isAct ? 'ON' : 'OFF';
+      fxRack.toggleMasterDelay(isAct);
+    });
+  }
+
+  const btnMasterReverbToggle = document.getElementById('btnMasterReverbToggle');
+  if (btnMasterReverbToggle) {
+    btnMasterReverbToggle.addEventListener('click', () => {
+      const isAct = btnMasterReverbToggle.classList.toggle('active');
+      btnMasterReverbToggle.textContent = isAct ? 'ON' : 'OFF';
+      fxRack.toggleMasterReverb(isAct);
+    });
+  }
+
+  const knobMasterLowEl = document.getElementById('knobMasterEqLow');
+  if (knobMasterLowEl) {
+    new RotaryKnob(knobMasterLowEl, {
+      title: 'GRAVE', min: -12, max: 12, step: 0.5, value: 0, unit: 'dB',
+      onChange: (val) => fxRack.setMasterEqLowGain(val)
+    });
+  }
+  const knobMasterMidEl = document.getElementById('knobMasterEqMid');
+  if (knobMasterMidEl) {
+    new RotaryKnob(knobMasterMidEl, {
+      title: 'MÉDIO', min: -12, max: 12, step: 0.5, value: 0, unit: 'dB',
+      onChange: (val) => fxRack.setMasterEqMidGain(val)
+    });
+  }
+  const knobMasterHighEl = document.getElementById('knobMasterEqHigh');
+  if (knobMasterHighEl) {
+    new RotaryKnob(knobMasterHighEl, {
+      title: 'AGUDO', min: -12, max: 12, step: 0.5, value: 0, unit: 'dB',
+      onChange: (val) => fxRack.setMasterEqHighGain(val)
+    });
+  }
+
+  const knobMasterDelayTimeEl = document.getElementById('knobMasterDelayTime');
+  if (knobMasterDelayTimeEl) {
+    new RotaryKnob(knobMasterDelayTimeEl, {
+      title: 'TEMPO', min: 50, max: 1000, step: 10, value: 300, unit: 'ms',
+      onChange: (val) => fxRack.setMasterDelayTime(val / 1000.0)
+    });
+  }
+  const knobMasterDelayMixEl = document.getElementById('knobMasterDelayMix');
+  if (knobMasterDelayMixEl) {
+    new RotaryKnob(knobMasterDelayMixEl, {
+      title: 'MISTURA', min: 0, max: 100, step: 1, value: 20, unit: '%',
+      onChange: (val) => fxRack.setMasterDelayMix(val / 100.0)
+    });
+  }
+
+  const knobMasterReverbSizeEl = document.getElementById('knobMasterReverbSize');
+  if (knobMasterReverbSizeEl) {
+    new RotaryKnob(knobMasterReverbSizeEl, {
+      title: 'SALA', min: 10, max: 100, step: 1, value: 40, unit: '%',
+      onChange: (val) => fxRack.setMasterReverbSize(val / 100.0)
+    });
+  }
+  const knobMasterReverbMixEl = document.getElementById('knobMasterReverbMix');
+  if (knobMasterReverbMixEl) {
+    new RotaryKnob(knobMasterReverbMixEl, {
+      title: 'MISTURA', min: 0, max: 100, step: 1, value: 25, unit: '%',
+      onChange: (val) => fxRack.setMasterReverbMix(val / 100.0)
+    });
+  }
+
+  // 2. INSTANCIAR RACK DE EFEITOS POR PISTA (No Painel do Mixer)
+  let knobTrackEqLow, knobTrackEqMid, knobTrackEqHigh, knobTrackDelayTime, knobTrackDelayMix, knobTrackReverbSize, knobTrackReverbMix;
+
+  const knobTrackLowEl = document.getElementById('knobTrackEqLow');
+  if (knobTrackLowEl) {
+    knobTrackEqLow = new RotaryKnob(knobTrackLowEl, {
+      title: 'GRAVE', min: -12, max: 12, step: 0.5, value: 0, unit: 'dB',
       onChange: (val) => fxRack.setEqLowGain(val)
     });
-    midiLearn.attach(knobLowEl, 'EQ Grave (100Hz)', (normVal) => {
+    midiLearn.attach(knobTrackLowEl, 'EQ Grave Pista', (normVal) => {
       const dbVal = (normVal * 24.0) - 12.0;
       fxRack.setEqLowGain(dbVal);
-      if (knobEqLow) knobEqLow.setValue(dbVal);
+      if (knobTrackEqLow) knobTrackEqLow.setValue(dbVal);
     });
   }
 
-  const knobMidEl = document.getElementById('knobEqMid');
-  if (knobMidEl) {
-    knobEqMid = new RotaryKnob(knobMidEl, {
-      title: 'MÉDIO (1kHz)',
-      min: -12, max: 12, step: 0.5, value: 0, unit: 'dB',
+  const knobTrackMidEl = document.getElementById('knobTrackEqMid');
+  if (knobTrackMidEl) {
+    knobTrackEqMid = new RotaryKnob(knobTrackMidEl, {
+      title: 'MÉDIO', min: -12, max: 12, step: 0.5, value: 0, unit: 'dB',
       onChange: (val) => fxRack.setEqMidGain(val)
     });
-    midiLearn.attach(knobMidEl, 'EQ Médio (1kHz)', (normVal) => {
+    midiLearn.attach(knobTrackMidEl, 'EQ Médio Pista', (normVal) => {
       const dbVal = (normVal * 24.0) - 12.0;
       fxRack.setEqMidGain(dbVal);
-      if (knobEqMid) knobEqMid.setValue(dbVal);
+      if (knobTrackEqMid) knobTrackEqMid.setValue(dbVal);
     });
   }
 
-  const knobHighEl = document.getElementById('knobEqHigh');
-  if (knobHighEl) {
-    knobEqHigh = new RotaryKnob(knobHighEl, {
-      title: 'AGUDO (8kHz)',
-      min: -12, max: 12, step: 0.5, value: 0, unit: 'dB',
+  const knobTrackHighEl = document.getElementById('knobTrackEqHigh');
+  if (knobTrackHighEl) {
+    knobTrackEqHigh = new RotaryKnob(knobTrackHighEl, {
+      title: 'AGUDO', min: -12, max: 12, step: 0.5, value: 0, unit: 'dB',
       onChange: (val) => fxRack.setEqHighGain(val)
     });
-    midiLearn.attach(knobHighEl, 'EQ Agudo (8kHz)', (normVal) => {
+    midiLearn.attach(knobTrackHighEl, 'EQ Agudo Pista', (normVal) => {
       const dbVal = (normVal * 24.0) - 12.0;
       fxRack.setEqHighGain(dbVal);
-      if (knobEqHigh) knobEqHigh.setValue(dbVal);
+      if (knobTrackEqHigh) knobTrackEqHigh.setValue(dbVal);
     });
   }
 
-  const knobDelayTimeEl = document.getElementById('knobDelayTime');
-  if (knobDelayTimeEl) {
-    knobDelayTime = new RotaryKnob(knobDelayTimeEl, {
-      title: 'TEMPO DELAY',
-      min: 50, max: 1000, step: 10, value: 300, unit: 'ms',
+  const knobTrackDelayTimeEl = document.getElementById('knobTrackDelayTime');
+  if (knobTrackDelayTimeEl) {
+    knobTrackDelayTime = new RotaryKnob(knobTrackDelayTimeEl, {
+      title: 'TEMPO', min: 50, max: 1000, step: 10, value: 300, unit: 'ms',
       onChange: (val) => fxRack.setDelayTime(val / 1000.0)
     });
-    midiLearn.attach(knobDelayTimeEl, 'Tempo Delay', (normVal) => {
-      const secVal = 0.05 + (normVal * 0.95);
-      fxRack.setDelayTime(secVal);
-      if (knobDelayTime) knobDelayTime.setValue(Math.round(secVal * 1000));
-    });
   }
 
-  const knobDelayMixEl = document.getElementById('knobDelayMix');
-  if (knobDelayMixEl) {
-    knobDelayMix = new RotaryKnob(knobDelayMixEl, {
-      title: 'MISTURA DELAY',
-      min: 0, max: 100, step: 1, value: 20, unit: '%',
+  const knobTrackDelayMixEl = document.getElementById('knobTrackDelayMix');
+  if (knobTrackDelayMixEl) {
+    knobTrackDelayMix = new RotaryKnob(knobTrackDelayMixEl, {
+      title: 'MISTURA', min: 0, max: 100, step: 1, value: 20, unit: '%',
       onChange: (val) => fxRack.setDelayMix(val / 100.0)
     });
-    midiLearn.attach(knobDelayMixEl, 'Mistura Delay', (normVal) => {
-      fxRack.setDelayMix(normVal);
-      if (knobDelayMix) knobDelayMix.setValue(Math.round(normVal * 100));
-    });
   }
 
-  const knobReverbSizeEl = document.getElementById('knobReverbSize');
-  if (knobReverbSizeEl) {
-    knobReverbSize = new RotaryKnob(knobReverbSizeEl, {
-      title: 'SALA REVERB',
-      min: 10, max: 100, step: 1, value: 40, unit: '%',
+  const knobTrackReverbSizeEl = document.getElementById('knobTrackReverbSize');
+  if (knobTrackReverbSizeEl) {
+    knobTrackReverbSize = new RotaryKnob(knobTrackReverbSizeEl, {
+      title: 'SALA', min: 10, max: 100, step: 1, value: 40, unit: '%',
       onChange: (val) => fxRack.setReverbSize(val / 100.0)
     });
-    midiLearn.attach(knobReverbSizeEl, 'Tamanho Sala Reverb', (normVal) => {
-      fxRack.setReverbSize(normVal);
-      if (knobReverbSize) knobReverbSize.setValue(Math.round(normVal * 100));
-    });
   }
 
-  const knobReverbMixEl = document.getElementById('knobReverbMix');
-  if (knobReverbMixEl) {
-    knobReverbMix = new RotaryKnob(knobReverbMixEl, {
-      title: 'MISTURA REVERB',
-      min: 0, max: 100, step: 1, value: 25, unit: '%',
+  const knobTrackReverbMixEl = document.getElementById('knobTrackReverbMix');
+  if (knobTrackReverbMixEl) {
+    knobTrackReverbMix = new RotaryKnob(knobTrackReverbMixEl, {
+      title: 'MISTURA', min: 0, max: 100, step: 1, value: 25, unit: '%',
       onChange: (val) => fxRack.setReverbMix(val / 100.0)
     });
-    midiLearn.attach(knobReverbMixEl, 'Mistura Reverb', (normVal) => {
-      fxRack.setReverbMix(normVal);
-      if (knobReverbMix) knobReverbMix.setValue(Math.round(normVal * 100));
-    });
   }
 
-  // Atualizar valores dos Knobs quando a pista selecionada mudar!
+  // Atualizar Knobs da pista individual ao trocar de canal no Mixer!
   fxRack.onSelectionChange((ch, params) => {
     if (fxRackTitleEl) {
-      fxRackTitleEl.textContent = `RACK DE EFEITOS - PISTA CH ${ch < 10 ? '0' + ch : ch}: LAYER ${ch}`;
+      fxRackTitleEl.textContent = `EFEITOS DA PISTA - CH ${ch < 10 ? '0' + ch : ch}: LAYER ${ch}`;
     }
 
-    if (knobEqLow) knobEqLow.setValue(params.eqLow);
-    if (knobEqMid) knobEqMid.setValue(params.eqMid);
-    if (knobEqHigh) knobEqHigh.setValue(params.eqHigh);
-    if (knobDelayTime) knobDelayTime.setValue(params.delayTime);
-    if (knobDelayMix) knobDelayMix.setValue(params.delayMix);
-    if (knobReverbSize) knobReverbSize.setValue(params.reverbSize);
-    if (knobReverbMix) knobReverbMix.setValue(params.reverbMix);
+    if (knobTrackEqLow) knobTrackEqLow.setValue(params.eqLow);
+    if (knobTrackEqMid) knobTrackEqMid.setValue(params.eqMid);
+    if (knobTrackEqHigh) knobTrackEqHigh.setValue(params.eqHigh);
+    if (knobTrackDelayTime) knobTrackDelayTime.setValue(params.delayTime);
+    if (knobTrackDelayMix) knobTrackDelayMix.setValue(params.delayMix);
+    if (knobTrackReverbSize) knobTrackReverbSize.setValue(params.reverbSize);
+    if (knobTrackReverbMix) knobTrackReverbMix.setValue(params.reverbMix);
   });
 
   // Preset Manager Binds

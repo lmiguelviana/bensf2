@@ -32,6 +32,25 @@
   padding-bottom: 6px;
 }
 
+.btn-fx-toggle {
+  padding: 2px 8px;
+  font-size: 9px;
+  font-weight: 800;
+  border-radius: 4px;
+  background: rgba(255, 23, 68, 0.2);
+  color: var(--accent-danger);
+  border: 1px solid var(--accent-danger);
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.btn-fx-toggle.active {
+  background: rgba(0, 230, 118, 0.2);
+  color: var(--accent-emerald);
+  border-color: var(--accent-emerald);
+  box-shadow: 0 0 8px rgba(0, 230, 118, 0.3);
+}
+
 .fx-control-row {
   display: flex;
   align-items: center;

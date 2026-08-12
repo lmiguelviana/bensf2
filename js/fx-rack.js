@@ -1,13 +1,13 @@
 /**
  * MASTER & PER-TRACK FX RACK ENGINE
- * Módulo de processamento de efeitos por pista (EQ 3-Band, Stereo Delay, Reverb Estéreo) com seleção dinâmica de canal.
+ * Módulo de processamento de efeitos com Master FX Global (com botões ON/OFF) e FX por pista individual.
  */
 
 class FxRackManager {
   constructor(audioEngineContext) {
     this.audioCtx = audioEngineContext;
 
-    // Master FX Nodes
+    // Master FX Nodes (Saída Geral)
     this.masterEqLow = null;
     this.masterEqMid = null;
     this.masterEqHigh = null;
@@ -15,6 +15,16 @@ class FxRackManager {
     this.masterDelayGain = null;
     this.masterReverbNode = null;
     this.masterReverbGain = null;
+
+    this.masterEqEnabled = true;
+    this.masterDelayEnabled = true;
+    this.masterReverbEnabled = true;
+
+    this.masterParams = {
+      eqLow: 0, eqMid: 0, eqHigh: 0,
+      delayTime: 300, delayMix: 20,
+      reverbSize: 40, reverbMix: 25
+    };
 
     // Per-Channel FX Nodes & State (Ch 1 a 16)
     this.channelFx = new Map();
@@ -25,7 +35,54 @@ class FxRackManager {
   init() {
     const ctx = this.audioCtx.init();
 
-    // Inicializar Nódulos de Efeito para cada um dos 16 canais
+    // 1. Inicializar Master FX Nodes
+    this.masterEqLow = ctx.createBiquadFilter();
+    this.masterEqLow.type = 'lowshelf';
+    this.masterEqLow.frequency.value = 100;
+
+    this.masterEqMid = ctx.createBiquadFilter();
+    this.masterEqMid.type = 'peaking';
+    this.masterEqMid.frequency.value = 1000;
+    this.masterEqMid.Q.value = 1.0;
+
+    this.masterEqHigh = ctx.createBiquadFilter();
+    this.masterEqHigh.type = 'highshelf';
+    this.masterEqHigh.frequency.value = 8000;
+
+    this.masterEqLow.connect(this.masterEqMid);
+    this.masterEqMid.connect(this.masterEqHigh);
+
+    this.masterDelayNode = ctx.createDelay();
+    this.masterDelayNode.delayTime.value = 0.3;
+    const masterDelayFeedback = ctx.createGain();
+    masterDelayFeedback.gain.value = 0.3;
+    this.masterDelayGain = ctx.createGain();
+    this.masterDelayGain.gain.value = 0.2;
+
+    this.masterDelayNode.connect(masterDelayFeedback);
+    masterDelayFeedback.connect(this.masterDelayNode);
+    this.masterDelayNode.connect(this.masterDelayGain);
+
+    this.masterReverbNode = ctx.createConvolver();
+    this.masterReverbNode.buffer = this.createSyntheticImpulse(ctx, 2.0, 2.0);
+    this.masterReverbGain = ctx.createGain();
+    this.masterReverbGain.gain.value = 0.25;
+    this.masterReverbNode.connect(this.masterReverbGain);
+
+    // Conectar saída do MasterGain do AudioEngine através do Master FX
+    if (this.audioCtx.masterGain && this.audioCtx.limiterNode) {
+      this.audioCtx.masterGain.disconnect();
+      this.audioCtx.masterGain.connect(this.masterEqLow);
+      this.masterEqHigh.connect(this.audioCtx.limiterNode);
+
+      this.masterEqHigh.connect(this.masterDelayNode);
+      this.masterDelayGain.connect(this.audioCtx.limiterNode);
+
+      this.masterEqHigh.connect(this.masterReverbNode);
+      this.masterReverbGain.connect(this.audioCtx.limiterNode);
+    }
+
+    // 2. Inicializar Nódulos de Efeito para cada um dos 16 canais
     for (let ch = 1; ch <= 16; ch++) {
       const eqLow = ctx.createBiquadFilter();
       eqLow.type = 'lowshelf';
@@ -43,11 +100,9 @@ class FxRackManager {
       eqHigh.frequency.value = 8000;
       eqHigh.gain.value = 0;
 
-      // Encadeamento do EQ
       eqLow.connect(eqMid);
       eqMid.connect(eqHigh);
 
-      // Delay Node do Canal
       const delayNode = ctx.createDelay();
       delayNode.delayTime.value = 0.3;
 
@@ -61,7 +116,6 @@ class FxRackManager {
       delayFeedback.connect(delayNode);
       delayNode.connect(delayGain);
 
-      // Reverb Node do Canal
       const reverbNode = ctx.createConvolver();
       reverbNode.buffer = this.createSyntheticImpulse(ctx, 2.0, 2.0);
 
@@ -70,7 +124,6 @@ class FxRackManager {
 
       reverbNode.connect(reverbGain);
 
-      // Roteamento interno
       eqHigh.connect(delayNode);
       eqHigh.connect(reverbNode);
 
@@ -94,7 +147,7 @@ class FxRackManager {
       });
     }
 
-    console.log('[FxRack] Motor de Efeitos por Pista (16 Canais) inicializado com sucesso.');
+    console.log('[FxRack] Motor de Efeitos Master e por Pista inicializados.');
   }
 
   createSyntheticImpulse(ctx, durationSec, decaySec) {
@@ -113,6 +166,78 @@ class FxRackManager {
     return impulse;
   }
 
+  // Toggles ON/OFF do Master FX Global
+  toggleMasterEq(enabled) {
+    this.masterEqEnabled = enabled;
+    const gainLow = enabled ? this.masterParams.eqLow : 0;
+    const gainMid = enabled ? this.masterParams.eqMid : 0;
+    const gainHigh = enabled ? this.masterParams.eqHigh : 0;
+
+    this.masterEqLow.gain.setTargetAtTime(gainLow, this.audioCtx.getCurrentTime(), 0.01);
+    this.masterEqMid.gain.setTargetAtTime(gainMid, this.audioCtx.getCurrentTime(), 0.01);
+    this.masterEqHigh.gain.setTargetAtTime(gainHigh, this.audioCtx.getCurrentTime(), 0.01);
+  }
+
+  toggleMasterDelay(enabled) {
+    this.masterDelayEnabled = enabled;
+    const targetGain = enabled ? (this.masterParams.delayMix / 100.0) : 0;
+    this.masterDelayGain.gain.setTargetAtTime(targetGain, this.audioCtx.getCurrentTime(), 0.01);
+  }
+
+  toggleMasterReverb(enabled) {
+    this.masterReverbEnabled = enabled;
+    const targetGain = enabled ? (this.masterParams.reverbMix / 100.0) : 0;
+    this.masterReverbGain.gain.setTargetAtTime(targetGain, this.audioCtx.getCurrentTime(), 0.01);
+  }
+
+  // Master Params Setter
+  setMasterEqLowGain(gainDb) {
+    this.masterParams.eqLow = gainDb;
+    if (this.masterEqEnabled) {
+      this.masterEqLow.gain.setTargetAtTime(gainDb, this.audioCtx.getCurrentTime(), 0.01);
+    }
+  }
+
+  setMasterEqMidGain(gainDb) {
+    this.masterParams.eqMid = gainDb;
+    if (this.masterEqEnabled) {
+      this.masterEqMid.gain.setTargetAtTime(gainDb, this.audioCtx.getCurrentTime(), 0.01);
+    }
+  }
+
+  setMasterEqHighGain(gainDb) {
+    this.masterParams.eqHigh = gainDb;
+    if (this.masterEqEnabled) {
+      this.masterEqHigh.gain.setTargetAtTime(gainDb, this.audioCtx.getCurrentTime(), 0.01);
+    }
+  }
+
+  setMasterDelayTime(seconds) {
+    this.masterParams.delayTime = Math.round(seconds * 1000);
+    this.masterDelayNode.delayTime.setTargetAtTime(seconds, this.audioCtx.getCurrentTime(), 0.01);
+  }
+
+  setMasterDelayMix(mixNorm) {
+    this.masterParams.delayMix = Math.round(mixNorm * 100);
+    if (this.masterDelayEnabled) {
+      this.masterDelayGain.gain.setTargetAtTime(mixNorm, this.audioCtx.getCurrentTime(), 0.01);
+    }
+  }
+
+  setMasterReverbSize(sizeNorm) {
+    this.masterParams.reverbSize = Math.round(sizeNorm * 100);
+    const duration = 0.5 + (sizeNorm * 4.0);
+    const ctx = this.audioCtx.init();
+    this.masterReverbNode.buffer = this.createSyntheticImpulse(ctx, duration, 2.0);
+  }
+
+  setMasterReverbMix(mixNorm) {
+    this.masterParams.reverbMix = Math.round(mixNorm * 100);
+    if (this.masterReverbEnabled) {
+      this.masterReverbGain.gain.setTargetAtTime(mixNorm, this.audioCtx.getCurrentTime(), 0.01);
+    }
+  }
+
   setSelectedChannel(ch) {
     this.selectedChannel = parseInt(ch, 10) || 1;
     this.notifySelectionChange();
@@ -129,12 +254,7 @@ class FxRackManager {
     }
   }
 
-  getSelectedChannelParams() {
-    const chData = this.channelFx.get(this.selectedChannel);
-    return chData ? chData.params : null;
-  }
-
-  // Métodos de alteração de parâmetros do canal selecionado
+  // Métodos de alteração de parâmetros do canal selecionado (Efeitos por Pista)
   setEqLowGain(gainDb, channel = this.selectedChannel) {
     const fx = this.channelFx.get(channel);
     if (fx) {
@@ -193,7 +313,6 @@ class FxRackManager {
     }
   }
 
-  // Roteamento dos nós de áudio do canal através do seu FX individual
   connectChannelNode(channel, sourceGainNode, targetPannerNode) {
     const fx = this.channelFx.get(channel);
     if (!fx) {
@@ -204,7 +323,6 @@ class FxRackManager {
     sourceGainNode.disconnect();
     sourceGainNode.connect(fx.eqLow);
 
-    // Conectar saída do EQ e dos efeitos paralelos ao Panner
     fx.eqHigh.connect(targetPannerNode);
     fx.delayGain.connect(targetPannerNode);
     fx.reverbGain.connect(targetPannerNode);

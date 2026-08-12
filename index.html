@@ -31,10 +31,10 @@
         <span class="badge-tag">LIVE RIG</span>
       </div>
 
-      <!-- View Switcher Tabs (Mixer, FX, Teclado) -->
+      <!-- View Switcher Tabs (Mixer, FX Master, Teclado) -->
       <div class="view-tabs-bar">
         <button id="tabMixer" class="tab-btn active">🎛️ Mixer & Layers</button>
-        <button id="tabFxRack" class="tab-btn">🏛️ Rack FX & EQ</button>
+        <button id="tabFxRack" class="tab-btn">🏛️ Rack FX Master</button>
         <button id="tabMidi" class="tab-btn">🎹 Teclado & MIDI</button>
       </div>
 
@@ -151,8 +151,8 @@
     <!-- Main View: Multitimbric Layer Mixer Console & FX Rack -->
     <section class="main-view-area">
 
-      <!-- Section: Mixer Console 16-Canais -->
-      <section id="sectionMixer" class="glass-card">
+      <!-- Section: Mixer Console 16-Canais + Dynamic Track FX Panel -->
+      <section id="sectionMixer" class="glass-card" style="display: flex; flex-direction: column; gap: 12px;">
         <div class="card-title">
           <span>Mixer Console Multitimbrico (Layers & 16 Canais MIDI)</span>
           <div style="display: flex; align-items: center; gap: 8px;">
@@ -173,68 +173,103 @@
         <div id="mixerContainer" class="mixer-strip-container">
           <!-- Renderizado dinamicamente via MixerConsoleManager -->
         </div>
+
+        <!-- Painel de Efeitos INDIVIDUAL por Pista (Dedicado ao Canal Selecionado) -->
+        <div class="track-fx-subcard" style="background: rgba(12, 16, 25, 0.7); border-radius: var(--radius-md); padding: 10px; border: 1px solid rgba(0, 242, 254, 0.2);">
+          <div class="card-title" style="margin-bottom: 8px;">
+            <span id="fxRackTitleText" style="color: var(--accent-cyan); font-weight: 800;">EFEITOS DA PISTA - CH 01: LAYER 1</span>
+            <span style="font-size: 10px; color: var(--text-muted);">Clique em qualquer pista acima para alternar os efeitos</span>
+          </div>
+
+          <div class="fx-rack-container">
+            <div class="fx-module-card" style="align-items: center;">
+              <div class="fx-module-title" style="width: 100%;"><span>EQ por Pista</span><span>🎚️</span></div>
+              <div style="display: flex; gap: 12px; justify-content: center; width: 100%; margin-top: 4px;">
+                <div id="knobTrackEqLow"></div>
+                <div id="knobTrackEqMid"></div>
+                <div id="knobTrackEqHigh"></div>
+              </div>
+            </div>
+
+            <div class="fx-module-card" style="align-items: center;">
+              <div class="fx-module-title" style="width: 100%;"><span>Delay por Pista</span><span>⏱️</span></div>
+              <div style="display: flex; gap: 16px; justify-content: center; width: 100%; margin-top: 4px;">
+                <div id="knobTrackDelayTime"></div>
+                <div id="knobTrackDelayMix"></div>
+              </div>
+            </div>
+
+            <div class="fx-module-card" style="align-items: center;">
+              <div class="fx-module-title" style="width: 100%;"><span>Reverb por Pista</span><span>🏛️</span></div>
+              <div style="display: flex; gap: 16px; justify-content: center; width: 100%; margin-top: 4px;">
+                <div id="knobTrackReverbSize"></div>
+                <div id="knobTrackReverbMix"></div>
+              </div>
+            </div>
+          </div>
+        </div>
       </section>
 
-      <!-- Section: Rack de Processamento de Efeitos (FX Rack Dinâmico por Pista) -->
-      <section id="sectionFxRack" class="glass-card">
+      <!-- Section: Rack de Processamento de Efeitos MASTER GLOBAL (Com Interruptores ON/OFF) -->
+      <section id="sectionFxRack" class="glass-card" style="display: none;">
         <div class="card-title">
-          <span id="fxRackTitleText" style="color: var(--accent-cyan); font-weight: 800;">RACK DE EFEITOS - PISTA CH 01: LAYER 1</span>
-          <span>🎛️</span>
+          <span style="color: var(--accent-purple); font-weight: 800; font-size: 14px;">RACK DE EFEITOS MASTER GLOBAL (SAÍDA GERAL)</span>
+          <span>🌐 MASTER BUS</span>
         </div>
 
         <div class="fx-rack-container">
           
-          <!-- Módulo Equalizador 3-Bandas com Knobs 3D -->
+          <!-- Módulo Master EQ com Chave ON/OFF -->
           <div class="fx-module-card" style="align-items: center;">
             <div class="fx-module-title" style="width: 100%;">
-              <span>Equalizador (3-Band EQ)</span>
-              <span>🎚️</span>
+              <span>Equalizador Master (3-Band)</span>
+              <button id="btnMasterEqToggle" class="btn btn-sm btn-fx-toggle active">ON</button>
             </div>
             
             <div style="display: flex; gap: 16px; justify-content: center; width: 100%; margin-top: 8px;">
-              <div id="knobEqLow"></div>
-              <div id="knobEqMid"></div>
-              <div id="knobEqHigh"></div>
+              <div id="knobMasterEqLow"></div>
+              <div id="knobMasterEqMid"></div>
+              <div id="knobMasterEqHigh"></div>
             </div>
           </div>
 
-          <!-- Módulo Stereo Delay com Knobs 3D -->
+          <!-- Módulo Master Stereo Delay com Chave ON/OFF -->
           <div class="fx-module-card" style="align-items: center;">
             <div class="fx-module-title" style="width: 100%;">
-              <span>Stereo Delay / Echo</span>
-              <span>⏱️</span>
+              <span>Stereo Delay Master</span>
+              <button id="btnMasterDelayToggle" class="btn btn-sm btn-fx-toggle active">ON</button>
             </div>
             
             <div style="display: flex; gap: 20px; justify-content: center; width: 100%; margin-top: 8px;">
-              <div id="knobDelayTime"></div>
-              <div id="knobDelayMix"></div>
+              <div id="knobMasterDelayTime"></div>
+              <div id="knobMasterDelayMix"></div>
             </div>
           </div>
 
-          <!-- Módulo Reverb Estéreo com Knobs 3D -->
+          <!-- Módulo Master Reverb Estéreo com Chave ON/OFF -->
           <div class="fx-module-card" style="align-items: center;">
             <div class="fx-module-title" style="width: 100%;">
-              <span>Reverb Estéreo</span>
-              <span>🏛️</span>
+              <span>Reverb Estéreo Master</span>
+              <button id="btnMasterReverbToggle" class="btn btn-sm btn-fx-toggle active">ON</button>
             </div>
             
             <div style="display: flex; gap: 20px; justify-content: center; width: 100%; margin-top: 8px;">
-              <div id="knobReverbSize"></div>
-              <div id="knobReverbMix"></div>
+              <div id="knobMasterReverbSize"></div>
+              <div id="knobMasterReverbMix"></div>
             </div>
           </div>
 
           <!-- Módulo Master Limiter Status -->
           <div class="fx-module-card" style="justify-content: center; text-align: center;">
             <div class="fx-module-title">
-              <span>Master Limiter</span>
+              <span>Master Limiter Proteção</span>
               <span>🛡️</span>
             </div>
             <div style="color: var(--accent-emerald); font-weight: 700; font-size: 13px; margin-top: 10px;">
-              ● Proteção Ativa (-1.0 dB)
+              ● Ativo (-1.0 dB Limit)
             </div>
             <div style="font-size: 10px; color: var(--text-muted); margin-top: 4px;">
-              Prevenção automática contra distorção em speakers mobile
+              Proteção automática na saída geral do áudio
             </div>
           </div>
 
@@ -278,7 +313,7 @@
         </div>
 
         <div style="font-size: 10px; color: var(--text-muted);">
-          💡 Clique em uma pista do Mixer para editar seus efeitos | Botão Direito nos knobs para <b>MIDI Learn</b>
+          💡 Clique na pista para efeitos individuais | Botão Direito para <b>MIDI Learn</b>
         </div>
       </div>
 
