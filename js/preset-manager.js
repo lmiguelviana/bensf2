@@ -25,8 +25,8 @@ class PresetManager {
         // Capturar metadados do timbre atribuído à pista
         let timbreInfo = null;
         if (chData.assignedPresetIndex !== null && chData.assignedPresetIndex !== undefined &&
-            this.synth.parsedSf2Data && this.synth.parsedSf2Data.presets &&
-            this.synth.parsedSf2Data.presets[chData.assignedPresetIndex]) {
+          this.synth.parsedSf2Data && this.synth.parsedSf2Data.presets &&
+          this.synth.parsedSf2Data.presets[chData.assignedPresetIndex]) {
           const p = this.synth.parsedSf2Data.presets[chData.assignedPresetIndex];
           timbreInfo = {
             name: p.name,
@@ -278,7 +278,7 @@ class PresetManager {
     try {
       const arr = Array.from(this.userPresets.values());
       localStorage.setItem('sf2_user_presets', JSON.stringify(arr));
-    } catch (e) {}
+    } catch (e) { }
   }
 
   loadUserPresetsFromStorage() {
@@ -288,7 +288,7 @@ class PresetManager {
         const arr = JSON.parse(jsonStr);
         arr.forEach((p) => this.userPresets.set(p.name, p));
       }
-    } catch (e) {}
+    } catch (e) { }
   }
 
   updatePresetDropdownUI() {

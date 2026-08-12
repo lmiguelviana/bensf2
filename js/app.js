@@ -831,19 +831,29 @@ document.addEventListener('DOMContentLoaded', () => {
   });
 
   // Preset Manager Binds
-  if (btnSavePreset) {
-    btnSavePreset.addEventListener('click', () => {
-      presetManager.savePreset();
-      showToastNotification('Preset Salvo!', 'As configurações do banco foram salvas com sucesso.');
+  const btnNewPreset = document.getElementById('btnNewPreset');
+  if (btnNewPreset) {
+    btnNewPreset.addEventListener('click', () => {
+      presetManager.createNewPreset();
     });
   }
 
-  if (btnLoadPreset && presetFileInput) {
-    btnLoadPreset.addEventListener('click', () => presetFileInput.click());
+  if (btnSavePreset) {
+    btnSavePreset.addEventListener('click', () => {
+      presetManager.saveActivePreset();
+    });
+  }
+
+  if (btnLoadPreset) {
+    btnLoadPreset.addEventListener('click', () => {
+      presetManager.openPresetFileDialog();
+    });
+  }
+
+  if (presetFileInput) {
     presetFileInput.addEventListener('change', (e) => {
       if (e.target.files.length > 0) {
         presetManager.importPresetFromJsonFile(e.target.files[0]);
-        showToastNotification('Preset Carregado!', `Arquivo "${e.target.files[0].name}" importado.`);
       }
     });
   }
@@ -851,9 +861,7 @@ document.addEventListener('DOMContentLoaded', () => {
   if (presetSelect) {
     presetSelect.addEventListener('change', (e) => {
       const selectedVal = e.target.value;
-      if (presetManager.factoryPresets.has(selectedVal)) {
-        presetManager.loadPreset(presetManager.factoryPresets.get(selectedVal));
-      } else if (presetManager.userPresets.has(selectedVal)) {
+      if (presetManager.userPresets.has(selectedVal)) {
         presetManager.loadPreset(presetManager.userPresets.get(selectedVal));
       }
     });
@@ -967,8 +975,7 @@ document.addEventListener('DOMContentLoaded', () => {
   window.addEventListener('keydown', (e) => {
     if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 's') {
       e.preventDefault();
-      presetManager.savePreset();
-      showToastNotification('Preset Salvo!', 'Configurações salvas (Ctrl+S)');
+      presetManager.saveActivePreset();
       return;
     }
 

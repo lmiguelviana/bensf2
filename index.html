@@ -52,11 +52,14 @@
     <!-- Linha Inferior (Barra de Ferramentas & Presets & Configurações - Limpa & Ultra-Organizada) -->
     <div class="header-bottom-row">
       <div class="top-toolbar">
-        <div class="preset-selector-group">
+        <div class="preset-selector-group" style="display: flex; align-items: center; gap: 6px;">
           <span class="preset-label">Preset:</span>
-          <select id="presetSelect" class="preset-select">
+          <select id="presetSelect" class="preset-select" style="min-width: 170px;">
             <option value="" disabled selected>(nenhum preset salvo)</option>
           </select>
+          <button id="btnNewPreset" class="btn" title="Criar um Novo Preset (+)">
+            ➕ Novo
+          </button>
         </div>
 
         <button id="btnSavePreset" class="btn btn-accent" title="Salvar Preset Atual (Ctrl+S)">
