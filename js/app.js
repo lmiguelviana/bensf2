@@ -33,6 +33,9 @@ document.addEventListener('DOMContentLoaded', () => {
   const presetManager = new PresetManager(synth, fxRack, mixerConsole);
   window.presetManager = presetManager;
 
+  const setlistManager = new BenSetlistManager(synth, presetManager, mixerConsole, fxRack);
+  window.setlistManager = setlistManager;
+
   let baseOctave = 1;
   let totalKeysToRender = 88; // Padrão 88 teclas estilo Piano Completo
 
@@ -1365,10 +1368,106 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   });
 
+  // Tab Switcher (Mixer, FX Master, Setlist Mode)
+  const tabMixer = document.getElementById('tabMixer');
+  const tabFxRack = document.getElementById('tabFxRack');
+  const tabSetlist = document.getElementById('tabSetlist');
+  const sectionMixer = document.getElementById('sectionMixer');
+  const sectionFxRack = document.getElementById('sectionFxRack');
+  const sectionSetlist = document.getElementById('sectionSetlist');
+
+  if (tabMixer && tabFxRack && tabSetlist) {
+    tabMixer.addEventListener('click', () => {
+      tabMixer.classList.add('active');
+      tabFxRack.classList.remove('active');
+      tabSetlist.classList.remove('active');
+      if (sectionMixer) sectionMixer.style.display = 'flex';
+      if (sectionFxRack) sectionFxRack.style.display = 'none';
+      if (sectionSetlist) sectionSetlist.style.display = 'none';
+    });
+
+    tabFxRack.addEventListener('click', () => {
+      tabFxRack.classList.add('active');
+      tabMixer.classList.remove('active');
+      tabSetlist.classList.remove('active');
+      if (sectionFxRack) sectionFxRack.style.display = 'block';
+      if (sectionMixer) sectionMixer.style.display = 'none';
+      if (sectionSetlist) sectionSetlist.style.display = 'none';
+    });
+
+    tabSetlist.addEventListener('click', () => {
+      tabSetlist.classList.add('active');
+      tabMixer.classList.remove('active');
+      tabFxRack.classList.remove('active');
+      if (sectionSetlist) sectionSetlist.style.display = 'block';
+      if (sectionMixer) sectionMixer.style.display = 'none';
+      if (sectionFxRack) sectionFxRack.style.display = 'none';
+      setlistManager.renderSetlistPanel();
+    });
+  }
+
+  // Atalhos Globais de Palco (Troca de Músicas do Setlist via Teclado / Pedal)
+  window.addEventListener('keydown', (e) => {
+    if (e.target.tagName === 'INPUT' || e.target.tagName === 'SELECT' || e.target.tagName === 'TEXTAREA') return;
+    if (e.key === 'N' || e.key === 'n' || e.key === 'PageDown') {
+      setlistManager.nextSong();
+    } else if (e.key === 'P' || e.key === 'p' || e.key === 'PageUp') {
+      setlistManager.prevSong();
+    }
+  });
+
+  const btnPrevSong = document.getElementById('btnPrevSong');
+  const btnNextSong = document.getElementById('btnNextSong');
+  if (btnPrevSong) btnPrevSong.addEventListener('click', () => setlistManager.prevSong());
+  if (btnNextSong) btnNextSong.addEventListener('click', () => setlistManager.nextSong());
+
+  // Handlers para o Modal de Adicionar Música ao Setlist
+  const btnAddSongToSetlist = document.getElementById('btnAddSongToSetlist');
+  const addSongModal = document.getElementById('addSongModal');
+  const inputSongTitle = document.getElementById('inputSongTitle');
+  const selectSongPreset = document.getElementById('selectSongPreset');
+  const inputSongNotes = document.getElementById('inputSongNotes');
+  const btnConfirmAddSongModal = document.getElementById('btnConfirmAddSongModal');
+  const btnCancelAddSongModal = document.getElementById('btnCancelAddSongModal');
+
+  if (btnAddSongToSetlist && addSongModal) {
+    btnAddSongToSetlist.addEventListener('click', () => {
+      if (selectSongPreset) {
+        let html = '';
+        presetManager.userPresets.forEach((p, name) => {
+          html += `<option value="${name}">${name}</option>`;
+        });
+        if (html === '') html = `<option value="">(Nenhum preset salvo - Crie presets no mixer primeiro)</option>`;
+        selectSongPreset.innerHTML = html;
+      }
+      if (inputSongTitle) inputSongTitle.value = `Música ${setlistManager.getSetlistItems().length + 1}`;
+      addSongModal.style.display = 'flex';
+    });
+  }
+
+  if (btnCancelAddSongModal) {
+    btnCancelAddSongModal.addEventListener('click', () => {
+      if (addSongModal) addSongModal.style.display = 'none';
+    });
+  }
+
+  if (btnConfirmAddSongModal) {
+    btnConfirmAddSongModal.addEventListener('click', () => {
+      const title = inputSongTitle ? inputSongTitle.value.trim() : '';
+      const preset = selectSongPreset ? selectSongPreset.value : '';
+      const notes = inputSongNotes ? inputSongNotes.value.trim() : '';
+
+      if (title) {
+        setlistManager.addItem(title, preset, notes);
+        if (addSongModal) addSongModal.style.display = 'none';
+      }
+    });
+  }
+
   function handleSf2Files(filesList) {
-    const files = Array.from(filesList).filter(f => f.name.toLowerCase().endsWith('.sf2'));
+    const files = Array.from(filesList).filter(f => f.name.toLowerCase().endsWith('.sf2') || f.name.toLowerCase().endsWith('.sf3'));
     if (files.length === 0) {
-      showToastNotification('Arquivo Inválido', 'Por favor, selecione arquivos válidos com extensão .sf2', 'warning');
+      showToastNotification('Arquivo Inválido', 'Por favor, selecione arquivos válidos com extensão .sf2 ou .sf3', 'warning');
       return;
     }
 

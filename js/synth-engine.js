@@ -301,7 +301,14 @@ class SynthEngine {
 
       const now = ctx.currentTime;
       const gainNode = ctx.createGain();
-      const velGain = this.calculateVelocityGain(velocity, ch);
+      let velGain = this.calculateVelocityGain(velocity, ch);
+
+      // Velocity Layer Crossfading (Equal-Power Transition)
+      if (assignedSampleIndices && assignedSampleIndices.length > 1) {
+        const velNorm = velocity / 127.0;
+        const crossfadeFactor = Math.sin(velNorm * (Math.PI / 2.0));
+        velGain *= (0.5 + 0.5 * crossfadeFactor);
+      }
 
       const adsr = chConfig.adsr || this.adsr;
       const attackEnd = now + Math.max(0.001, adsr.attack);

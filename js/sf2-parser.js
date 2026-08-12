@@ -197,6 +197,7 @@ class SoundFont2Parser {
           const validPitch = (rawPitch >= 12 && rawPitch <= 108) ? rawPitch : 60;
 
           if (name && name !== 'EOS') {
+            const isCompressed = (sampleType & 0x10) !== 0;
             this.sampleHeaders.push({
               name: this.cleanString(name), 
               start, 
@@ -204,7 +205,9 @@ class SoundFont2Parser {
               startLoop, 
               endLoop, 
               sampleRate, 
-              originalPitch: validPitch
+              originalPitch: validPitch,
+              sampleType,
+              isCompressed
             });
           }
         }
