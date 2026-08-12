@@ -1,6 +1,6 @@
 /**
  * MASTER APPLICATION CONTROLLER
- * Liga a interface UI ao motor de síntese SF2, Mixer Console, FX Rack, WebMIDI, SettingsModal, PresetManager e Teclado Kontakt Ribbon (88 Teclas).
+ * Liga a interface UI ao motor de síntese SF2, Mixer Console, FX Rack, WebMIDI, SettingsModal, PresetManager e MidiLearn.
  */
 
 document.addEventListener('DOMContentLoaded', () => {
@@ -14,7 +14,16 @@ document.addEventListener('DOMContentLoaded', () => {
   const vuMeter = new VuMeterManager(window.audioEngine);
   window.vuMeter = vuMeter;
 
+  const webMidi = new WebMidiManager(synth);
+  window.webMidi = webMidi;
+
+  // Gerenciador de Automação MIDI Learn (Botão Direito estilo Kontakt)
+  const midiLearn = new MidiLearnManager(webMidi);
+  midiLearn.init();
+  window.midiLearn = midiLearn;
+
   const mixerConsole = new MixerConsoleManager(synth, vuMeter);
+  mixerConsole.setMidiLearnManager(midiLearn);
   mixerConsole.init(document.getElementById('mixerContainer'));
   window.mixerConsole = mixerConsole;
 
@@ -22,20 +31,18 @@ document.addEventListener('DOMContentLoaded', () => {
   window.presetManager = presetManager;
 
   let baseOctave = 1;
-  let totalKeysToRender = 88; // Padrão 88 teclas estilo Kontakt / DAW
+  let totalKeysToRender = 88; // Padrão 88 teclas estilo Piano Completo
 
   // WebMIDI Manager com iluminação de teclas em tempo real quando o controlador físico toca
   const midiDeviceStatusText = document.getElementById('midiDeviceStatusText');
   const pianoKeysEl = document.getElementById('pianoKeys');
 
-  const webMidi = new WebMidiManager(synth);
   webMidi.init((deviceName) => {
     if (midiDeviceStatusText) {
       midiDeviceStatusText.textContent = deviceName;
       midiDeviceStatusText.style.color = deviceName !== 'Nenhum' && deviceName !== 'Não Suportado' ? 'var(--accent-emerald)' : 'var(--accent-cyan)';
     }
   });
-  window.webMidi = webMidi;
 
   // Instanciar Gerenciador de Configurações
   const settingsModal = new SettingsModalManager(window.audioEngine, webMidi);
@@ -57,12 +64,21 @@ document.addEventListener('DOMContentLoaded', () => {
     });
     pitchWheelInput.addEventListener('mouseup', resetPitch);
     pitchWheelInput.addEventListener('touchend', resetPitch);
+
+    midiLearn.attach(pitchWheelInput, 'Pitch Bend Wheel', (normVal) => {
+      const bendVal = (normVal * 4.0) - 2.0;
+      synth.setPitchBend('all', bendVal);
+    });
   }
 
   if (modWheelInput) {
     modWheelInput.addEventListener('input', (e) => {
       const val = parseFloat(e.target.value);
       fxRack.setReverbMix(val * 0.5);
+    });
+
+    midiLearn.attach(modWheelInput, 'Modulation Wheel (CC1)', (normVal) => {
+      fxRack.setReverbMix(normVal * 0.5);
     });
   }
 
@@ -154,13 +170,17 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
-  // Instanciar Knobs 3D VST para o FX Rack
+  // Instanciar Knobs 3D VST para o FX Rack com Suporte a MIDI Learn (Botão Direito)
   const knobLowEl = document.getElementById('knobEqLow');
   if (knobLowEl) {
     new RotaryKnob(knobLowEl, {
       title: 'GRAVE (100Hz)',
       min: -12, max: 12, step: 0.5, value: 0, unit: 'dB',
       onChange: (val) => fxRack.setEqLowGain(val)
+    });
+    midiLearn.attach(knobLowEl, 'EQ Grave (100Hz)', (normVal) => {
+      const dbVal = (normVal * 24.0) - 12.0;
+      fxRack.setEqLowGain(dbVal);
     });
   }
 
@@ -171,6 +191,10 @@ document.addEventListener('DOMContentLoaded', () => {
       min: -12, max: 12, step: 0.5, value: 0, unit: 'dB',
       onChange: (val) => fxRack.setEqMidGain(val)
     });
+    midiLearn.attach(knobMidEl, 'EQ Médio (1kHz)', (normVal) => {
+      const dbVal = (normVal * 24.0) - 12.0;
+      fxRack.setEqMidGain(dbVal);
+    });
   }
 
   const knobHighEl = document.getElementById('knobEqHigh');
@@ -179,6 +203,10 @@ document.addEventListener('DOMContentLoaded', () => {
       title: 'AGUDO (8kHz)',
       min: -12, max: 12, step: 0.5, value: 0, unit: 'dB',
       onChange: (val) => fxRack.setEqHighGain(val)
+    });
+    midiLearn.attach(knobHighEl, 'EQ Agudo (8kHz)', (normVal) => {
+      const dbVal = (normVal * 24.0) - 12.0;
+      fxRack.setEqHighGain(dbVal);
     });
   }
 
@@ -189,6 +217,10 @@ document.addEventListener('DOMContentLoaded', () => {
       min: 50, max: 1000, step: 10, value: 300, unit: 'ms',
       onChange: (val) => fxRack.setDelayTime(val / 1000.0)
     });
+    midiLearn.attach(knobDelayTimeEl, 'Tempo Delay', (normVal) => {
+      const secVal = 0.05 + (normVal * 0.95);
+      fxRack.setDelayTime(secVal);
+    });
   }
 
   const knobDelayMixEl = document.getElementById('knobDelayMix');
@@ -197,6 +229,9 @@ document.addEventListener('DOMContentLoaded', () => {
       title: 'MISTURA DELAY',
       min: 0, max: 100, step: 1, value: 20, unit: '%',
       onChange: (val) => fxRack.setDelayMix(val / 100.0)
+    });
+    midiLearn.attach(knobDelayMixEl, 'Mistura Delay', (normVal) => {
+      fxRack.setDelayMix(normVal);
     });
   }
 
@@ -207,6 +242,9 @@ document.addEventListener('DOMContentLoaded', () => {
       min: 10, max: 100, step: 1, value: 40, unit: '%',
       onChange: (val) => fxRack.setReverbSize(val / 100.0)
     });
+    midiLearn.attach(knobReverbSizeEl, 'Tamanho Sala Reverb', (normVal) => {
+      fxRack.setReverbSize(normVal);
+    });
   }
 
   const knobReverbMixEl = document.getElementById('knobReverbMix');
@@ -215,6 +253,9 @@ document.addEventListener('DOMContentLoaded', () => {
       title: 'MISTURA REVERB',
       min: 0, max: 100, step: 1, value: 25, unit: '%',
       onChange: (val) => fxRack.setReverbMix(val / 100.0)
+    });
+    midiLearn.attach(knobReverbMixEl, 'Mistura Reverb', (normVal) => {
+      fxRack.setReverbMix(normVal);
     });
   }
 
@@ -262,7 +303,7 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
-  // Renderizar Teclado Virtual Piano Estilo Kontakt / DAW Ribbon (Apenas números 1,2,3,4... nas teclas C)
+  // Renderizar Teclado Virtual Piano com Proporções Piano Real Slender
   function renderPianoKeyboard() {
     pianoKeysEl.innerHTML = '';
     const startNote = totalKeysToRender === 88 ? 21 : baseOctave * 12;
@@ -294,7 +335,7 @@ document.addEventListener('DOMContentLoaded', () => {
         keyEl.style.marginLeft = `-${blackMarginPct}%`;
         keyEl.style.marginRight = `-${blackMarginPct}%`;
       } else {
-        // Exibir rótulo discreto APENAS nas teclas C (1, 2, 3, 4, 5, 6, 7, 8) exatamente como no Kontakt!
+        // Exibir rótulo discreto APENAS nas teclas C (1, 2, 3, 4, 5, 6, 7, 8)
         if (noteName === 'C') {
           const label = document.createElement('span');
           label.className = 'key-label';

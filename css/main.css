@@ -491,17 +491,130 @@ body {
   font-size: 11px;
 }
 
-/* Virtual Piano Keyboard Footer - Ultra-Compact Strip (Estilo Kontakt / DAW) */
+/* MIDI Learn Context Menu (Estilo Kontakt / DAW) */
+.midi-learn-menu {
+  position: fixed;
+  z-index: 3000;
+  background: rgba(16, 21, 33, 0.96);
+  backdrop-filter: blur(20px);
+  border: 1px solid var(--accent-cyan);
+  border-radius: var(--radius-md);
+  padding: 6px;
+  box-shadow: 0 10px 30px rgba(0,0,0,0.8), var(--shadow-glow-cyan);
+  min-width: 200px;
+  font-family: var(--font-body);
+}
+
+.menu-item-header {
+  font-family: var(--font-heading);
+  font-size: 11px;
+  font-weight: 800;
+  color: var(--accent-cyan);
+  padding: 4px 8px;
+  text-transform: uppercase;
+}
+
+.menu-divider {
+  height: 1px;
+  background: rgba(255, 255, 255, 0.08);
+  margin: 4px 0;
+}
+
+.menu-item {
+  padding: 6px 10px;
+  border-radius: var(--radius-sm);
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-main);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  transition: all 0.15s ease;
+}
+
+.menu-item:hover {
+  background: rgba(0, 242, 254, 0.15);
+  color: var(--accent-cyan);
+}
+
+.menu-item-active {
+  color: var(--accent-emerald);
+}
+
+.menu-item-danger:hover {
+  background: rgba(255, 23, 68, 0.15);
+  color: var(--accent-danger);
+}
+
+/* Learning Banner Overlay */
+.midi-learning-overlay {
+  position: fixed;
+  top: 60px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 3500;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.learning-card {
+  background: rgba(12, 16, 25, 0.95);
+  backdrop-filter: blur(20px);
+  border: 2px solid var(--accent-cyan);
+  border-radius: var(--radius-lg);
+  padding: 12px 20px;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  box-shadow: 0 10px 40px rgba(0, 242, 254, 0.3);
+}
+
+.learning-icon {
+  font-size: 24px;
+  animation: pulseMidi 1s infinite alternate;
+}
+
+@keyframes pulseMidi {
+  0% { transform: scale(1); opacity: 0.7; }
+  100% { transform: scale(1.2); opacity: 1; }
+}
+
+.learning-title {
+  font-family: var(--font-heading);
+  font-size: 13px;
+  font-weight: 800;
+  color: var(--accent-cyan);
+}
+
+.learning-sub {
+  font-size: 11px;
+  color: var(--text-muted);
+}
+
+/* Indicadores nos Controles UI */
+.midi-learning-target {
+  outline: 2px dashed var(--accent-cyan) !important;
+  box-shadow: 0 0 15px var(--accent-cyan) !important;
+}
+
+.midi-linked {
+  border-color: var(--accent-emerald) !important;
+}
+
+/* Virtual Piano Keyboard Footer - Sleek & Slender Piano Key Proportions */
 .keyboard-container {
-  height: 68px;
+  height: 105px;
   background: #090c12;
-  border-top: 1px solid rgba(255, 255, 255, 0.1);
-  padding: 2px 10px;
+  border-top: 1px solid rgba(255, 255, 255, 0.12);
+  padding: 4px 10px;
   display: flex;
   align-items: center;
   gap: 12px;
   z-index: 90;
   width: 100%;
+  box-shadow: 0 -5px 25px rgba(0,0,0,0.8);
 }
 
 /* Wheels de Pitch Bend & Modulation */
@@ -510,7 +623,7 @@ body {
   align-items: center;
   gap: 8px;
   height: 100%;
-  padding: 2px 4px;
+  padding: 4px 6px;
   background: rgba(0, 0, 0, 0.4);
   border-radius: var(--radius-sm);
   border: 1px solid rgba(255, 255, 255, 0.05);
@@ -520,7 +633,9 @@ body {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 2px;
+  gap: 4px;
+  height: 100%;
+  justify-content: space-between;
 }
 
 .wheel-label {
@@ -534,7 +649,7 @@ body {
   writing-mode: bt-lr;
   -webkit-appearance: slider-vertical;
   width: 12px;
-  height: 42px;
+  height: 72px;
   background: #141a24;
   outline: none;
   cursor: pointer;
@@ -545,14 +660,14 @@ body {
   display: flex;
   flex-direction: column;
   height: 100%;
-  gap: 2px;
+  gap: 4px;
 }
 
 .keyboard-controls-bar {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  height: 16px;
+  height: 18px;
 }
 
 .octave-controls {
@@ -581,52 +696,55 @@ body {
 .piano-key {
   position: relative;
   cursor: pointer;
-  border-radius: 0 0 2px 2px;
+  border-radius: 0 0 3px 3px;
   transition: background 0.04s ease, box-shadow 0.04s ease;
   touch-action: none;
 }
 
-/* Teclas Brancas estilo Kontakt (Dark Metalized Gray) */
+/* Teclas Brancas (Elegantes, Esbeltas, Proporção Piano Real 1:5) */
 .piano-key.white {
   flex: 1 1 0%;
-  min-width: 6px;
+  min-width: 8px;
   height: 100%;
-  background: linear-gradient(180deg, #323d4e 0%, #202733 100%);
-  border: 1px solid #141a24;
-  border-top: none;
+  background: linear-gradient(180deg, #eef2f7 0%, #d8e0ea 85%, #b5c3d4 100%);
+  border: 1px solid #78899a;
+  border-top: 3px solid #4a5868;
   margin-right: 1px;
   z-index: 1;
+  box-shadow: inset 0 -4px 6px rgba(0,0,0,0.15), 0 2px 5px rgba(0,0,0,0.3);
 }
 
 .piano-key.white.active, .piano-key.white:active {
   background: linear-gradient(180deg, var(--accent-cyan) 0%, #00b0ff 100%) !important;
-  box-shadow: 0 0 8px var(--accent-cyan);
+  box-shadow: 0 0 12px var(--accent-cyan) !important;
+  border-color: var(--accent-cyan) !important;
 }
 
-/* Teclas Pretas estilo Kontakt */
+/* Teclas Pretas (Elegantes, Estreitas, Proporção Piano Real ~58% da altura) */
 .piano-key.black {
   height: 58%;
-  background: linear-gradient(180deg, #161b24 0%, #080b0f 100%);
+  background: linear-gradient(180deg, #252c38 0%, #0d1117 100%);
   border: 1px solid #000;
+  border-radius: 0 0 2px 2px;
   z-index: 2;
-  box-shadow: 0 2px 4px rgba(0,0,0,0.8);
-  min-width: 4px;
+  box-shadow: 0 3px 6px rgba(0,0,0,0.85), inset 0 1px 1px rgba(255,255,255,0.2);
+  min-width: 5px;
 }
 
 .piano-key.black.active, .piano-key.black:active {
   background: linear-gradient(180deg, var(--accent-purple) 0%, var(--accent-pink) 100%) !important;
-  box-shadow: 0 0 8px var(--accent-purple);
+  box-shadow: 0 0 12px var(--accent-purple) !important;
+  border-color: var(--accent-pink) !important;
 }
 
-/* Marcador numérico discreto apenas nas teclas C (1, 2, 3, 4, 5, 6, 7, 8) */
 .key-label {
   position: absolute;
-  bottom: 1px;
+  bottom: 2px;
   left: 50%;
   transform: translateX(-50%);
-  font-size: 7px;
+  font-size: 8px;
   font-weight: 800;
-  color: rgba(255, 255, 255, 0.4);
+  color: #4a5868;
   font-family: var(--font-mono);
   pointer-events: none;
 }

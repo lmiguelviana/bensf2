@@ -1,16 +1,19 @@
 /**
- * WEBMIDI CONTROLLER MANAGER (MULTI-DEVICE SUPPORT)
- * Suporte a múltiplos teclados controladores MIDI (USB-OTG e Bluetooth) com roteamento individual por dispositivo.
+ * WEBMIDI CONTROLLER MANAGER (MULTI-DEVICE & MIDI LEARN)
+ * Suporte a múltiplos teclados controladores MIDI (USB-OTG e Bluetooth) e automação MIDI Learn em tempo real.
  */
 
 class WebMidiManager {
   constructor(synthEngine) {
     this.synth = synthEngine;
     this.midiAccess = null;
-    this.activeInputs = new Map(); // id -> input
-    this.deviceChannelMap = new Map(); // id -> assignedMidiChannel (1-16 ou 'all')
+    this.activeInputs = new Map();
+    this.deviceChannelMap = new Map();
     this.onStatusChange = null;
     this.sustainPedalActive = false;
+
+    this.ccCustomMappings = new Map(); // ccNum -> callback(normVal)
+    this.learningCallback = null;
   }
 
   init(statusCallback) {
@@ -53,7 +56,6 @@ class WebMidiManager {
         connectedNames.push(input.name);
 
         if (!this.deviceChannelMap.has(input.id)) {
-          // Atribuir canal padrão baseado na ordem dos dispositivos conectados
           const defaultChan = this.activeInputs.size;
           this.deviceChannelMap.set(input.id, defaultChan <= 16 ? defaultChan : 'all');
         }
@@ -87,6 +89,22 @@ class WebMidiManager {
     console.log(`[WebMIDI] Dispositivo ${deviceId} remapeado para o Canal MIDI: ${channel}`);
   }
 
+  setLearningCallback(callback) {
+    this.learningCallback = callback;
+  }
+
+  cancelLearning() {
+    this.learningCallback = null;
+  }
+
+  addCcMapping(ccNum, callback) {
+    this.ccCustomMappings.set(ccNum, callback);
+  }
+
+  removeCcMapping(ccNum) {
+    this.ccCustomMappings.delete(ccNum);
+  }
+
   handleMidiMessage(event, deviceId) {
     const data = event.data;
     if (!data || data.length < 2) return;
@@ -96,7 +114,6 @@ class WebMidiManager {
     const noteOrCc = data[1];
     const velocityOrVal = data[2] !== undefined ? data[2] : 0;
 
-    // Se o dispositivo tiver um canal fixo atribuído na configuração, usar ele!
     const mappedChannelSetting = this.deviceChannelMap.get(deviceId);
     const targetChannel = (mappedChannelSetting && mappedChannelSetting !== 'all') ? parseInt(mappedChannelSetting, 10) : rawChannel;
 
@@ -114,6 +131,20 @@ class WebMidiManager {
         break;
 
       case 0xb0: // Control Change (CC)
+        // Se estiver em modo de aprendizado (MIDI Learn), capturar o número do CC!
+        if (this.learningCallback) {
+          const cb = this.learningCallback;
+          this.learningCallback = null;
+          cb(noteOrCc);
+          return;
+        }
+
+        // Executar mapa customizado de MIDI Learn se existir para este CC
+        if (this.ccCustomMappings.has(noteOrCc)) {
+          const customCb = this.ccCustomMappings.get(noteOrCc);
+          customCb(velocityOrVal / 127.0);
+        }
+
         if (noteOrCc === 64) { // CC64 - Pedal de Sustain
           this.sustainPedalActive = velocityOrVal >= 64;
         } else if (noteOrCc === 7) { // CC7 - Master Volume
@@ -124,8 +155,8 @@ class WebMidiManager {
 
       case 0xe0: // Pitch Bend
         const rawBend = (velocityOrVal << 7) | noteOrCc;
-        const normalizedBend = (rawBend - 8192) / 8192.0; // [-1.0 a +1.0]
-        const semitones = normalizedBend * 2.0; // +/- 2 semitons
+        const normalizedBend = (rawBend - 8192) / 8192.0;
+        const semitones = normalizedBend * 2.0;
         this.synth.setPitchBend(targetChannel, semitones);
         break;
     }

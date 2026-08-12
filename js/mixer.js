@@ -1,6 +1,6 @@
 /**
- * MULTITIMBRIC MIXER CONSOLE MANAGER (16 MIDI CHANNELS)
- * Gerenciador dinâmico de 16 pistas de canais MIDI, roteamento por canal físico, seleção de timbres limpos, faders, pan, mute e solo.
+ * MULTITIMBRIC MIXER CONSOLE MANAGER (16 MIDI CHANNELS WITH MIDI LEARN)
+ * Gerenciador dinâmico de 16 pistas de canais MIDI, roteamento por canal físico, seleção de timbres limpos, faders, pan, mute e solo com suporte a MIDI Learn.
  */
 
 class MixerConsoleManager {
@@ -8,12 +8,17 @@ class MixerConsoleManager {
     this.synth = synthEngine;
     this.vuMeter = vuMeterManager;
     this.container = null;
-    this.totalChannels = 4; // Canais padrão visíveis (expansível de 1 a 16)
+    this.totalChannels = 4;
+    this.midiLearn = null;
   }
 
   init(containerElement) {
     this.container = containerElement;
     this.renderMixer();
+  }
+
+  setMidiLearnManager(midiLearnManager) {
+    this.midiLearn = midiLearnManager;
   }
 
   setVisibleChannelCount(count) {
@@ -52,7 +57,6 @@ class MixerConsoleManager {
       assignedMidiChannel: ch 
     };
 
-    // Montar opções de timbres do banco SF2 sem caracteres estranhos
     let presetOptionsHtml = `<option value="0">Default Sound</option>`;
     if (this.synth.parsedSf2Data && this.synth.parsedSf2Data.presets && this.synth.parsedSf2Data.presets.length > 0) {
       presetOptionsHtml = this.synth.parsedSf2Data.presets.map((p, idx) => {
@@ -62,7 +66,6 @@ class MixerConsoleManager {
       }).join('');
     }
 
-    // Montar opções de Canais MIDI (1 a 16 ou Todos/Layer)
     let midiChanOptionsHtml = `<option value="all" ${chConfig.assignedMidiChannel === 'all' ? 'selected' : ''}>TODOS (Layer)</option>`;
     for (let m = 1; m <= 16; m++) {
       const isSelected = (chConfig.assignedMidiChannel === m || (chConfig.assignedMidiChannel === undefined && ch === m)) ? 'selected' : '';
@@ -72,7 +75,6 @@ class MixerConsoleManager {
     strip.innerHTML = `
       <div class="channel-header">CH ${ch < 10 ? '0' + ch : ch}: LAYER ${ch}</div>
 
-      <!-- Roteamento do Canal MIDI Físico do Controlador -->
       <div class="knob-group" style="width: 100%;">
         <div class="knob-label">CANAL MIDI ENTRADA</div>
         <select class="ch-midi-select preset-select" data-channel="${ch}" style="width: 100%; font-size: 10px; padding: 2px;">
@@ -80,7 +82,6 @@ class MixerConsoleManager {
         </select>
       </div>
 
-      <!-- Seletor de Timbre do Banco SF2 para ESTA PISTA -->
       <div class="knob-group" style="width: 100%; margin-top: 4px;">
         <div class="knob-label">TIMBRE / SOM</div>
         <select class="ch-preset-select preset-select" data-channel="${ch}" style="width: 100%; font-size: 10px; padding: 3px; text-overflow: ellipsis;">
@@ -88,24 +89,20 @@ class MixerConsoleManager {
         </select>
       </div>
 
-      <!-- Area do Fader + VU Meter -->
       <div class="channel-fader-area" style="margin-top: 6px;">
-        <input type="range" class="vertical-fader ch-volume" data-channel="${ch}" min="0" max="1" step="0.01" value="${chConfig.volume}">
+        <input type="range" class="vertical-fader ch-volume" data-channel="${ch}" min="0" max="1" step="0.01" value="${chConfig.volume}" title="Clique com o botão direito para MIDI Learn">
         <canvas class="vu-meter-canvas vu-canvas-${ch}" width="10" height="120"></canvas>
       </div>
 
-      <!-- Controle de Volume Valor -->
       <div style="font-size: 10px; font-weight: 700; color: var(--accent-cyan); font-family: var(--font-mono);" id="volVal_${ch}">
         ${Math.round(chConfig.volume * 100)}%
       </div>
 
-      <!-- Panorama (PAN) -->
       <div class="knob-group">
         <div class="knob-label">PAN (L/R)</div>
-        <input type="range" class="knob-slider ch-pan" data-channel="${ch}" min="-1" max="1" step="0.05" value="${chConfig.pan}">
+        <input type="range" class="knob-slider ch-pan" data-channel="${ch}" min="-1" max="1" step="0.05" value="${chConfig.pan}" title="Clique com o botão direito para MIDI Learn">
       </div>
 
-      <!-- Transposição de Oitava -->
       <div class="knob-group">
         <div class="knob-label">OITAVA</div>
         <select class="ch-transpose preset-select" data-channel="${ch}" style="font-size: 11px; padding: 2px 4px;">
@@ -117,20 +114,17 @@ class MixerConsoleManager {
         </select>
       </div>
 
-      <!-- Botões Mute e Solo -->
       <div class="button-group-row">
         <button class="btn btn-mute ${chConfig.muted ? 'active' : ''}" data-channel="${ch}">M</button>
         <button class="btn btn-solo ${chConfig.solo ? 'active' : ''}" data-channel="${ch}">S</button>
       </div>
     `;
 
-    // Eventos dos Controles da Pista
     const midiSelect = strip.querySelector('.ch-midi-select');
     midiSelect.addEventListener('change', (e) => {
       const val = e.target.value === 'all' ? 'all' : parseInt(e.target.value, 10);
       if (this.synth.channels[ch]) {
         this.synth.channels[ch].assignedMidiChannel = val;
-        console.log(`[MixerConsoleManager] Pista CH ${ch} escutando canal MIDI: ${val}`);
       }
     });
 
@@ -153,6 +147,21 @@ class MixerConsoleManager {
       const val = parseFloat(e.target.value);
       this.synth.setChannelPan(ch, val);
     });
+
+    // Anexar MIDI Learn por botão direito!
+    if (this.midiLearn) {
+      this.midiLearn.attach(volInput, `Volume Pista CH ${ch}`, (normVal) => {
+        this.synth.setChannelVolume(ch, normVal);
+        volInput.value = normVal;
+        volDisplay.textContent = `${Math.round(normVal * 100)}%`;
+      });
+
+      this.midiLearn.attach(panInput, `PAN Pista CH ${ch}`, (normVal) => {
+        const panVal = (normVal * 2.0) - 1.0;
+        this.synth.setChannelPan(ch, panVal);
+        panInput.value = panVal;
+      });
+    }
 
     const transposeSelect = strip.querySelector('.ch-transpose');
     transposeSelect.addEventListener('change', (e) => {
@@ -207,7 +216,6 @@ class MixerConsoleManager {
     if (this.totalChannels < 16) {
       this.totalChannels++;
       this.renderMixer();
-      console.log(`[MixerConsoleManager] Nova pista adicionada: Canal ${this.totalChannels}`);
     }
   }
 }
