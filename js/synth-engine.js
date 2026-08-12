@@ -42,7 +42,7 @@ class SynthEngine {
   }
 
   initChannels() {
-    const ctx = this.audioCtx.init();
+    const ctx = this.audioCtx.init(); // Garante que ctx e masterGain estão inicializados
     for (let ch = 1; ch <= 16; ch++) {
       const channelGain = ctx.createGain();
       channelGain.gain.value = 1.0;
@@ -241,12 +241,21 @@ class SynthEngine {
   }
 
   setPitchBend(channel, semitones) {
-    this.pitchBendSemi.set(channel, semitones);
+    // Suporte a 'all': aplica em todos os canais ativos
+    if (channel === 'all') {
+      for (let ch = 1; ch <= 16; ch++) {
+        this.pitchBendSemi.set(ch, semitones);
+      }
+    } else {
+      this.pitchBendSemi.set(channel, semitones);
+    }
 
     this.activeVoices.forEach((voice) => {
-      if (voice.channel === channel && voice.sourceNode) {
+      const matches = (channel === 'all') || (voice.channel === channel);
+      if (matches && voice.sourceNode) {
         const basePitch = voice.originalPitch || 60;
-        const totalNoteShift = (voice.note + semitones) - basePitch;
+        const bendForVoice = this.pitchBendSemi.get(voice.channel) || 0;
+        const totalNoteShift = (voice.note + bendForVoice) - basePitch;
         const pitchRatio = Math.pow(2, totalNoteShift / 12);
         try {
           voice.sourceNode.playbackRate.setValueAtTime(pitchRatio, this.audioCtx.getCurrentTime());
@@ -303,8 +312,21 @@ class SynthEngine {
       const gainNode = ctx.createGain();
       let velGain = this.calculateVelocityGain(velocity, ch);
 
-      // Velocity Layer Crossfading (Equal-Power Transition)
-      if (assignedSampleIndices && assignedSampleIndices.length > 1) {
+      // BUG FIX: assignedSampleIndices DEVE ser declarado ANTES de ser usado no bloco crossfade
+      let assignedSampleIndices = [];
+      if (this.parsedSf2Data && this.parsedSf2Data.presets && this.parsedSf2Data.presets[chConfig.assignedPresetIndex]) {
+        const presetObj = this.parsedSf2Data.presets[chConfig.assignedPresetIndex];
+        if (presetObj.sampleIndices && presetObj.sampleIndices.length > 0) {
+          assignedSampleIndices = presetObj.sampleIndices;
+        }
+      }
+
+      if (assignedSampleIndices.length === 0) {
+        assignedSampleIndices = Array.from(this.decodedAudioBuffers.keys());
+      }
+
+      // Velocity Layer Crossfading (Equal-Power Transition) — agora usa assignedSampleIndices já declarado
+      if (assignedSampleIndices.length > 1) {
         const velNorm = velocity / 127.0;
         const crossfadeFactor = Math.sin(velNorm * (Math.PI / 2.0));
         velGain *= (0.5 + 0.5 * crossfadeFactor);
@@ -318,18 +340,6 @@ class SynthEngine {
       gainNode.gain.setValueAtTime(0.0001, now);
       gainNode.gain.linearRampToValueAtTime(velGain, attackEnd);
       gainNode.gain.linearRampToValueAtTime(sustainLevel, decayEnd);
-
-      let assignedSampleIndices = [];
-      if (this.parsedSf2Data && this.parsedSf2Data.presets && this.parsedSf2Data.presets[chConfig.assignedPresetIndex]) {
-        const presetObj = this.parsedSf2Data.presets[chConfig.assignedPresetIndex];
-        if (presetObj.sampleIndices && presetObj.sampleIndices.length > 0) {
-          assignedSampleIndices = presetObj.sampleIndices;
-        }
-      }
-
-      if (assignedSampleIndices.length === 0) {
-        assignedSampleIndices = Array.from(this.decodedAudioBuffers.keys());
-      }
 
       let bestMatchedIdx = assignedSampleIndices[0];
       let minPitchDiff = 999;
