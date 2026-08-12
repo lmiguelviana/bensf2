@@ -155,8 +155,19 @@
       <!-- Section: Mixer Console 16-Canais -->
       <section id="sectionMixer" class="glass-card">
         <div class="card-title">
-          <span>Mixer Console Multitimbrico (Layers & Channels)</span>
-          <button id="btnAddChannel" class="btn btn-primary" style="padding: 4px 10px; font-size: 11px;">+ Nova Pista</button>
+          <span>Mixer Console Multitimbrico (Layers & 16 Canais MIDI)</span>
+          <div style="display: flex; align-items: center; gap: 8px;">
+            <div class="preset-selector-group">
+              <span class="preset-label">Pistas:</span>
+              <select id="mixerChannelCountSelect" class="preset-select" style="font-size: 11px;">
+                <option value="4" selected>4 Canais</option>
+                <option value="8">8 Canais</option>
+                <option value="12">12 Canais</option>
+                <option value="16">16 Canais (Completo)</option>
+              </select>
+            </div>
+            <button id="btnAddChannel" class="btn btn-primary" style="padding: 4px 10px; font-size: 11px;">+ Add Pista</button>
+          </div>
         </div>
 
         <!-- Mixer Channel Strips Container -->

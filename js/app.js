@@ -82,6 +82,8 @@ document.addEventListener('DOMContentLoaded', () => {
   const sf2PromptBanner = document.getElementById('sf2PromptBanner');
   const polyphonySelect = document.getElementById('polyphonySelect');
   const velocityCurveSelect = document.getElementById('velocityCurveSelect');
+
+  const mixerChannelCountSelect = document.getElementById('mixerChannelCountSelect');
   const btnAddChannel = document.getElementById('btnAddChannel');
 
   const keyboardRangeSelect = document.getElementById('keyboardRangeSelect');
@@ -107,6 +109,22 @@ document.addEventListener('DOMContentLoaded', () => {
   if (tabMixer) tabMixer.addEventListener('click', () => switchView(tabMixer, true, true, true));
   if (tabFxRack) tabFxRack.addEventListener('click', () => switchView(tabFxRack, false, true, true));
   if (tabMidi) tabMidi.addEventListener('click', () => switchView(tabMidi, true, false, true));
+
+  // Seletor de Quantidade de Canais do Mixer (4, 8, 12, 16)
+  if (mixerChannelCountSelect) {
+    mixerChannelCountSelect.addEventListener('change', (e) => {
+      mixerConsole.setVisibleChannelCount(e.target.value);
+    });
+  }
+
+  if (btnAddChannel) {
+    btnAddChannel.addEventListener('click', () => {
+      mixerConsole.addChannel();
+      if (mixerChannelCountSelect) {
+        mixerChannelCountSelect.value = mixerConsole.totalChannels;
+      }
+    });
+  }
 
   // Instanciar Knobs 3D VST para o FX Rack
   const knobLowEl = document.getElementById('knobEqLow');
@@ -196,13 +214,6 @@ document.addEventListener('DOMContentLoaded', () => {
       } else if (presetManager.userPresets.has(selectedVal)) {
         presetManager.loadPreset(presetManager.userPresets.get(selectedVal));
       }
-    });
-  }
-
-  // Bind Adicionar Nova Pista no Mixer
-  if (btnAddChannel) {
-    btnAddChannel.addEventListener('click', () => {
-      mixerConsole.addChannel();
     });
   }
 
@@ -392,7 +403,6 @@ document.addEventListener('DOMContentLoaded', () => {
         synth.loadSoundFont(parsedData);
         updatePresetListUI(parsedData.presets);
 
-        // Atualizar também todos os seletores de timbres nas pistas do Mixer!
         mixerConsole.renderMixer();
 
         if (sf2PromptBanner) {

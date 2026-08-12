@@ -1,6 +1,6 @@
 /**
- * MULTITIMBRIC MIXER CONSOLE MANAGER
- * Gerenciador dinâmico de pistas de canais MIDI (1 a 16), seleção de timbres por faixa, faders, pan, mute e solo.
+ * MULTITIMBRIC MIXER CONSOLE MANAGER (16 MIDI CHANNELS)
+ * Gerenciador dinâmico de 16 pistas de canais MIDI, roteamento por canal físico, seleção de timbres limpos, faders, pan, mute e solo.
  */
 
 class MixerConsoleManager {
@@ -8,11 +8,16 @@ class MixerConsoleManager {
     this.synth = synthEngine;
     this.vuMeter = vuMeterManager;
     this.container = null;
-    this.totalChannels = 4; // Canais iniciais visíveis (expansível até 16)
+    this.totalChannels = 4; // Canais padrão visíveis (expansível de 1 a 16)
   }
 
   init(containerElement) {
     this.container = containerElement;
+    this.renderMixer();
+  }
+
+  setVisibleChannelCount(count) {
+    this.totalChannels = Math.max(1, Math.min(16, parseInt(count, 10) || 4));
     this.renderMixer();
   }
 
@@ -37,22 +42,46 @@ class MixerConsoleManager {
     strip.className = 'mixer-channel-strip';
     strip.dataset.channel = ch;
 
-    const chConfig = this.synth.channels[ch] || { volume: 0.8, pan: 0, muted: false, solo: false, transpose: 0, assignedPresetIndex: (ch-1) };
+    const chConfig = this.synth.channels[ch] || { 
+      volume: 0.8, 
+      pan: 0, 
+      muted: false, 
+      solo: false, 
+      transpose: 0, 
+      assignedPresetIndex: (ch - 1),
+      assignedMidiChannel: ch 
+    };
 
-    // Montar opções de timbres do banco SF2 se já estiverem carregadas
+    // Montar opções de timbres do banco SF2 sem caracteres estranhos
     let presetOptionsHtml = `<option value="0">Default Sound</option>`;
-    if (this.synth.parsedSf2Data && this.synth.parsedSf2Data.presets) {
+    if (this.synth.parsedSf2Data && this.synth.parsedSf2Data.presets && this.synth.parsedSf2Data.presets.length > 0) {
       presetOptionsHtml = this.synth.parsedSf2Data.presets.map((p, idx) => {
         const isSelected = idx === chConfig.assignedPresetIndex ? 'selected' : '';
-        return `<option value="${idx}" ${isSelected}>${p.name} (${p.bank}:${p.preset})</option>`;
+        const cleanName = (p.name || `Preset #${idx}`).replace(/[^\x20-\x7E]/g, '').trim() || `Preset ${p.bank}:${p.preset}`;
+        return `<option value="${idx}" ${isSelected}>${cleanName} (${p.bank}:${p.preset})</option>`;
       }).join('');
+    }
+
+    // Montar opções de Canais MIDI (1 a 16 ou Todos/Layer)
+    let midiChanOptionsHtml = `<option value="all" ${chConfig.assignedMidiChannel === 'all' ? 'selected' : ''}>TODOS (Layer)</option>`;
+    for (let m = 1; m <= 16; m++) {
+      const isSelected = (chConfig.assignedMidiChannel === m || (chConfig.assignedMidiChannel === undefined && ch === m)) ? 'selected' : '';
+      midiChanOptionsHtml += `<option value="${m}" ${isSelected}>MIDI CH ${m < 10 ? '0' + m : m}</option>`;
     }
 
     strip.innerHTML = `
       <div class="channel-header">CH ${ch < 10 ? '0' + ch : ch}: LAYER ${ch}</div>
 
-      <!-- Seletor de Timbre do Banco SF2 para ESTA PISTA -->
+      <!-- Roteamento do Canal MIDI Físico do Controlador -->
       <div class="knob-group" style="width: 100%;">
+        <div class="knob-label">CANAL MIDI ENTRADA</div>
+        <select class="ch-midi-select preset-select" data-channel="${ch}" style="width: 100%; font-size: 10px; padding: 2px;">
+          ${midiChanOptionsHtml}
+        </select>
+      </div>
+
+      <!-- Seletor de Timbre do Banco SF2 para ESTA PISTA -->
+      <div class="knob-group" style="width: 100%; margin-top: 4px;">
         <div class="knob-label">TIMBRE / SOM</div>
         <select class="ch-preset-select preset-select" data-channel="${ch}" style="width: 100%; font-size: 10px; padding: 3px; text-overflow: ellipsis;">
           ${presetOptionsHtml}
@@ -60,9 +89,9 @@ class MixerConsoleManager {
       </div>
 
       <!-- Area do Fader + VU Meter -->
-      <div class="channel-fader-area">
+      <div class="channel-fader-area" style="margin-top: 6px;">
         <input type="range" class="vertical-fader ch-volume" data-channel="${ch}" min="0" max="1" step="0.01" value="${chConfig.volume}">
-        <canvas class="vu-meter-canvas vu-canvas-${ch}" width="10" height="135"></canvas>
+        <canvas class="vu-meter-canvas vu-canvas-${ch}" width="10" height="120"></canvas>
       </div>
 
       <!-- Controle de Volume Valor -->
@@ -96,6 +125,15 @@ class MixerConsoleManager {
     `;
 
     // Eventos dos Controles da Pista
+    const midiSelect = strip.querySelector('.ch-midi-select');
+    midiSelect.addEventListener('change', (e) => {
+      const val = e.target.value === 'all' ? 'all' : parseInt(e.target.value, 10);
+      if (this.synth.channels[ch]) {
+        this.synth.channels[ch].assignedMidiChannel = val;
+        console.log(`[MixerConsoleManager] Pista CH ${ch} escutando canal MIDI: ${val}`);
+      }
+    });
+
     const presetSelect = strip.querySelector('.ch-preset-select');
     presetSelect.addEventListener('change', (e) => {
       const idx = parseInt(e.target.value, 10);
