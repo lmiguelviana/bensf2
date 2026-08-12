@@ -151,6 +151,13 @@ class MixerConsoleManager {
       midiChanOptionsHtml += `<option value="${m}" ${isSelected}>MIDI CH ${m < 10 ? '0' + m : m}</option>`;
     }
 
+    let semitoneOptionsHtml = '';
+    for (let s = -12; s <= 12; s++) {
+      const isSelected = (chConfig.semitoneTranspose === s || (s === 0 && (chConfig.semitoneTranspose === undefined || chConfig.semitoneTranspose === null))) ? 'selected' : '';
+      const label = s > 0 ? `+${s}` : `${s}`;
+      semitoneOptionsHtml += `<option value="${s}" ${isSelected}>${label}</option>`;
+    }
+
     const lowVal = chConfig.keyRangeLow !== undefined ? chConfig.keyRangeLow : 0;
     const highVal = chConfig.keyRangeHigh !== undefined ? chConfig.keyRangeHigh : 127;
 
@@ -160,40 +167,25 @@ class MixerConsoleManager {
           <div class="ch-name-container" style="display: flex; align-items: center; justify-content: center; flex: 1; overflow: hidden; margin-right: 2px;">
             <span class="ch-name-text" style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${chConfig.name}</span>
           </div>
-          <button class="btn-remove-track" data-channel="${ch}" title="Remover pista CH ${ch}">✕</button>
+          <button class="btn-remove-ch" data-channel="${ch}" title="Remover esta pista do Mixer" style="background: transparent; border: none; color: var(--accent-danger); font-size: 12px; font-weight: 800; cursor: pointer; padding: 0 2px; line-height: 1;">✕</button>
         </div>
-        <span class="selected-badge" style="font-size: 8px; color: var(--accent-cyan); display: none;">● FX SELECIONADO</span>
-      </div>
-
-      <div class="knob-group" style="width: 100%;">
-        <div class="knob-label">CANAL MIDI ENTRADA</div>
-        <select class="ch-midi-select preset-select" data-channel="${ch}" style="width: 100%; font-size: 10px; padding: 2px;">
-          ${midiChanOptionsHtml}
-        </select>
       </div>
 
       <div class="knob-group" style="width: 100%; margin-top: 4px;">
-        <div class="knob-label">TIMBRE / SOM</div>
-        <select class="ch-preset-select preset-select" data-channel="${ch}" style="width: 100%; font-size: 10px; padding: 3px; text-overflow: ellipsis;">
+        <div class="knob-label">TIMBRE SOUNDFONT</div>
+        <select class="ch-preset preset-select" data-channel="${ch}">
           ${presetOptionsHtml}
         </select>
       </div>
 
-      <div class="channel-fader-area" style="margin-top: 6px;">
-        <input type="range" class="vertical-fader ch-volume" data-channel="${ch}" min="0" max="1" step="0.01" value="${chConfig.volume}" title="Clique com o botão direito para MIDI Learn">
-        <canvas class="vu-meter-canvas vu-canvas-${ch}" width="10" height="120"></canvas>
+      <div class="knob-group" style="width: 100%; margin-top: 3px;">
+        <div class="knob-label">ROTEAMENTO MIDI</div>
+        <select class="ch-midi-chan preset-select" data-channel="${ch}">
+          ${midiChanOptionsHtml}
+        </select>
       </div>
 
-      <div style="font-size: 10px; font-weight: 700; color: var(--accent-cyan); font-family: var(--font-mono);" id="volVal_${ch}">
-        ${Math.round(chConfig.volume * 100)}%
-      </div>
-
-      <div class="knob-group">
-        <div class="knob-label">PAN (L/R)</div>
-        <input type="range" class="knob-slider ch-pan" data-channel="${ch}" min="-1" max="1" step="0.05" value="${chConfig.pan}" title="Clique com o botão direito para MIDI Learn">
-      </div>
-
-      <div style="display: flex; gap: 4px; width: 100%;">
+      <div style="display: flex; gap: 4px; width: 100%; margin-top: 3px;">
         <div class="knob-group" style="flex: 1;">
           <div class="knob-label">OITAVA</div>
           <select class="ch-transpose preset-select" data-channel="${ch}" style="font-size: 10px; padding: 2px;">
@@ -208,15 +200,23 @@ class MixerConsoleManager {
         <div class="knob-group" style="flex: 1;">
           <div class="knob-label">SEMITOM</div>
           <select class="ch-semitone preset-select" data-channel="${ch}" style="font-size: 10px; padding: 2px;">
-            <option value="-12" ${chConfig.semitoneTranspose === -12 ? 'selected' : ''}>-12</option>
-            <option value="-7" ${chConfig.semitoneTranspose === -7 ? 'selected' : ''}>-7</option>
-            <option value="-5" ${chConfig.semitoneTranspose === -5 ? 'selected' : ''}>-5</option>
-            <option value="0" ${chConfig.semitoneTranspose === 0 ? 'selected' : ''}>0</option>
-            <option value="5" ${chConfig.semitoneTranspose === 5 ? 'selected' : ''}>+5</option>
-            <option value="7" ${chConfig.semitoneTranspose === 7 ? 'selected' : ''}>+7</option>
-            <option value="12" ${chConfig.semitoneTranspose === 12 ? 'selected' : ''}>+12</option>
+            ${semitoneOptionsHtml}
           </select>
         </div>
+      </div>
+
+      <div class="channel-fader-area" style="margin-top: 6px;">
+        <input type="range" class="vertical-fader ch-volume" data-channel="${ch}" min="0" max="1" step="0.01" value="${chConfig.volume}" title="Clique com o botão direito para MIDI Learn">
+        <canvas class="vu-meter-canvas vu-canvas-${ch}" width="10" height="120"></canvas>
+      </div>
+
+      <div style="font-size: 10px; font-weight: 700; color: var(--accent-cyan); font-family: var(--font-mono);" id="volVal_${ch}">
+        ${Math.round(chConfig.volume * 100)}%
+      </div>
+
+      <div class="knob-group">
+        <div class="knob-label">PAN (L/R)</div>
+        <input type="range" class="knob-slider ch-pan" data-channel="${ch}" min="-1" max="1" step="0.05" value="${chConfig.pan}" title="Clique com o botão direito para MIDI Learn">
       </div>
 
       <!-- ZONA DE SPLIT DO TECLADO (DIGITAR EX: C0, C7 OU TOCAR NO CONTROLADOR MIDI) -->
