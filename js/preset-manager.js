@@ -70,24 +70,91 @@ class PresetManager {
     };
   }
 
-  savePreset(name) {
-    if (!name || typeof name !== 'string' || name.trim() === '') {
-      name = prompt('Digite um nome para o seu Preset personalizado:', 'Meu Preset Live');
-    }
-    if (!name) return;
-
-    const presetData = this.getCurrentState(name.trim());
-    this.userPresets.set(name.trim(), presetData);
+  createNewPreset(name) {
+    if (!name || typeof name !== 'string' || name.trim() === '') return null;
+    const cleanName = name.trim();
+    const presetData = this.getCurrentState(cleanName);
+    this.userPresets.set(cleanName, presetData);
+    this.activePresetName = cleanName;
     this.saveUserPresetsToStorage();
     this.updatePresetDropdownUI();
 
-    this.exportPresetToJson(presetData);
+    const selectEl = document.getElementById('presetSelect');
+    if (selectEl) selectEl.value = cleanName;
+
+    if (window.showToastNotification) {
+      window.showToastNotification('Preset Criado!', `Preset "${cleanName}" salvo com sucesso.`, 'success');
+    }
     return presetData;
+  }
+
+  saveActivePreset() {
+    let name = this.activePresetName;
+    const selectEl = document.getElementById('presetSelect');
+    if (!name && selectEl && selectEl.value && selectEl.value !== '(nenhum preset salvo)') {
+      name = selectEl.value;
+    }
+
+    if (!name) {
+      const modal = document.getElementById('newPresetNameModal');
+      if (modal) modal.style.display = 'flex';
+      return;
+    }
+
+    const presetData = this.getCurrentState(name);
+    this.userPresets.set(name, presetData);
+    this.activePresetName = name;
+    this.saveUserPresetsToStorage();
+    this.updatePresetDropdownUI();
+
+    if (window.showToastNotification) {
+      window.showToastNotification('Preset Salvo!', `Configuração "${name}" atualizada com sucesso.`, 'success');
+    }
+  }
+
+  async openPresetFileDialog() {
+    if (window.electronAPI && window.electronAPI.showOpenDialog) {
+      try {
+        const filePath = await window.electronAPI.showOpenDialog({
+          title: 'Importar Preset JSON',
+          filters: [{ name: 'Arquivo Preset JSON', extensions: ['json'] }],
+          properties: ['openFile']
+        });
+        if (filePath && window.electronAPI.readFile) {
+          const content = await window.electronAPI.readFile(filePath);
+          if (content) {
+            const presetData = JSON.parse(content);
+            if (presetData.name && presetData.channels) {
+              this.userPresets.set(presetData.name, presetData);
+              this.activePresetName = presetData.name;
+              this.saveUserPresetsToStorage();
+              this.loadPreset(presetData);
+              if (window.showToastNotification) {
+                window.showToastNotification('Preset Importado!', `Preset "${presetData.name}" carregado com sucesso.`, 'success');
+              }
+            }
+          }
+        }
+      } catch (e) {
+        console.error('[PresetManager] Erro ao abrir diálogo de arquivo:', e);
+      }
+    } else {
+      const fileInput = document.getElementById('presetFileInput');
+      if (fileInput) fileInput.click();
+    }
+  }
+
+  savePreset(name) {
+    if (!name || typeof name !== 'string' || name.trim() === '') {
+      return this.saveActivePreset();
+    }
+    return this.createNewPreset(name);
   }
 
   loadPreset(presetData) {
     if (!presetData) return;
 
+    this.activePresetName = presetData.name;
     console.log(`[PresetManager] Carregando preset: ${presetData.name}`);
 
     // 1. Restaurar quantidade de canais visíveis no Mixer
