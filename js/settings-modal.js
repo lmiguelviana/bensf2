@@ -27,9 +27,18 @@ class SettingsModalManager {
     this.audioOutputSelect = document.getElementById('audioOutputSelect');
     this.sampleRateSelect = document.getElementById('sampleRateSelect');
     this.bufferSizeSelect = document.getElementById('bufferSizeSelect');
-    this.modalPolyphonySelect = document.getElementById('modalPolyphonySelect');
-    this.modalVelocityCurveSelect = document.getElementById('modalVelocityCurveSelect');
-    this.midiDevicesListContainer = document.getElementById('midiDevicesListContainer');
+    this.modalThemeSelect = document.getElementById('modalThemeSelect');
+
+    // Carregar tema salvo no localStorage (padrão: Nord Stage Red)
+    const savedTheme = localStorage.getItem('bensf2_theme') || 'nord_red';
+    this.setTheme(savedTheme);
+
+    if (this.modalThemeSelect) {
+      this.modalThemeSelect.value = savedTheme;
+      this.modalThemeSelect.addEventListener('change', (e) => {
+        this.setTheme(e.target.value);
+      });
+    }
 
     const canvasEl = document.getElementById('velocityCurveCanvas');
     if (canvasEl && this.synth && window.VelocityVisualizerManager) {
@@ -71,6 +80,12 @@ class SettingsModalManager {
     }
 
     this.populateAudioOutputDevices();
+  }
+
+  setTheme(themeName) {
+    document.documentElement.setAttribute('data-theme', themeName);
+    localStorage.setItem('bensf2_theme', themeName);
+    console.log(`[SettingsModal] Tema visual alterado para: ${themeName}`);
   }
 
   openModal() {

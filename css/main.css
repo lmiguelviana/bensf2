@@ -956,3 +956,82 @@ body {
     grid-template-columns: 1fr;
   }
 }
+
+/* ==============================================================================
+   IMPECCABLE DESIGN SYSTEM - WORKSTATION THEMES (NORD STAGE RED & VINTAGE)
+   ============================================================================== */
+
+/* 1. TEMA NORD STAGE RED (🔴 VERMELHO NORD STAGE 3 / MAINSTAGE) */
+[data-theme="nord_red"] {
+  --bg-dark: #0d0708;
+  --bg-dark-surface: #180d10;
+  --bg-card: rgba(32, 14, 17, 0.82);
+  --bg-card-border: rgba(255, 42, 75, 0.22);
+  --bg-card-hover: rgba(45, 18, 23, 0.9);
+
+  --accent-cyan: #ff2a4b;      /* Nord Crimson Red Accent */
+  --accent-blue: #ff5270;      /* Nord Soft Red Glow */
+  --accent-purple: #e6002e;    /* Nord Deep Ruby Red */
+  --accent-pink: #ff3b5c;      /* Nord Bright Crimson */
+  --accent-emerald: #00e676;   /* Active Signal LED */
+  --accent-warning: #ffab00;   /* Nord Amber LED */
+  --accent-danger: #ff1744;
+
+  --shadow-glow-cyan: 0 0 20px rgba(255, 42, 75, 0.35);
+  --shadow-glow-purple: 0 0 20px rgba(230, 0, 46, 0.35);
+}
+
+[data-theme="nord_red"] body {
+  background: var(--bg-dark);
+  background-image: 
+    radial-gradient(circle at 15% 15%, rgba(255, 42, 75, 0.08) 0%, transparent 45%),
+    radial-gradient(circle at 85% 85%, rgba(230, 0, 46, 0.08) 0%, transparent 45%);
+}
+
+[data-theme="nord_red"] .app-header {
+  border-bottom: 1px solid rgba(255, 42, 75, 0.25);
+  background: rgba(18, 9, 11, 0.96);
+}
+
+[data-theme="nord_red"] .badge-tag {
+  background: rgba(255, 42, 75, 0.15) !important;
+  color: #ff2a4b !important;
+  border-color: rgba(255, 42, 75, 0.4) !important;
+}
+
+/* 2. TEMA DARK OBERHEIM VINTAGE (⬛ PRETO & DOURADO PRO) */
+[data-theme="dark_oberheim"] {
+  --bg-dark: #0a0907;
+  --bg-dark-surface: #14120e;
+  --bg-card: rgba(26, 23, 17, 0.82);
+  --bg-card-border: rgba(255, 171, 0, 0.22);
+  --bg-card-hover: rgba(38, 33, 24, 0.9);
+
+  --accent-cyan: #ffab00;      /* Amber Gold Accent */
+  --accent-blue: #ffd54f;      /* Vintage Warm Gold */
+  --accent-purple: #c79100;    /* Deep Amber */
+  --accent-pink: #ffc40d;
+  --accent-emerald: #00e676;
+  --accent-warning: #ff6d00;
+  --accent-danger: #ff1744;
+
+  --shadow-glow-cyan: 0 0 20px rgba(255, 171, 0, 0.35);
+  --shadow-glow-purple: 0 0 20px rgba(199, 145, 0, 0.35);
+}
+
+/* 3. TEMA ABLETON DARK STUDIO (🎚️ CINZA METAL PRO) */
+[data-theme="ableton_dark"] {
+  --bg-dark: #121418;
+  --bg-dark-surface: #1a1d24;
+  --bg-card: rgba(28, 32, 42, 0.82);
+  --bg-card-border: rgba(255, 255, 255, 0.12);
+  --bg-card-hover: rgba(36, 42, 54, 0.9);
+
+  --accent-cyan: #00e5ff;
+  --accent-blue: #40c4ff;
+  --accent-purple: #7c4dff;
+  --accent-pink: #e040fb;
+
+  --shadow-glow-cyan: 0 0 20px rgba(0, 229, 255, 0.25);
+  --shadow-glow-purple: 0 0 20px rgba(124, 77, 255, 0.25);
+}
