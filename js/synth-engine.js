@@ -1,6 +1,6 @@
 /**
- * POLYPHONIC WAVETABLE SYNTHESIZER ENGINE (MULTITIMBRIC WITH ADSR ENVELOPES, SEMITONE TRANSPOSE & PER-TRACK FX)
- * Processador de síntese polifônica com suporte a envelopes ADSR customizáveis por pista, transposição por semitões e renomeação de faixas.
+ * POLYPHONIC WAVETABLE SYNTHESIZER ENGINE (MULTITIMBRIC WITH ADSR ENVELOPES, SEMITONE TRANSPOSE & ALL-LAYERS DEFAULT)
+ * Processador de síntese polifônica com suporte a envelopes ADSR customizáveis por pista, transposição por semitões e canais definidos para 'TODOS (Layer)' por padrão.
  */
 
 class SynthEngine {
@@ -59,7 +59,7 @@ class SynthEngine {
         semitoneTranspose: 0, // Semitões (-12 a +12)
         adsr: { attack: 0.005, decay: 0.1, sustain: 0.75, release: 0.25 },
         assignedPresetIndex: 0,
-        assignedMidiChannel: ch
+        assignedMidiChannel: 'all' // Todos os canais começam em 'TODOS (Layer)' por padrão!
       };
 
       this.pitchBendSemi.set(ch, 0);

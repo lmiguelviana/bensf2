@@ -1,6 +1,6 @@
 /**
- * MULTITIMBRIC MIXER CONSOLE MANAGER (WITH SEMITONE TRANSPOSE, INLINE RENAMING, MIDI LEARN & TRACK REMOVAL)
- * Gerenciador dinâmico de 16 pistas de canais MIDI com transposição por semitões, oitavas, edição inline de nomes e MIDI Learn.
+ * MULTITIMBRIC MIXER CONSOLE MANAGER (WITH ALL-LAYERS DEFAULT, SEMITONE TRANSPOSE, INLINE RENAMING & MIDI LEARN)
+ * Gerenciador dinâmico de 16 pistas de canais MIDI com todas as faixas configuradas para 'TODOS (Layer)' por padrão.
  */
 
 class MixerConsoleManager {
@@ -79,7 +79,7 @@ class MixerConsoleManager {
       transpose: 0, 
       semitoneTranspose: 0,
       assignedPresetIndex: (ch - 1),
-      assignedMidiChannel: ch 
+      assignedMidiChannel: 'all' 
     };
 
     let presetOptionsHtml = `<option value="0">Default Sound</option>`;
@@ -91,9 +91,9 @@ class MixerConsoleManager {
       }).join('');
     }
 
-    let midiChanOptionsHtml = `<option value="all" ${chConfig.assignedMidiChannel === 'all' ? 'selected' : ''}>TODOS (Layer)</option>`;
+    let midiChanOptionsHtml = `<option value="all" ${chConfig.assignedMidiChannel === 'all' || chConfig.assignedMidiChannel === undefined ? 'selected' : ''}>TODOS (Layer)</option>`;
     for (let m = 1; m <= 16; m++) {
-      const isSelected = (chConfig.assignedMidiChannel === m || (chConfig.assignedMidiChannel === undefined && ch === m)) ? 'selected' : '';
+      const isSelected = (chConfig.assignedMidiChannel === m) ? 'selected' : '';
       midiChanOptionsHtml += `<option value="${m}" ${isSelected}>MIDI CH ${m < 10 ? '0' + m : m}</option>`;
     }
 
