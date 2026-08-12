@@ -9,6 +9,7 @@ class WebMidiManager {
     this.midiAccess = null;
     this.activeInputs = new Map();
     this.deviceChannelMap = new Map();
+    this.deviceActiveMap = new Map(); // deviceId -> boolean (ativo ou inativo)
     this.onStatusChange = null;
     this.sustainPedalActive = false;
 
@@ -81,13 +82,28 @@ class WebMidiManager {
       id: input.id,
       name: input.name || `Controlador MIDI (${input.id})`,
       manufacturer: input.manufacturer || 'Genérico',
-      assignedChannel: this.deviceChannelMap.get(input.id) || 'all'
+      assignedChannel: this.deviceChannelMap.get(input.id) || 'all',
+      active: this.deviceActiveMap.has(input.id) ? this.deviceActiveMap.get(input.id) : true
     }));
   }
 
   setDeviceChannelMapping(deviceId, channel) {
     this.deviceChannelMap.set(deviceId, channel);
     console.log(`[WebMIDI] Dispositivo ${deviceId} remapeado para o Canal MIDI: ${channel}`);
+  }
+
+  setDeviceActive(deviceId, isActive) {
+    this.deviceActiveMap.set(deviceId, isActive);
+    // Atualizar o handler de mensagem: se inativo, remove o onmidimessage
+    const input = this.activeInputs.get(deviceId);
+    if (input) {
+      if (isActive) {
+        input.onmidimessage = (e) => this.handleMidiMessage(e, deviceId);
+      } else {
+        input.onmidimessage = null; // silenciar completamente
+      }
+    }
+    console.log(`[WebMIDI] Dispositivo ${deviceId} definido como: ${isActive ? 'ATIVO' : 'INATIVO'}`);
   }
 
   setLearningCallback(callback) {
