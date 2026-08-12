@@ -126,7 +126,7 @@ class MixerConsoleManager {
       solo: false, 
       transpose: 0, 
       semitoneTranspose: 0,
-      assignedPresetIndex: ((ch - 1) % 16),
+      assignedPresetIndex: null, // sem timbre por padrão até o usuário escolher
       assignedMidiChannel: 'all',
       keyRangeLow: 0,
       keyRangeHigh: 127
@@ -439,6 +439,9 @@ class MixerConsoleManager {
             splitLowInput.style.borderColor = '';
             splitLowInput.style.boxShadow = '';
             updateLowVal(noteNum);
+            // Feedback de áudio: tocar a nota para o usuário ouvir onde está no teclado
+            if (this.synth) this.synth.noteOn(noteNum, 80, 1);
+            setTimeout(() => { if (this.synth) this.synth.noteOff(noteNum, 1); }, 500);
           });
         }
       };
@@ -511,6 +514,9 @@ class MixerConsoleManager {
             splitHighInput.style.borderColor = '';
             splitHighInput.style.boxShadow = '';
             updateHighVal(noteNum);
+            // Feedback de áudio: tocar a nota para o usuário ouvir onde está no teclado
+            if (this.synth) this.synth.noteOn(noteNum, 80, 1);
+            setTimeout(() => { if (this.synth) this.synth.noteOff(noteNum, 1); }, 500);
           });
         }
       };
@@ -570,7 +576,8 @@ class MixerConsoleManager {
     }
 
     let hasSoloActive = false;
-    for (let c = 1; c <= 16; c++) {
+    // Verificar apenas nos canais visíveis (totalChannels) para consistência
+    for (let c = 1; c <= this.totalChannels; c++) {
       if (this.synth.channels[c] && this.synth.channels[c].solo) {
         hasSoloActive = true;
         break;
@@ -603,7 +610,10 @@ class MixerConsoleManager {
       return;
     }
 
-    this.synth.setChannelMute(ch, true);
+    // Silenciar via gain (não setar chConfig.muted = true para não contaminar o estado)
+    if (this.synth.channels[ch] && this.synth.channels[ch].gainNode) {
+      this.synth.channels[ch].gainNode.gain.setTargetAtTime(0, this.synth.audioCtx.getCurrentTime(), 0.01);
+    }
     this.totalChannels--;
 
     const selectEl = document.getElementById('mixerChannelCountSelect');

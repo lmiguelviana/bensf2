@@ -29,7 +29,7 @@ class SynthEngine {
 
   detectOptimalPolyphony() {
     const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
-    return isMobile ? 24 : 48; // Limite otimizado para evitar estouro de buffers de áudio
+    return isMobile ? 24 : 64; // Otimizado: 24 mobile, 64 desktop
   }
 
   initChannels() {
@@ -58,7 +58,8 @@ class SynthEngine {
         transpose: 0,
         semitoneTranspose: 0,
         adsr: { attack: 0.005, decay: 0.1, sustain: 0.75, release: 0.25 },
-        assignedPresetIndex: 0,
+        // Canal 1 começa com preset 0; canais 2+ sem timbre até o usuário escolher
+        assignedPresetIndex: ch === 1 ? 0 : null,
         assignedMidiChannel: 'all',
         keyRangeLow: 0,
         keyRangeHigh: 127
@@ -162,8 +163,10 @@ class SynthEngine {
 
   setChannelPreset(channel, presetIndex) {
     if (this.channels[channel]) {
-      this.channels[channel].assignedPresetIndex = parseInt(presetIndex, 10) || 0;
-      console.log(`[SynthEngine] Canal ${channel} atribuído ao Timbre Preset #${presetIndex}`);
+      // Usar parseInt mas preservar 0 (não usar || 0 que colapsa 0 para falsy)
+      const parsed = parseInt(presetIndex, 10);
+      this.channels[channel].assignedPresetIndex = Number.isFinite(parsed) ? parsed : null;
+      console.log(`[SynthEngine] Canal ${channel} atribuído ao Timbre Preset #${parsed}`);
     }
   }
 

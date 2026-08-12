@@ -181,7 +181,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
     if (sectionMixer) sectionMixer.style.display = showMixer ? 'flex' : 'none';
     if (sectionFxRack) sectionFxRack.style.display = showFx ? 'block' : 'none';
-    if (sectionMidiKeyboard) sectionMidiKeyboard.style.display = showMidi ? 'flex' : 'flex';
+    // Bug fix: anteriormente showMidi era ignorado e sempre mostrava 'flex'
+    if (sectionMidiKeyboard) sectionMidiKeyboard.style.display = showMidi ? 'flex' : 'none';
   }
 
   if (tabMixer) tabMixer.addEventListener('click', () => switchView(tabMixer, true, false, true));
@@ -912,13 +913,16 @@ document.addEventListener('DOMContentLoaded', () => {
         e.preventDefault();
         window.audioEngine.resume().then(() => updateAudioStatus(true));
         keyEl.classList.add('active');
-        synth.noteOn(noteNum, 100, 1);
+        // Usar o canal selecionado no mixer (não hardcoded canal 1)
+        const activeCh = mixerConsole ? mixerConsole.selectedChannel : 1;
+        synth.noteOn(noteNum, 100, activeCh);
       };
 
       const triggerNoteOff = (e) => {
         e.preventDefault();
         keyEl.classList.remove('active');
-        synth.noteOff(noteNum, 1);
+        const activeCh = mixerConsole ? mixerConsole.selectedChannel : 1;
+        synth.noteOff(noteNum, activeCh);
       };
 
       keyEl.addEventListener('mousedown', triggerNoteOn);
@@ -999,9 +1003,9 @@ document.addEventListener('DOMContentLoaded', () => {
     if (key in qwertyKeyMap && !activeQwertyKeys.has(key)) {
       activeQwertyKeys.add(key);
       const noteNum = (baseOctave * 12) + qwertyKeyMap[key];
-      
+      const activeCh = mixerConsole ? mixerConsole.selectedChannel : 1;
       window.audioEngine.resume().then(() => updateAudioStatus(true));
-      synth.noteOn(noteNum, 100, 1);
+      synth.noteOn(noteNum, 100, activeCh);
     }
   });
 
@@ -1010,7 +1014,8 @@ document.addEventListener('DOMContentLoaded', () => {
     if (key in qwertyKeyMap) {
       activeQwertyKeys.delete(key);
       const noteNum = (baseOctave * 12) + qwertyKeyMap[key];
-      synth.noteOff(noteNum, 1);
+      const activeCh = mixerConsole ? mixerConsole.selectedChannel : 1;
+      synth.noteOff(noteNum, activeCh);
     }
   });
 
@@ -1088,7 +1093,8 @@ document.addEventListener('DOMContentLoaded', () => {
         item.classList.add('active');
 
         // Atribuir o timbre clicado EXCLUSIVAMENTE à PISTA SELECIONADA no Mixer!
-        const activeCh = fxRack ? fxRack.selectedChannel : 1;
+        // Usar mixerConsole.selectedChannel como fonte canônica (não fxRack.selectedChannel)
+        const activeCh = mixerConsole ? mixerConsole.selectedChannel : 1;
         synth.setChannelPreset(activeCh, idx);
 
         if (mixerConsole) {
