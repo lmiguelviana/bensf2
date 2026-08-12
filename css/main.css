@@ -401,6 +401,96 @@ body {
   font-weight: 800;
 }
 
+/* Modal Glassmorphism Backdrop & Card */
+.modal-backdrop {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  background: rgba(0, 0, 0, 0.75);
+  backdrop-filter: blur(10px);
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.modal-card {
+  width: 580px;
+  max-width: 92vw;
+  background: rgba(16, 21, 33, 0.95);
+  backdrop-filter: blur(24px);
+  border: 1px solid var(--bg-card-border);
+  border-radius: var(--radius-lg);
+  box-shadow: 0 20px 50px rgba(0,0,0,0.8), var(--shadow-glow-cyan);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.modal-header {
+  padding: 14px 20px;
+  background: rgba(255, 255, 255, 0.04);
+  border-bottom: 1px solid var(--bg-card-border);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.btn-close-modal {
+  background: transparent;
+  border: none;
+  color: var(--text-muted);
+  font-size: 16px;
+  cursor: pointer;
+}
+.btn-close-modal:hover {
+  color: var(--accent-danger);
+}
+
+.modal-body {
+  padding: 20px;
+  max-height: 70vh;
+  overflow-y: auto;
+}
+
+.modal-footer {
+  padding: 12px 20px;
+  background: rgba(0, 0, 0, 0.4);
+  border-top: 1px solid var(--bg-card-border);
+  display: flex;
+  justify-content: flex-end;
+}
+
+.settings-section-title {
+  font-family: var(--font-heading);
+  font-size: 12px;
+  font-weight: 800;
+  text-transform: uppercase;
+  color: var(--accent-cyan);
+  margin-bottom: 12px;
+}
+
+.settings-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 10px;
+}
+
+.settings-label {
+  font-size: 12px;
+  color: var(--text-main);
+  font-weight: 500;
+}
+
+.settings-input {
+  width: 260px;
+  padding: 5px 8px;
+  font-size: 11px;
+}
+
 /* Virtual Piano Keyboard Footer - 100% Responsivo e Adaptável */
 .keyboard-container {
   height: 130px;

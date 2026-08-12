@@ -1,143 +1,133 @@
 /**
- * WEBMIDI API INPUT MANAGER (OTIMIZADO COM GSD-WEBMIDI-CONTROLLER)
- * Reconhecimento automático Plug-and-Play de Teclados Controladores MIDI USB (cabo OTG no Android) e Bluetooth MIDI.
+ * WEBMIDI CONTROLLER MANAGER (MULTI-DEVICE SUPPORT)
+ * Suporte a múltiplos teclados controladores MIDI (USB-OTG e Bluetooth) com roteamento individual por dispositivo.
  */
 
 class WebMidiManager {
   constructor(synthEngine) {
     this.synth = synthEngine;
     this.midiAccess = null;
-    this.connectedInputs = new Map(); // id -> MIDIInput
-    this.activeDeviceName = 'Nenhum';
-    this.onDeviceStatusChangeCallback = null;
-
-    // Estado do Pedal de Sustain (CC64)
+    this.activeInputs = new Map(); // id -> input
+    this.deviceChannelMap = new Map(); // id -> assignedMidiChannel (1-16 ou 'all')
+    this.onStatusChange = null;
     this.sustainPedalActive = false;
-    this.sustainedNotes = new Set(); // Notas mantidas pelo pedal
   }
 
   init(statusCallback) {
-    this.onDeviceStatusChangeCallback = statusCallback;
+    this.onStatusChange = statusCallback;
 
     if (navigator.requestMIDIAccess) {
-      navigator.requestMIDIAccess({ sysex: true })
-        .then((midiAccess) => {
-          this.midiAccess = midiAccess;
-          console.log('[WebMIDI] Acesso à API WebMIDI concedido com sucesso!');
-
-          this.updateMidiInputs();
-
-          this.midiAccess.onstatechange = (e) => {
-            console.log(`[WebMIDI] Estado do dispositivo alterado: ${e.port.name} (${e.port.state})`);
-            this.updateMidiInputs();
-          };
-        })
+      navigator.requestMIDIAccess({ sysex: false })
+        .then((access) => this.handleMidiSuccess(access))
         .catch((err) => {
-          console.warn('[WebMIDI] Não foi possível acessar a API WebMIDI:', err.message);
-          if (this.onDeviceStatusChangeCallback) {
-            this.onDeviceStatusChangeCallback('Não Suportado');
-          }
+          console.warn('[WebMIDI] Acesso MIDI recusado ou indisponível:', err);
+          if (this.onStatusChange) this.onStatusChange('Não Suportado');
         });
     } else {
-      console.warn('[WebMIDI] WebMIDI API não é suportada neste navegador.');
-      if (this.onDeviceStatusChangeCallback) {
-        this.onDeviceStatusChangeCallback('Não Suportado');
+      console.warn('[WebMIDI] WebMIDI API não suportada neste navegador.');
+      if (this.onStatusChange) this.onStatusChange('Não Suportado');
+    }
+  }
+
+  handleMidiSuccess(access) {
+    this.midiAccess = access;
+    this.updateDeviceList();
+
+    this.midiAccess.onstatechange = (e) => {
+      console.log(`[WebMIDI] Mudança de estado do dispositivo: ${e.port.name} (${e.port.state})`);
+      this.updateDeviceList();
+    };
+  }
+
+  updateDeviceList() {
+    if (!this.midiAccess) return;
+
+    this.activeInputs.clear();
+    const inputs = Array.from(this.midiAccess.inputs.values());
+    const connectedNames = [];
+
+    inputs.forEach((input) => {
+      if (input.state === 'connected') {
+        this.activeInputs.set(input.id, input);
+        input.onmidimessage = (e) => this.handleMidiMessage(e, input.id);
+        connectedNames.push(input.name);
+
+        if (!this.deviceChannelMap.has(input.id)) {
+          // Atribuir canal padrão baseado na ordem dos dispositivos conectados
+          const defaultChan = this.activeInputs.size;
+          this.deviceChannelMap.set(input.id, defaultChan <= 16 ? defaultChan : 'all');
+        }
+      }
+    });
+
+    if (this.onStatusChange) {
+      if (connectedNames.length === 0) {
+        this.onStatusChange('Nenhum');
+      } else if (connectedNames.length === 1) {
+        this.onStatusChange(connectedNames[0]);
+      } else {
+        this.onStatusChange(`${connectedNames.length} Dispositivos`);
       }
     }
   }
 
-  updateMidiInputs() {
-    if (!this.midiAccess) return;
-
-    this.connectedInputs.clear();
-    const inputs = this.midiAccess.inputs.values();
-    let deviceNames = [];
-
-    for (let input of inputs) {
-      this.connectedInputs.set(input.id, input);
-      deviceNames.push(input.name);
-
-      input.onmidimessage = (e) => this.handleMidiMessage(e);
-    }
-
-    if (deviceNames.length > 0) {
-      this.activeDeviceName = deviceNames.join(', ');
-    } else {
-      this.activeDeviceName = 'Nenhum';
-    }
-
-    console.log(`[WebMIDI] Dispositivos conectados: ${this.activeDeviceName}`);
-    if (this.onDeviceStatusChangeCallback) {
-      this.onDeviceStatusChangeCallback(this.activeDeviceName);
-    }
+  getConnectedDevicesList() {
+    if (!this.midiAccess) return [];
+    const inputs = Array.from(this.midiAccess.inputs.values());
+    return inputs.map((input) => ({
+      id: input.id,
+      name: input.name || `Controlador MIDI (${input.id})`,
+      manufacturer: input.manufacturer || 'Genérico',
+      assignedChannel: this.deviceChannelMap.get(input.id) || 'all'
+    }));
   }
 
-  handleMidiMessage(event) {
+  setDeviceChannelMapping(deviceId, channel) {
+    this.deviceChannelMap.set(deviceId, channel);
+    console.log(`[WebMIDI] Dispositivo ${deviceId} remapeado para o Canal MIDI: ${channel}`);
+  }
+
+  handleMidiMessage(event, deviceId) {
     const data = event.data;
     if (!data || data.length < 2) return;
 
-    const command = data[0] & 0xF0;
-    const channel = (data[0] & 0x0F) + 1; // Canal MIDI 1 a 16
-    const note = data[1];
-    const velocity = data.length > 2 ? data[2] : 0;
+    const command = data[0] & 0xf0;
+    const rawChannel = (data[0] & 0x0f) + 1;
+    const noteOrCc = data[1];
+    const velocityOrVal = data[2] !== undefined ? data[2] : 0;
+
+    // Se o dispositivo tiver um canal fixo atribuído na configuração, usar ele!
+    const mappedChannelSetting = this.deviceChannelMap.get(deviceId);
+    const targetChannel = (mappedChannelSetting && mappedChannelSetting !== 'all') ? parseInt(mappedChannelSetting, 10) : rawChannel;
 
     switch (command) {
       case 0x90: // Note On
-        if (velocity > 0) {
-          this.synth.noteOn(note, velocity, channel);
-          if (this.sustainPedalActive) {
-            this.sustainedNotes.add(`${channel}_${note}`);
-          }
+        if (velocityOrVal > 0) {
+          this.synth.noteOn(noteOrCc, velocityOrVal, targetChannel);
         } else {
-          this.handleNoteOffEvent(note, channel);
+          this.synth.noteOff(noteOrCc, targetChannel);
         }
         break;
 
       case 0x80: // Note Off
-        this.handleNoteOffEvent(note, channel);
+        this.synth.noteOff(noteOrCc, targetChannel);
         break;
 
-      case 0xE0: // Pitch Bend (Roda de Afinação)
-        const bendRaw = (data[2] << 7) | data[1];
-        const bendNormalized = (bendRaw - 8192) / 8192.0; // -1.0 a +1.0
-        const bendSemitones = bendNormalized * 2.0; // +/- 2 semitones por padrão
-        this.synth.setPitchBend(channel, bendSemitones);
-        break;
-
-      case 0xB0: // Control Change (CC)
-        const ccNumber = data[1];
-        const ccValue = data[2];
-
-        if (ccNumber === 64) { // Pedal de Sustain (Damper)
-          this.sustainPedalActive = ccValue >= 64;
-          if (!this.sustainPedalActive) {
-            this.sustainedNotes.forEach((key) => {
-              const [ch, n] = key.split('_').map(Number);
-              this.synth.noteOff(n, ch);
-            });
-            this.sustainedNotes.clear();
-          }
-        } else if (ccNumber === 1) { // Modulation Wheel
-          console.log(`[WebMIDI] Mod Wheel (CC1): ${ccValue}`);
-        } else if (ccNumber === 7) { // Canal Volume
-          const volNorm = ccValue / 127.0;
-          this.synth.setChannelVolume(channel, volNorm);
+      case 0xb0: // Control Change (CC)
+        if (noteOrCc === 64) { // CC64 - Pedal de Sustain
+          this.sustainPedalActive = velocityOrVal >= 64;
+        } else if (noteOrCc === 7) { // CC7 - Master Volume
+          const volNorm = velocityOrVal / 127.0;
+          this.synth.setChannelVolume(targetChannel, volNorm);
         }
         break;
 
-      case 0xC0: // Program Change
-        const programNum = data[1];
-        console.log(`[WebMIDI] Program Change: ${programNum} no Canal ${channel}`);
+      case 0xe0: // Pitch Bend
+        const rawBend = (velocityOrVal << 7) | noteOrCc;
+        const normalizedBend = (rawBend - 8192) / 8192.0; // [-1.0 a +1.0]
+        const semitones = normalizedBend * 2.0; // +/- 2 semitons
+        this.synth.setPitchBend(targetChannel, semitones);
         break;
-    }
-  }
-
-  handleNoteOffEvent(note, channel) {
-    const key = `${channel}_${note}`;
-    if (this.sustainPedalActive) {
-      this.sustainedNotes.add(key);
-    } else {
-      this.synth.noteOff(note, channel);
     }
   }
 }

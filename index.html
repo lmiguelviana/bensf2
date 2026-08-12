@@ -52,7 +52,7 @@
       </div>
     </div>
 
-    <!-- Linha Inferior (Barra de Ferramentas & Presets) -->
+    <!-- Linha Inferior (Barra de Ferramentas & Presets & Configurações) -->
     <div class="header-bottom-row">
       <div class="top-toolbar">
         <div class="preset-selector-group">
@@ -72,6 +72,10 @@
           📂 Carregar
         </button>
         <input type="file" id="presetFileInput" accept=".json" style="display: none;">
+
+        <button id="btnOpenSettings" class="btn" title="Configurações de Áudio e Controladores MIDI">
+          ⚙️ Configurações
+        </button>
       </div>
 
       <!-- Configurações de Polifonia e Velocidade -->
@@ -146,11 +150,6 @@
 
     <!-- Main View: Multitimbric Layer Mixer Console & FX Rack -->
     <section class="main-view-area">
-
-      <!-- Status Banner -->
-      <div id="sf2PromptBanner" style="background: rgba(255, 171, 0, 0.12); border: 1px solid var(--accent-warning); border-radius: var(--radius-md); padding: 12px 16px; color: var(--accent-warning); font-size: 13px; font-weight: 600; display: flex; align-items: center; justify-content: space-between;">
-        <span>ℹ️ <b>Aviso:</b> O som permanecerá silencioso até que você selecione e carregue um arquivo <b>.sf2</b> no painel à esquerda.</span>
-      </div>
 
       <!-- Section: Mixer Console 16-Canais -->
       <section id="sectionMixer" class="glass-card">
@@ -275,6 +274,71 @@
     </div>
   </footer>
 
+  <!-- Modal de Configurações de Áudio e Mapeamento MIDI -->
+  <div id="settingsModal" class="modal-backdrop" style="display: none;">
+    <div class="modal-card">
+      <div class="modal-header">
+        <div style="font-family: var(--font-heading); font-size: 16px; font-weight: 800; color: var(--text-main);">
+          ⚙️ Configurações de Áudio & Controladores MIDI
+        </div>
+        <button id="btnCloseSettings" class="btn-close-modal">✕</button>
+      </div>
+
+      <div class="modal-body">
+        
+        <!-- Seção 1: Áudio Engine & Buffer -->
+        <div class="settings-section">
+          <div class="settings-section-title">🔊 Motor de Áudio & Dispositivo de Saída</div>
+          
+          <div class="settings-row">
+            <label class="settings-label">Dispositivo de Saída de Áudio:</label>
+            <select id="audioOutputSelect" class="preset-select settings-input">
+              <option value="default">Alto-falantes Padrão do Sistema</option>
+            </select>
+          </div>
+
+          <div class="settings-row">
+            <label class="settings-label">Taxa de Amostragem (Sample Rate):</label>
+            <select id="sampleRateSelect" class="preset-select settings-input">
+              <option value="44100" selected>44.1 kHz (CD Quality)</option>
+              <option value="48000">48.0 kHz (Estúdio Pro)</option>
+              <option value="96000">96.0 kHz (Hi-Res Audio)</option>
+            </select>
+          </div>
+
+          <div class="settings-row">
+            <label class="settings-label">Buffer de Áudio / Latência:</label>
+            <select id="bufferSizeSelect" class="preset-select settings-input">
+              <option value="128">Ultra-baixa Latência (128 amostras / ~2.9ms)</option>
+              <option value="256" selected>Baixa Latência (256 amostras / ~5.8ms - Recomendado)</option>
+              <option value="512">Latência Padrão (512 amostras / ~11.6ms)</option>
+              <option value="1024">Estabilidade Máxima (1024 amostras / ~23.2ms)</option>
+            </select>
+          </div>
+        </div>
+
+        <!-- Seção 2: Roteamento de Múltiplos Controladores MIDI Físicos -->
+        <div class="settings-section" style="margin-top: 16px;">
+          <div class="settings-section-title">🎹 Teclados Controladores MIDI Conectados</div>
+          <div style="font-size: 11px; color: var(--text-muted); margin-bottom: 10px;">
+            Atribua cada controlador físico a uma pista MIDI diferente (ex: Controlador 1 no Canal 1, Controlador 2 no Canal 2):
+          </div>
+
+          <div id="midiDevicesListContainer">
+            <!-- Renderizado dinamicamente via SettingsModalManager -->
+          </div>
+        </div>
+
+      </div>
+
+      <div class="modal-footer">
+        <button id="btnSaveSettings" class="btn btn-primary" style="padding: 8px 18px; font-size: 12px;">
+          💾 Salvar e Aplicar
+        </button>
+      </div>
+    </div>
+  </div>
+
   <!-- Scripts JavaScript -->
   <script src="js/audio-context.js"></script>
   <script src="js/sf2-parser.js"></script>
@@ -285,6 +349,7 @@
   <script src="js/web-midi.js"></script>
   <script src="js/preset-manager.js"></script>
   <script src="js/knob-component.js"></script>
+  <script src="js/settings-modal.js"></script>
   <script src="js/app.js"></script>
 </body>
 </html>

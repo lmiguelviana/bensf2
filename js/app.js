@@ -1,6 +1,6 @@
 /**
  * MASTER APPLICATION CONTROLLER
- * Liga a interface UI ao motor de síntese SF2, Mixer Console, FX Rack, WebMIDI, PresetManager e Teclado 100% Responsivo.
+ * Liga a interface UI ao motor de síntese SF2, Mixer Console, FX Rack, WebMIDI, SettingsModal, PresetManager e Teclado 100% Responsivo.
  */
 
 document.addEventListener('DOMContentLoaded', () => {
@@ -36,6 +36,11 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   });
   window.webMidi = webMidi;
+
+  // Instanciar Gerenciador de Configurações
+  const settingsModal = new SettingsModalManager(window.audioEngine, webMidi);
+  settingsModal.init();
+  window.settingsModal = settingsModal;
 
   // Interceptar NoteOn/NoteOff do Synth para iluminação visual do teclado
   const originalNoteOn = synth.noteOn.bind(synth);
@@ -79,7 +84,6 @@ document.addEventListener('DOMContentLoaded', () => {
   const sf2FileInput = document.getElementById('sf2FileInput');
   const presetListEl = document.getElementById('presetList');
   const sf2PresetCount = document.getElementById('sf2PresetCount');
-  const sf2PromptBanner = document.getElementById('sf2PromptBanner');
   const polyphonySelect = document.getElementById('polyphonySelect');
   const velocityCurveSelect = document.getElementById('velocityCurveSelect');
 
@@ -234,13 +238,12 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
-  // Renderizar Teclado Virtual Piano 100% Responsivo e Adaptável
+  // Renderizar Teclado Virtual Piano 100% Responsivo
   function renderPianoKeyboard() {
     pianoKeysEl.innerHTML = '';
     const startNote = totalKeysToRender === 88 ? 21 : baseOctave * 12;
     const noteNames = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'];
 
-    // Contar total de teclas brancas para calcular o flex-growth 100% fluido
     let whiteCount = 0;
     for (let i = 0; i < totalKeysToRender; i++) {
       const noteNum = startNote + i;
@@ -419,10 +422,6 @@ document.addEventListener('DOMContentLoaded', () => {
         updatePresetListUI(parsedData.presets);
 
         mixerConsole.renderMixer();
-
-        if (sf2PromptBanner) {
-          sf2PromptBanner.style.display = 'none';
-        }
 
         alert(`SoundFont "${file.name}" carregado com sucesso! Timbres prontos para atribuir às pistas.`);
       } catch (err) {
