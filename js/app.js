@@ -143,7 +143,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
   const fxRackTitleEl = document.getElementById('fxRackTitleText');
 
-  // Tab View Switcher
+  // Tab View Switcher (Garante que o Rack FX Master SÓ aparece quando a aba 'Rack FX Master' estiver selecionada)
   function switchView(activeTab, showMixer, showFx, showMidi) {
     [tabMixer, tabFxRack, tabMidi].forEach(t => t && t.classList.remove('active'));
     if (activeTab) activeTab.classList.add('active');
@@ -155,7 +155,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
   if (tabMixer) tabMixer.addEventListener('click', () => switchView(tabMixer, true, false, true));
   if (tabFxRack) tabFxRack.addEventListener('click', () => switchView(tabFxRack, false, true, true));
-  if (tabMidi) tabMidi.addEventListener('click', () => switchView(tabMidi, true, true, true));
+  if (tabMidi) tabMidi.addEventListener('click', () => switchView(tabMidi, true, false, true));
 
   // Seletor de Quantidade de Canais do Mixer (4, 8, 12, 16)
   if (mixerChannelCountSelect) {
