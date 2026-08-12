@@ -836,7 +836,7 @@ document.addEventListener('DOMContentLoaded', () => {
   const trackVelCanvas = document.getElementById('trackVelCanvas');
   const selectTrackVelMode = document.getElementById('selectTrackVelMode');
   const trackVelModuleTitle = document.getElementById('trackVelModuleTitle');
-  const trackVelBadge = document.getElementById('trackVelBadge');
+  const btnTrackVelToggle = document.getElementById('btnTrackVelToggle');
   let trackVelocityVisualizer = null;
 
   if (trackVelCanvas && window.VelocityVisualizerManager && synth) {
@@ -856,9 +856,11 @@ document.addEventListener('DOMContentLoaded', () => {
       selectTrackVelMode.value = isGlobal ? 'global' : (chObj.velocitySettings.mode || 'normal');
     }
 
-    if (trackVelBadge) {
-      trackVelBadge.textContent = isGlobal ? '🌐 GLOBAL' : '● PISTA';
-      trackVelBadge.style.color = isGlobal ? 'var(--text-muted)' : 'var(--accent-cyan)';
+    if (btnTrackVelToggle) {
+      const isCustom = !isGlobal;
+      btnTrackVelToggle.classList.toggle('active', isCustom);
+      btnTrackVelToggle.textContent = isCustom ? 'ON' : 'OFF';
+      btnTrackVelToggle.title = isCustom ? 'Velocity na Pista ATIVADO (Personalizado nesta faixa)' : 'Velocity na Pista DESLIGADO (Usando Padrão Global)';
     }
 
     if (trackVelModuleTitle) {
@@ -873,6 +875,34 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   window.updateTrackVelUI = updateTrackVelUI;
+
+  if (btnTrackVelToggle) {
+    btnTrackVelToggle.addEventListener('click', () => {
+      const activeCh = fxRack ? fxRack.selectedChannel : 1;
+      const chObj = synth.channels[activeCh];
+      if (!chObj) return;
+
+      if (!chObj.velocitySettings) {
+        chObj.velocitySettings = { useGlobal: true, mode: 'normal', minVel: 1, maxVel: 127 };
+      }
+
+      // Alternar ON (Velocity da Pista) / OFF (Padrão Global)
+      chObj.velocitySettings.useGlobal = !chObj.velocitySettings.useGlobal;
+      if (!chObj.velocitySettings.useGlobal && (!chObj.velocitySettings.mode || chObj.velocitySettings.mode === 'global')) {
+        chObj.velocitySettings.mode = 'normal';
+      }
+
+      if (mixerConsole) {
+        mixerConsole.updateChannelVelocityBadge(activeCh);
+      }
+      updateTrackVelUI(activeCh);
+      showToastNotification(
+        'Velocity por Pista',
+        chObj.velocitySettings.useGlobal ? 'Desativado (Usando Padrão Global)' : 'Ativado para esta pista',
+        'info'
+      );
+    });
+  }
 
   if (selectTrackVelMode) {
     selectTrackVelMode.addEventListener('change', (e) => {
