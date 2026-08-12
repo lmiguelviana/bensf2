@@ -1,6 +1,6 @@
 /**
- * POLYPHONIC WAVETABLE SYNTHESIZER ENGINE (WITH KEY ZONE RANGE SPLIT, ADSR & MULTITIMBRIC LAYERS)
- * Processador de síntese polifônica com filtragem de notas por Zona de Teclado (Split Min/Max), envelopes ADSR e camadas multitímbricas.
+ * POLYPHONIC WAVETABLE SYNTHESIZER ENGINE (OPTIMIZED WITH ZERO-LAG VOICE STEALING & STRICT AUDIO CLEANUP)
+ * Motor de síntese de altíssimo desempenho com cancelamento imediato de vozes sobrepostas, prevenção de acúmulo de CPU e rampas suaves de áudio.
  */
 
 class SynthEngine {
@@ -29,7 +29,7 @@ class SynthEngine {
 
   detectOptimalPolyphony() {
     const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
-    return isMobile ? 32 : 64;
+    return isMobile ? 24 : 48; // Limite otimizado para evitar estouro de buffers de áudio
   }
 
   initChannels() {
@@ -55,13 +55,13 @@ class SynthEngine {
         pan: 0.0,
         muted: false,
         solo: false,
-        transpose: 0, // Oitava (-2 a +2)
-        semitoneTranspose: 0, // Semitões (-12 a +12)
+        transpose: 0,
+        semitoneTranspose: 0,
         adsr: { attack: 0.005, decay: 0.1, sustain: 0.75, release: 0.25 },
         assignedPresetIndex: 0,
-        assignedMidiChannel: 'all', // Todos os canais começam em 'TODOS (Layer)' por padrão!
-        keyRangeLow: 0,   // Dó-1 (Nota MIDI 0)
-        keyRangeHigh: 127 // Sol9 (Nota MIDI 127)
+        assignedMidiChannel: 'all',
+        keyRangeLow: 0,
+        keyRangeHigh: 127
       };
 
       this.pitchBendSemi.set(ch, 0);
@@ -108,6 +108,7 @@ class SynthEngine {
   }
 
   loadSoundFont(sf2ParsedObj) {
+    this.stopAllVoices();
     this.parsedSf2Data = sf2ParsedObj;
     this.decodedAudioBuffers.clear();
 
@@ -177,6 +178,14 @@ class SynthEngine {
     });
   }
 
+  stopVoicesForNote(channel, note) {
+    this.activeVoices.forEach((voice, key) => {
+      if (voice.channel === channel && voice.note === note) {
+        this.stopVoiceImmediate(key);
+      }
+    });
+  }
+
   noteOn(note, velocity = 100, channel = 1) {
     if (this.decodedAudioBuffers.size === 0) {
       return;
@@ -196,16 +205,15 @@ class SynthEngine {
       const lowLimit = chConfig.keyRangeLow !== undefined ? chConfig.keyRangeLow : 0;
       const highLimit = chConfig.keyRangeHigh !== undefined ? chConfig.keyRangeHigh : 127;
       if (note < lowLimit || note > highLimit) {
-        continue; // Nota fora da região permitida para esta pista!
+        continue;
       }
 
       const actualNote = Math.max(0, Math.min(127, note + (chConfig.transpose * 12) + (chConfig.semitoneTranspose || 0)));
-      const voiceKey = `${ch}_${note}`;
 
-      if (this.activeVoices.has(voiceKey)) {
-        this.stopVoiceImmediate(voiceKey);
-      }
+      // Encerrar voz ativa anterior no mesmo canal e nota para evitar sobreposição/acúmulo
+      this.stopVoicesForNote(ch, actualNote);
 
+      // Controle de Polifonia estrito
       if (this.activeVoices.size >= this.maxPolyphony) {
         const oldestKey = this.activeVoices.keys().next().value;
         this.stopVoiceImmediate(oldestKey);
@@ -216,8 +224,8 @@ class SynthEngine {
       const velGain = this.calculateVelocityGain(velocity);
 
       const adsr = chConfig.adsr || this.adsr;
-      const attackEnd = now + adsr.attack;
-      const decayEnd = attackEnd + adsr.decay;
+      const attackEnd = now + Math.max(0.001, adsr.attack);
+      const decayEnd = attackEnd + Math.max(0.01, adsr.decay);
       const sustainLevel = Math.max(0.001, velGain * adsr.sustain);
 
       gainNode.gain.setValueAtTime(0.0001, now);
@@ -239,16 +247,18 @@ class SynthEngine {
       let bestMatchedIdx = assignedSampleIndices[0];
       let minPitchDiff = 999;
 
-      assignedSampleIndices.forEach((sIdx) => {
+      for (let i = 0; i < assignedSampleIndices.length; i++) {
+        const sIdx = assignedSampleIndices[i];
         const sObj = this.decodedAudioBuffers.get(sIdx);
         if (sObj) {
           const diff = Math.abs(actualNote - sObj.originalPitch);
           if (diff < minPitchDiff) {
             minPitchDiff = diff;
             bestMatchedIdx = sIdx;
+            if (diff === 0) break; // Encontrou afinação perfeita!
           }
         }
-      });
+      }
 
       const sampleObj = this.decodedAudioBuffers.get(bestMatchedIdx);
       if (!sampleObj) continue;
@@ -273,14 +283,19 @@ class SynthEngine {
 
       sourceNode.start(now);
 
-      this.activeVoices.set(voiceKey, {
+      const voiceId = `v_${ch}_${actualNote}_${now}_${Math.random()}`;
+
+      this.activeVoices.set(voiceId, {
+        id: voiceId,
         sourceNode,
         gainNode,
         note: actualNote,
         channel: ch,
         originalPitch: basePitch,
         adsr: adsr,
-        startTime: now
+        startTime: now,
+        isReleasing: false,
+        releaseTimeout: null
       });
     }
   }
@@ -293,37 +308,45 @@ class SynthEngine {
       const isMatchingChannel = chConfig.assignedMidiChannel === 'all' || chConfig.assignedMidiChannel === channel || ch === channel;
       if (!isMatchingChannel) continue;
 
-      const voiceKey = `${ch}_${note}`;
-      const voice = this.activeVoices.get(voiceKey);
-      if (!voice) continue;
+      const actualNote = Math.max(0, Math.min(127, note + (chConfig.transpose * 12) + (chConfig.semitoneTranspose || 0)));
 
-      const ctx = this.audioCtx.ctx;
-      if (!ctx) continue;
+      this.activeVoices.forEach((voice, voiceId) => {
+        if (voice.channel === ch && voice.note === actualNote && !voice.isReleasing) {
+          voice.isReleasing = true;
 
-      const now = ctx.currentTime;
-      const adsr = voice.adsr || chConfig.adsr || this.adsr;
-      const releaseTime = adsr.release || 0.25;
-      const releaseEnd = now + releaseTime;
+          const ctx = this.audioCtx.ctx;
+          if (!ctx) {
+            this.stopVoiceImmediate(voiceId);
+            return;
+          }
 
-      voice.gainNode.gain.cancelScheduledValues(now);
-      voice.gainNode.gain.setValueAtTime(voice.gainNode.gain.value, now);
-      voice.gainNode.gain.exponentialRampToValueAtTime(0.0001, releaseEnd);
+          const now = ctx.currentTime;
+          const adsr = voice.adsr || chConfig.adsr || this.adsr;
+          const releaseTime = Math.max(0.02, adsr.release || 0.25);
+          const releaseEnd = now + releaseTime;
 
-      setTimeout(() => {
-        try {
-          voice.sourceNode.stop();
-          voice.sourceNode.disconnect();
-          voice.gainNode.disconnect();
-        } catch (e) {}
-      }, releaseTime * 1000 + 50);
+          try {
+            voice.gainNode.gain.cancelScheduledValues(now);
+            voice.gainNode.gain.setValueAtTime(Math.max(0.0001, voice.gainNode.gain.value), now);
+            voice.gainNode.gain.linearRampToValueAtTime(0.0001, releaseEnd);
+          } catch (e) {}
 
-      this.activeVoices.delete(voiceKey);
+          const timeoutMs = Math.round((releaseTime * 1000) + 30);
+          voice.releaseTimeout = setTimeout(() => {
+            this.stopVoiceImmediate(voiceId);
+          }, timeoutMs);
+        }
+      });
     }
   }
 
   stopVoiceImmediate(voiceKey) {
     const voice = this.activeVoices.get(voiceKey);
     if (voice) {
+      if (voice.releaseTimeout) {
+        clearTimeout(voice.releaseTimeout);
+        voice.releaseTimeout = null;
+      }
       try {
         voice.sourceNode.stop();
         voice.sourceNode.disconnect();
@@ -331,6 +354,13 @@ class SynthEngine {
       } catch (e) {}
       this.activeVoices.delete(voiceKey);
     }
+  }
+
+  stopAllVoices() {
+    this.activeVoices.forEach((voice, key) => {
+      this.stopVoiceImmediate(key);
+    });
+    this.activeVoices.clear();
   }
 
   setChannelVolume(channel, volume) {
