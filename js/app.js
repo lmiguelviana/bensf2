@@ -1,6 +1,6 @@
 /**
  * MASTER APPLICATION CONTROLLER
- * Liga a interface UI ao motor de síntese SF2, Mixer Console, FX Rack, WebMIDI e PresetManager.
+ * Liga a interface UI ao motor de síntese SF2, Mixer Console, FX Rack, WebMIDI, PresetManager e RotaryKnobs 3D.
  */
 
 document.addEventListener('DOMContentLoaded', () => {
@@ -18,11 +18,10 @@ document.addEventListener('DOMContentLoaded', () => {
   mixerConsole.init(document.getElementById('mixerContainer'));
   window.mixerConsole = mixerConsole;
 
-  // Instanciar PresetManager
   const presetManager = new PresetManager(synth, fxRack, mixerConsole);
   window.presetManager = presetManager;
 
-  // Instanciar WebMIDI Manager
+  // WebMIDI Manager
   const midiDeviceStatusText = document.getElementById('midiDeviceStatusText');
   const webMidi = new WebMidiManager(synth);
   webMidi.init((deviceName) => {
@@ -43,6 +42,14 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   // Elementos do DOM
+  const tabMixer = document.getElementById('tabMixer');
+  const tabFxRack = document.getElementById('tabFxRack');
+  const tabMidi = document.getElementById('tabMidi');
+
+  const sectionMixer = document.getElementById('sectionMixer');
+  const sectionFxRack = document.getElementById('sectionFxRack');
+  const sectionMidiKeyboard = document.getElementById('sectionMidiKeyboard');
+
   const audioStatusDot = document.getElementById('audioStatusDot');
   const audioStatusText = document.getElementById('audioStatusText');
   const voiceCountDisplay = document.getElementById('voiceCountDisplay');
@@ -65,25 +72,85 @@ document.addEventListener('DOMContentLoaded', () => {
   const btnOctaveUp = document.getElementById('btnOctaveUp');
   const btnOctaveDown = document.getElementById('btnOctaveDown');
 
-  // Controles de Efeitos FX
-  const eqLowGain = document.getElementById('eqLowGain');
-  const eqLowVal = document.getElementById('eqLowVal');
-  const eqMidGain = document.getElementById('eqMidGain');
-  const eqMidVal = document.getElementById('eqMidVal');
-  const eqHighGain = document.getElementById('eqHighGain');
-  const eqHighVal = document.getElementById('eqHighVal');
+  // Tab View Switcher (Navegação Suave)
+  function switchView(activeTab, showMixer, showFx, showMidi) {
+    [tabMixer, tabFxRack, tabMidi].forEach(t => t && t.classList.remove('active'));
+    if (activeTab) activeTab.classList.add('active');
 
-  const delayTime = document.getElementById('delayTime');
-  const delayTimeVal = document.getElementById('delayTimeVal');
-  const delayMix = document.getElementById('delayMix');
-  const delayMixVal = document.getElementById('delayMixVal');
+    if (sectionMixer) sectionMixer.style.display = showMixer ? 'block' : 'none';
+    if (sectionFxRack) sectionFxRack.style.display = showFx ? 'block' : 'none';
+    if (sectionMidiKeyboard) sectionMidiKeyboard.style.display = showMidi ? 'flex' : 'flex';
+  }
 
-  const fxReverbSize = document.getElementById('fxReverbSize');
-  const reverbSizeVal = document.getElementById('reverbSizeVal');
-  const fxReverbMix = document.getElementById('fxReverbMix');
-  const reverbMixVal = document.getElementById('reverbMixVal');
+  if (tabMixer) tabMixer.addEventListener('click', () => switchView(tabMixer, true, true, true));
+  if (tabFxRack) tabFxRack.addEventListener('click', () => switchView(tabFxRack, false, true, true));
+  if (tabMidi) tabMidi.addEventListener('click', () => switchView(tabMidi, true, false, true));
 
-  // 1. Preset Manager Binds
+  // Instanciar Knobs 3D VST para o FX Rack
+  const knobLowEl = document.getElementById('knobEqLow');
+  if (knobLowEl) {
+    new RotaryKnob(knobLowEl, {
+      title: 'GRAVE (100Hz)',
+      min: -12, max: 12, step: 0.5, value: 0, unit: 'dB',
+      onChange: (val) => fxRack.setEqLowGain(val)
+    });
+  }
+
+  const knobMidEl = document.getElementById('knobEqMid');
+  if (knobMidEl) {
+    new RotaryKnob(knobMidEl, {
+      title: 'MÉDIO (1kHz)',
+      min: -12, max: 12, step: 0.5, value: 0, unit: 'dB',
+      onChange: (val) => fxRack.setEqMidGain(val)
+    });
+  }
+
+  const knobHighEl = document.getElementById('knobEqHigh');
+  if (knobHighEl) {
+    new RotaryKnob(knobHighEl, {
+      title: 'AGUDO (8kHz)',
+      min: -12, max: 12, step: 0.5, value: 0, unit: 'dB',
+      onChange: (val) => fxRack.setEqHighGain(val)
+    });
+  }
+
+  const knobDelayTimeEl = document.getElementById('knobDelayTime');
+  if (knobDelayTimeEl) {
+    new RotaryKnob(knobDelayTimeEl, {
+      title: 'TEMPO DELAY',
+      min: 50, max: 1000, step: 10, value: 300, unit: 'ms',
+      onChange: (val) => fxRack.setDelayTime(val / 1000.0)
+    });
+  }
+
+  const knobDelayMixEl = document.getElementById('knobDelayMix');
+  if (knobDelayMixEl) {
+    new RotaryKnob(knobDelayMixEl, {
+      title: 'MISTURA DELAY',
+      min: 0, max: 100, step: 1, value: 20, unit: '%',
+      onChange: (val) => fxRack.setDelayMix(val / 100.0)
+    });
+  }
+
+  const knobReverbSizeEl = document.getElementById('knobReverbSize');
+  if (knobReverbSizeEl) {
+    new RotaryKnob(knobReverbSizeEl, {
+      title: 'SALA REVERB',
+      min: 10, max: 100, step: 1, value: 40, unit: '%',
+      onChange: (val) => fxRack.setReverbSize(val / 100.0)
+    });
+  }
+
+  const knobReverbMixEl = document.getElementById('knobReverbMix');
+  if (knobReverbMixEl) {
+    new RotaryKnob(knobReverbMixEl, {
+      title: 'MISTURA REVERB',
+      min: 0, max: 100, step: 1, value: 25, unit: '%',
+      onChange: (val) => fxRack.setReverbMix(val / 100.0)
+    });
+  }
+
+  // Preset Manager Binds
   if (btnSavePreset) {
     btnSavePreset.addEventListener('click', () => {
       presetManager.savePreset();
@@ -110,7 +177,7 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
-  // 2. Bind Adicionar Nova Pista no Mixer
+  // Bind Adicionar Nova Pista no Mixer
   if (btnAddChannel) {
     btnAddChannel.addEventListener('click', () => {
       mixerConsole.addChannel();
@@ -126,64 +193,7 @@ document.addEventListener('DOMContentLoaded', () => {
     synth.setVelocityCurve(e.target.value);
   });
 
-  // Binds dos Efeitos FX Rack
-  if (eqLowGain) {
-    eqLowGain.addEventListener('input', (e) => {
-      const val = parseFloat(e.target.value);
-      fxRack.setEqLowGain(val);
-      eqLowVal.textContent = `${val > 0 ? '+' : ''}${val} dB`;
-    });
-  }
-
-  if (eqMidGain) {
-    eqMidGain.addEventListener('input', (e) => {
-      const val = parseFloat(e.target.value);
-      fxRack.setEqMidGain(val);
-      eqMidVal.textContent = `${val > 0 ? '+' : ''}${val} dB`;
-    });
-  }
-
-  if (eqHighGain) {
-    eqHighGain.addEventListener('input', (e) => {
-      const val = parseFloat(e.target.value);
-      fxRack.setEqHighGain(val);
-      eqHighVal.textContent = `${val > 0 ? '+' : ''}${val} dB`;
-    });
-  }
-
-  if (delayTime) {
-    delayTime.addEventListener('input', (e) => {
-      const val = parseFloat(e.target.value);
-      fxRack.setDelayTime(val);
-      delayTimeVal.textContent = `${Math.round(val * 1000)} ms`;
-    });
-  }
-
-  if (delayMix) {
-    delayMix.addEventListener('input', (e) => {
-      const val = parseFloat(e.target.value);
-      fxRack.setDelayMix(val);
-      delayMixVal.textContent = `${Math.round(val * 100)}%`;
-    });
-  }
-
-  if (fxReverbSize) {
-    fxReverbSize.addEventListener('input', (e) => {
-      const val = parseFloat(e.target.value);
-      fxRack.setReverbSize(val);
-      reverbSizeVal.textContent = `${Math.round(val * 100)}%`;
-    });
-  }
-
-  if (fxReverbMix) {
-    fxReverbMix.addEventListener('input', (e) => {
-      const val = parseFloat(e.target.value);
-      fxRack.setReverbMix(val);
-      reverbMixVal.textContent = `${Math.round(val * 100)}%`;
-    });
-  }
-
-  // 3. Renderizar Teclado Virtual Piano
+  // Renderizar Teclado Virtual Piano
   function renderPianoKeyboard() {
     pianoKeysEl.innerHTML = '';
     const startNote = baseOctave * 12;
@@ -247,7 +257,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   });
 
-  // 4. Mapeamento de Teclado QWERTY + Atalho Ctrl+S para Salvar Preset
+  // Mapeamento de Teclado QWERTY + Atalhos
   const qwertyKeyMap = {
     'a': 0, 'w': 1, 's': 2, 'e': 3, 'd': 4, 'f': 5,
     't': 6, 'g': 7, 'y': 8, 'h': 9, 'u': 10, 'j': 11, 'k': 12
@@ -257,7 +267,6 @@ document.addEventListener('DOMContentLoaded', () => {
   let isMasterMuted = false;
 
   window.addEventListener('keydown', (e) => {
-    // Atalho Ctrl+S / Cmd+S para salvar preset
     if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 's') {
       e.preventDefault();
       presetManager.savePreset();
@@ -314,7 +323,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   });
 
-  // 5. Upload & Drag-and-Drop de Arquivos SF2
+  // Upload & Drag-and-Drop de Arquivos SF2
   sf2DropZone.addEventListener('click', () => sf2FileInput.click());
 
   sf2DropZone.addEventListener('dragover', (e) => {
@@ -389,7 +398,7 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
-  // 6. Monitor de Áudio e Vozes Polifônicas
+  // Monitor de Áudio e Vozes Polifônicas
   function updateAudioStatus(active) {
     if (active) {
       audioStatusDot.classList.add('active');

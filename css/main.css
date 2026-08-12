@@ -1,8 +1,9 @@
-/* SF2 LIVE SAMPLER WORKSTATION - DESIGN SYSTEM & STYLES */
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap');
+/* SF2 LIVE SAMPLER WORKSTATION - HIGH END DESIGN SYSTEM */
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;700&display=swap');
 
 :root {
   --bg-dark: #07090e;
+  --bg-dark-surface: #0c101a;
   --bg-card: rgba(16, 21, 33, 0.75);
   --bg-card-border: rgba(255, 255, 255, 0.08);
   --bg-card-hover: rgba(25, 33, 50, 0.85);
@@ -28,8 +29,9 @@
   --radius-lg: 16px;
   --radius-xl: 24px;
 
-  --shadow-glow: 0 0 20px rgba(0, 242, 254, 0.15);
-  --shadow-card: 0 10px 30px rgba(0, 0, 0, 0.5);
+  --shadow-glow-cyan: 0 0 20px rgba(0, 242, 254, 0.25);
+  --shadow-glow-purple: 0 0 20px rgba(127, 0, 255, 0.25);
+  --shadow-card: 0 10px 30px rgba(0, 0, 0, 0.6);
 }
 
 * {
@@ -43,8 +45,8 @@
 body {
   background: var(--bg-dark);
   background-image: 
-    radial-gradient(circle at 15% 15%, rgba(0, 242, 254, 0.05) 0%, transparent 40%),
-    radial-gradient(circle at 85% 85%, rgba(127, 0, 255, 0.05) 0%, transparent 40%);
+    radial-gradient(circle at 15% 15%, rgba(0, 242, 254, 0.06) 0%, transparent 40%),
+    radial-gradient(circle at 85% 85%, rgba(127, 0, 255, 0.06) 0%, transparent 40%);
   color: var(--text-main);
   font-family: var(--font-body);
   height: 100vh;
@@ -53,17 +55,18 @@ body {
   flex-direction: column;
 }
 
-/* App Header & Top Navigation Bar */
+/* Header & Glass Toolbar */
 .app-header {
-  height: 60px;
-  background: rgba(10, 13, 20, 0.85);
-  backdrop-filter: blur(16px);
+  height: 64px;
+  background: rgba(10, 13, 20, 0.88);
+  backdrop-filter: blur(20px);
   border-bottom: 1px solid var(--bg-card-border);
   display: flex;
   align-items: center;
   justify-content: space-between;
   padding: 0 20px;
   z-index: 100;
+  gap: 16px;
 }
 
 .app-brand {
@@ -73,23 +76,23 @@ body {
 }
 
 .app-logo-icon {
-  width: 34px;
-  height: 34px;
+  width: 36px;
+  height: 36px;
   background: linear-gradient(135deg, var(--accent-cyan), var(--accent-purple));
-  border-radius: var(--radius-sm);
+  border-radius: var(--radius-md);
   display: flex;
   align-items: center;
   justify-content: center;
   color: #fff;
   font-weight: 800;
-  font-size: 18px;
-  box-shadow: 0 0 12px rgba(0, 242, 254, 0.4);
+  font-size: 20px;
+  box-shadow: 0 0 15px rgba(0, 242, 254, 0.4);
 }
 
 .app-title {
   font-family: var(--font-heading);
   font-size: 18px;
-  font-weight: 700;
+  font-weight: 800;
   letter-spacing: 0.5px;
   background: linear-gradient(90deg, #ffffff, #8a99ad);
   -webkit-background-clip: text;
@@ -98,20 +101,58 @@ body {
 
 .badge-tag {
   font-size: 10px;
-  font-weight: 700;
+  font-weight: 800;
   text-transform: uppercase;
-  padding: 2px 8px;
+  padding: 3px 8px;
   border-radius: 12px;
-  background: rgba(0, 242, 254, 0.1);
+  background: rgba(0, 242, 254, 0.12);
   color: var(--accent-cyan);
   border: 1px solid rgba(0, 242, 254, 0.3);
 }
 
-/* Top Toolbar & Presets Bar */
+/* View Switcher Tabs (Mobile & Desktop) */
+.view-tabs-bar {
+  display: flex;
+  align-items: center;
+  background: rgba(0, 0, 0, 0.3);
+  padding: 4px;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--bg-card-border);
+  gap: 4px;
+}
+
+.tab-btn {
+  background: transparent;
+  border: none;
+  color: var(--text-muted);
+  font-family: var(--font-heading);
+  font-size: 12px;
+  font-weight: 700;
+  padding: 6px 14px;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.tab-btn:hover {
+  color: var(--text-main);
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.tab-btn.active {
+  background: linear-gradient(135deg, rgba(0, 242, 254, 0.2), rgba(127, 0, 255, 0.2));
+  color: var(--accent-cyan);
+  border: 1px solid rgba(0, 242, 254, 0.4);
+}
+
+/* Top Toolbar Controls */
 .top-toolbar {
   display: flex;
   align-items: center;
-  gap: 16px;
+  gap: 12px;
 }
 
 .preset-selector-group {
@@ -120,13 +161,13 @@ body {
   background: rgba(255, 255, 255, 0.04);
   border: 1px solid var(--bg-card-border);
   border-radius: var(--radius-md);
-  padding: 4px 8px;
+  padding: 4px 10px;
   gap: 8px;
 }
 
 .preset-label {
   font-size: 11px;
-  font-weight: 600;
+  font-weight: 700;
   color: var(--text-muted);
   text-transform: uppercase;
   letter-spacing: 0.5px;
@@ -137,15 +178,14 @@ body {
   border: none;
   color: var(--accent-cyan);
   font-family: var(--font-heading);
-  font-weight: 600;
-  font-size: 14px;
+  font-weight: 700;
+  font-size: 13px;
   outline: none;
   cursor: pointer;
-  padding-right: 12px;
 }
 
 .preset-select option {
-  background: #101521;
+  background: #0c101a;
   color: var(--text-main);
 }
 
@@ -156,8 +196,8 @@ body {
   padding: 8px 14px;
   border-radius: var(--radius-md);
   font-family: var(--font-body);
-  font-size: 13px;
-  font-weight: 600;
+  font-size: 12px;
+  font-weight: 700;
   cursor: pointer;
   display: inline-flex;
   align-items: center;
@@ -167,7 +207,7 @@ body {
 
 .btn:hover {
   background: rgba(255, 255, 255, 0.12);
-  border-color: rgba(255, 255, 255, 0.2);
+  border-color: rgba(255, 255, 255, 0.25);
   transform: translateY(-1px);
 }
 
@@ -175,13 +215,11 @@ body {
   background: linear-gradient(135deg, var(--accent-cyan), var(--accent-blue));
   color: #050b14;
   border: none;
-  font-weight: 700;
   box-shadow: 0 4px 15px rgba(0, 242, 254, 0.3);
 }
 
 .btn-primary:hover {
   box-shadow: 0 6px 20px rgba(0, 242, 254, 0.5);
-  background: linear-gradient(135deg, #20f5ff, #62b5fe);
 }
 
 .btn-accent {
@@ -197,13 +235,13 @@ body {
   align-items: center;
   gap: 8px;
   font-size: 12px;
-  font-weight: 600;
+  font-weight: 700;
   color: var(--text-muted);
 }
 
 .status-dot {
-  width: 8px;
-  height: 8px;
+  width: 10px;
+  height: 10px;
   border-radius: 50%;
   background: var(--accent-danger);
   box-shadow: 0 0 8px var(--accent-danger);
@@ -212,10 +250,10 @@ body {
 
 .status-dot.active {
   background: var(--accent-emerald);
-  box-shadow: 0 0 10px var(--accent-emerald);
+  box-shadow: 0 0 12px var(--accent-emerald);
 }
 
-/* Main Content Workspace Layout */
+/* Workspace Layout */
 .app-workspace {
   flex: 1;
   display: flex;
@@ -225,8 +263,8 @@ body {
 
 .sidebar-panel {
   width: 320px;
-  background: rgba(12, 16, 25, 0.7);
-  backdrop-filter: blur(12px);
+  background: rgba(12, 16, 25, 0.75);
+  backdrop-filter: blur(16px);
   border-right: 1px solid var(--bg-card-border);
   display: flex;
   flex-direction: column;
@@ -248,7 +286,7 @@ body {
 /* Glassmorphism Section Card */
 .glass-card {
   background: var(--bg-card);
-  backdrop-filter: blur(16px);
+  backdrop-filter: blur(20px);
   border: 1px solid var(--bg-card-border);
   border-radius: var(--radius-lg);
   padding: 16px;
@@ -257,13 +295,13 @@ body {
 }
 
 .glass-card:hover {
-  border-color: rgba(255, 255, 255, 0.15);
+  border-color: rgba(255, 255, 255, 0.18);
 }
 
 .card-title {
   font-family: var(--font-heading);
-  font-size: 14px;
-  font-weight: 700;
+  font-size: 13px;
+  font-weight: 800;
   text-transform: uppercase;
   letter-spacing: 0.8px;
   color: var(--text-muted);
@@ -273,31 +311,32 @@ body {
   justify-content: space-between;
 }
 
-/* SoundFont Library File Loader Area */
+/* SF2 Uploader Zone */
 .sf2-uploader-zone {
-  border: 2px dashed rgba(255, 255, 255, 0.15);
+  border: 2px dashed rgba(0, 242, 254, 0.3);
   border-radius: var(--radius-md);
   padding: 20px;
   text-align: center;
   cursor: pointer;
   transition: all 0.2s ease;
-  background: rgba(255, 255, 255, 0.02);
+  background: rgba(0, 242, 254, 0.02);
 }
 
 .sf2-uploader-zone:hover {
   border-color: var(--accent-cyan);
-  background: rgba(0, 242, 254, 0.04);
+  background: rgba(0, 242, 254, 0.08);
+  box-shadow: var(--shadow-glow-cyan);
 }
 
 .sf2-icon {
-  font-size: 32px;
+  font-size: 34px;
   margin-bottom: 8px;
   display: block;
 }
 
 .sf2-uploader-text {
   font-size: 13px;
-  font-weight: 600;
+  font-weight: 700;
   color: var(--text-main);
 }
 
@@ -307,7 +346,7 @@ body {
   margin-top: 4px;
 }
 
-/* SoundFont Preset List Item */
+/* SoundFont Preset List */
 .preset-list {
   display: flex;
   flex-direction: column;
@@ -321,7 +360,7 @@ body {
   border-radius: var(--radius-sm);
   background: rgba(255, 255, 255, 0.03);
   font-size: 12px;
-  font-weight: 500;
+  font-weight: 600;
   color: var(--text-main);
   cursor: pointer;
   display: flex;
@@ -331,23 +370,23 @@ body {
 }
 
 .preset-item:hover {
-  background: rgba(0, 242, 254, 0.1);
+  background: rgba(0, 242, 254, 0.12);
   color: var(--accent-cyan);
 }
 
 .preset-item.active {
-  background: linear-gradient(90deg, rgba(0, 242, 254, 0.2), transparent);
+  background: linear-gradient(90deg, rgba(0, 242, 254, 0.25), transparent);
   border-left: 3px solid var(--accent-cyan);
   color: var(--accent-cyan);
-  font-weight: 700;
+  font-weight: 800;
 }
 
 /* Virtual Piano Keyboard Footer */
 .keyboard-container {
-  height: 180px;
-  background: rgba(10, 13, 20, 0.95);
+  height: 190px;
+  background: rgba(10, 13, 20, 0.96);
   border-top: 1px solid var(--bg-card-border);
-  padding: 12px 20px;
+  padding: 10px 16px;
   display: flex;
   flex-direction: column;
   gap: 8px;
@@ -371,7 +410,7 @@ body {
   font-size: 13px;
   font-weight: 700;
   color: var(--accent-cyan);
-  min-width: 60px;
+  min-width: 90px;
   text-align: center;
 }
 
@@ -387,11 +426,13 @@ body {
   position: relative;
   cursor: pointer;
   border-radius: 0 0 6px 6px;
-  transition: background 0.05s ease, transform 0.05s ease;
+  transition: background 0.05s ease, transform 0.05s ease, box-shadow 0.05s ease;
+  touch-action: none;
 }
 
 .piano-key.white {
   width: 44px;
+  min-width: 44px;
   height: 100%;
   background: linear-gradient(180deg, #e6ecf2 0%, #ffffff 100%);
   border: 1px solid #b0bec5;
@@ -401,23 +442,26 @@ body {
 
 .piano-key.white.active, .piano-key.white:active {
   background: linear-gradient(180deg, var(--accent-cyan) 0%, #00b0ff 100%);
-  transform: translateY(2px);
+  box-shadow: 0 0 15px var(--accent-cyan);
+  transform: translateY(3px);
 }
 
 .piano-key.black {
   width: 28px;
+  min-width: 28px;
   height: 60%;
   background: linear-gradient(180deg, #263238 0%, #0d1317 100%);
   border: 1px solid #000;
   margin-left: -15px;
   margin-right: -15px;
   z-index: 2;
-  box-shadow: 0 4px 8px rgba(0,0,0,0.5);
+  box-shadow: 0 4px 8px rgba(0,0,0,0.6);
 }
 
 .piano-key.black.active, .piano-key.black:active {
   background: linear-gradient(180deg, var(--accent-purple) 0%, var(--accent-pink) 100%);
-  transform: translateY(2px);
+  box-shadow: 0 0 15px var(--accent-purple);
+  transform: translateY(3px);
 }
 
 .key-label {
@@ -426,7 +470,7 @@ body {
   left: 50%;
   transform: translateX(-50%);
   font-size: 10px;
-  font-weight: 600;
+  font-weight: 700;
   color: #78909c;
   pointer-events: none;
 }
@@ -437,30 +481,37 @@ body {
   height: 6px;
 }
 ::-webkit-scrollbar-track {
-  background: rgba(0, 0, 0, 0.2);
+  background: rgba(0, 0, 0, 0.3);
 }
 ::-webkit-scrollbar-thumb {
-  background: rgba(255, 255, 255, 0.15);
+  background: rgba(255, 255, 255, 0.18);
   border-radius: 3px;
 }
 ::-webkit-scrollbar-thumb:hover {
-  background: rgba(255, 255, 255, 0.3);
+  background: rgba(255, 255, 255, 0.35);
 }
 
-/* Mobile Responsiveness */
-@media (max-width: 768px) {
+/* Mobile Layout Responsiveness */
+@media (max-width: 900px) {
+  .app-header {
+    flex-wrap: wrap;
+    height: auto;
+    padding: 10px;
+  }
   .app-workspace {
     flex-direction: column;
   }
   .sidebar-panel {
     width: 100%;
-    height: 240px;
+    height: 220px;
   }
   .piano-key.white {
     width: 36px;
+    min-width: 36px;
   }
   .piano-key.black {
     width: 22px;
+    min-width: 22px;
     margin-left: -12px;
     margin-right: -12px;
   }

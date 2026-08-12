@@ -1,0 +1,60 @@
+/* ROTARY KNOB COMPONENT STYLES (VST / DAW STYLE) */
+
+.knob-container {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  user-select: none;
+  cursor: ns-resize;
+}
+
+.knob-element {
+  width: 42px;
+  height: 42px;
+  position: relative;
+  border-radius: 50%;
+  background: radial-gradient(circle at 35% 35%, #2a3447 0%, #121722 70%, #090c12 100%);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  box-shadow: 
+    0 4px 10px rgba(0, 0, 0, 0.6),
+    inset 0 1px 1px rgba(255, 255, 255, 0.2);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.knob-element:hover {
+  border-color: var(--accent-cyan);
+  box-shadow: 
+    0 0 12px rgba(0, 242, 254, 0.3),
+    inset 0 1px 1px rgba(255, 255, 255, 0.3);
+}
+
+/* Indicador de linha de rotação do Knob */
+.knob-pointer {
+  width: 3px;
+  height: 14px;
+  background: var(--accent-cyan);
+  border-radius: 2px;
+  position: absolute;
+  top: 4px;
+  transform-origin: 50% 17px;
+  box-shadow: 0 0 6px var(--accent-cyan);
+}
+
+.knob-value-text {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--accent-cyan);
+}
+
+.knob-title {
+  font-size: 9px;
+  font-weight: 800;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  letter-spacing: 0.5px;
+}

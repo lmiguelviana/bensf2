@@ -14,6 +14,7 @@
   <link rel="stylesheet" href="css/main.css">
   <link rel="stylesheet" href="css/mixer.css">
   <link rel="stylesheet" href="css/synth-rack.css">
+  <link rel="stylesheet" href="css/knob.css">
 </head>
 <body>
 
@@ -22,9 +23,16 @@
     <div class="app-brand">
       <div class="app-logo-icon">S</div>
       <div>
-        <h1 class="app-title">SF2 SAMPLER WORKSTATION</h1>
+        <h1 class="app-title">SF2 WORKSTATION</h1>
       </div>
       <span class="badge-tag">LIVE RIG</span>
+    </div>
+
+    <!-- View Switcher Tabs (Mobile & Desktop) -->
+    <div class="view-tabs-bar">
+      <button id="tabMixer" class="tab-btn active">🎛️ Mixer & Layers</button>
+      <button id="tabFxRack" class="tab-btn">🏛️ Rack FX & EQ</button>
+      <button id="tabMidi" class="tab-btn">🎹 Teclado & MIDI</button>
     </div>
 
     <!-- Indicador de Teclado MIDI Conectado (USB/Bluetooth) -->
@@ -66,11 +74,11 @@
       </div>
 
       <button id="btnSavePreset" class="btn btn-accent" title="Salvar Preset Atual (Ctrl+S)">
-        💾 Salvar Preset
+        💾 Salvar
       </button>
 
       <button id="btnLoadPreset" class="btn" title="Importar arquivo de Preset (.json)">
-        📂 Carregar Preset
+        📂 Carregar
       </button>
       <input type="file" id="presetFileInput" accept=".json" style="display: none;">
 
@@ -126,7 +134,7 @@
       </section>
     </aside>
 
-    <!-- Main View: Multitimbric Layer Mixer Console -->
+    <!-- Main View: Multitimbric Layer Mixer Console & FX Rack -->
     <section class="main-view-area">
 
       <!-- Status Banner -->
@@ -134,8 +142,8 @@
         <span>ℹ️ <b>Aviso:</b> O som permanecerá silencioso até que você selecione e carregue um arquivo <b>.sf2</b> no painel à esquerda.</span>
       </div>
 
-      <!-- Console de Mixagem 16-Canais -->
-      <section class="glass-card">
+      <!-- Section: Mixer Console 16-Canais -->
+      <section id="sectionMixer" class="glass-card">
         <div class="card-title">
           <span>Mixer Console Multitimbrico (Layers & Channels)</span>
           <button id="btnAddChannel" class="btn btn-primary" style="padding: 4px 10px; font-size: 11px;">+ Nova Pista</button>
@@ -147,8 +155,8 @@
         </div>
       </section>
 
-      <!-- Rack de Processamento de Efeitos (FX Rack) -->
-      <section class="glass-card">
+      <!-- Section: Rack de Processamento de Efeitos (FX Rack com Knobs 3D) -->
+      <section id="sectionFxRack" class="glass-card">
         <div class="card-title">
           <span>Rack de Efeitos Master (FX Rack)</span>
           <span>🎛️</span>
@@ -156,69 +164,43 @@
 
         <div class="fx-rack-container">
           
-          <!-- Módulo Equalizador 3-Bandas -->
-          <div class="fx-module-card">
-            <div class="fx-module-title">
+          <!-- Módulo Equalizador 3-Bandas com Knobs 3D -->
+          <div class="fx-module-card" style="align-items: center;">
+            <div class="fx-module-title" style="width: 100%;">
               <span>Equalizador (3-Band EQ)</span>
               <span>🎚️</span>
             </div>
             
-            <div class="fx-control-row">
-              <span>Grave (100Hz):</span>
-              <input type="range" id="eqLowGain" class="fx-slider" min="-12" max="12" step="0.5" value="0">
-              <span id="eqLowVal" class="fx-value-display">0 dB</span>
-            </div>
-
-            <div class="fx-control-row">
-              <span>Médio (1kHz):</span>
-              <input type="range" id="eqMidGain" class="fx-slider" min="-12" max="12" step="0.5" value="0">
-              <span id="eqMidVal" class="fx-value-display">0 dB</span>
-            </div>
-
-            <div class="fx-control-row">
-              <span>Agudo (8kHz):</span>
-              <input type="range" id="eqHighGain" class="fx-slider" min="-12" max="12" step="0.5" value="0">
-              <span id="eqHighVal" class="fx-value-display">0 dB</span>
+            <div style="display: flex; gap: 16px; justify-content: center; width: 100%; margin-top: 8px;">
+              <div id="knobEqLow"></div>
+              <div id="knobEqMid"></div>
+              <div id="knobEqHigh"></div>
             </div>
           </div>
 
-          <!-- Módulo Stereo Delay -->
-          <div class="fx-module-card">
-            <div class="fx-module-title">
+          <!-- Módulo Stereo Delay com Knobs 3D -->
+          <div class="fx-module-card" style="align-items: center;">
+            <div class="fx-module-title" style="width: 100%;">
               <span>Stereo Delay / Echo</span>
               <span>⏱️</span>
             </div>
             
-            <div class="fx-control-row">
-              <span>Tempo Delay:</span>
-              <input type="range" id="delayTime" class="fx-slider" min="0.05" max="1.0" step="0.05" value="0.3">
-              <span id="delayTimeVal" class="fx-value-display">300 ms</span>
-            </div>
-
-            <div class="fx-control-row">
-              <span>Mistura Wet/Dry:</span>
-              <input type="range" id="delayMix" class="fx-slider" min="0" max="1" step="0.01" value="0.2">
-              <span id="delayMixVal" class="fx-value-display">20%</span>
+            <div style="display: flex; gap: 20px; justify-content: center; width: 100%; margin-top: 8px;">
+              <div id="knobDelayTime"></div>
+              <div id="knobDelayMix"></div>
             </div>
           </div>
 
-          <!-- Módulo Reverb Estéreo -->
-          <div class="fx-module-card">
-            <div class="fx-module-title">
+          <!-- Módulo Reverb Estéreo com Knobs 3D -->
+          <div class="fx-module-card" style="align-items: center;">
+            <div class="fx-module-title" style="width: 100%;">
               <span>Reverb Estéreo</span>
               <span>🏛️</span>
             </div>
             
-            <div class="fx-control-row">
-              <span>Tamanho Sala:</span>
-              <input type="range" id="fxReverbSize" class="fx-slider" min="0.1" max="1.0" step="0.01" value="0.4">
-              <span id="reverbSizeVal" class="fx-value-display">40%</span>
-            </div>
-
-            <div class="fx-control-row">
-              <span>Mistura Wet/Dry:</span>
-              <input type="range" id="fxReverbMix" class="fx-slider" min="0" max="1" step="0.01" value="0.25">
-              <span id="reverbMixVal" class="fx-value-display">25%</span>
+            <div style="display: flex; gap: 20px; justify-content: center; width: 100%; margin-top: 8px;">
+              <div id="knobReverbSize"></div>
+              <div id="knobReverbMix"></div>
             </div>
           </div>
 
@@ -243,7 +225,7 @@
   </main>
 
   <!-- Virtual Piano Keyboard Footer -->
-  <footer class="keyboard-container">
+  <footer id="sectionMidiKeyboard" class="keyboard-container">
     <div class="keyboard-controls">
       <div class="octave-controls">
         <button id="btnOctaveDown" class="btn" style="padding: 4px 10px;">- Oitava (Z)</button>
@@ -271,6 +253,7 @@
   <script src="js/mixer.js"></script>
   <script src="js/web-midi.js"></script>
   <script src="js/preset-manager.js"></script>
+  <script src="js/knob-component.js"></script>
   <script src="js/app.js"></script>
 </body>
 </html>
