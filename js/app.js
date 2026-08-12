@@ -872,6 +872,8 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   }
 
+  window.updateTrackVelUI = updateTrackVelUI;
+
   if (selectTrackVelMode) {
     selectTrackVelMode.addEventListener('change', (e) => {
       const activeCh = fxRack ? fxRack.selectedChannel : 1;

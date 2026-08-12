@@ -64,6 +64,9 @@ class SettingsModalManager {
     if (this.modalVelocityCurveSelect && this.synth) {
       this.modalVelocityCurveSelect.addEventListener('change', (e) => {
         this.synth.setVelocityCurve(e.target.value);
+        if (typeof window.updateTrackVelUI === 'function' && window.fxRack) {
+          window.updateTrackVelUI(window.fxRack.selectedChannel);
+        }
       });
     }
 
