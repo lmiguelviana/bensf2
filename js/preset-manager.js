@@ -83,8 +83,10 @@ class PresetManager {
     if (selectEl) selectEl.value = cleanName;
 
     if (window.showToastNotification) {
-      window.showToastNotification('Preset Criado!', `Preset "${cleanName}" salvo com sucesso.`, 'success');
+      window.showToastNotification('Preset Criado!', `Preset "${cleanName}" salvo na memória. Escolha a pasta no Windows abaixo:`, 'success');
     }
+
+    this.exportPresetToJson(presetData);
     return presetData;
   }
 
@@ -108,8 +110,10 @@ class PresetManager {
     this.updatePresetDropdownUI();
 
     if (window.showToastNotification) {
-      window.showToastNotification('Preset Salvo!', `Configuração "${name}" atualizada com sucesso.`, 'success');
+      window.showToastNotification('Preset Salvo!', `Configuração "${name}" atualizada. Escolha a pasta no Windows abaixo:`, 'success');
     }
+
+    this.exportPresetToJson(presetData);
   }
 
   async openPresetFileDialog() {
@@ -307,16 +311,37 @@ class PresetManager {
     }
   }
 
-  exportPresetToJson(presetData) {
+  async exportPresetToJson(presetData) {
+    if (!presetData || !presetData.name) return;
     const jsonStr = JSON.stringify(presetData, null, 2);
-    const blob = new Blob([jsonStr], { type: 'application/json' });
-    const url = URL.createObjectURL(blob);
+    const cleanFileName = `${presetData.name.replace(/[^a-z0-9\s_\-]/gi, '_').trim()}_preset.json`;
 
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `${presetData.name.replace(/[^a-z0-9]/gi, '_').toLowerCase()}_preset.json`;
-    a.click();
-    URL.revokeObjectURL(url);
+    if (window.electronAPI && window.electronAPI.showSaveDialog) {
+      try {
+        const filePath = await window.electronAPI.showSaveDialog({
+          title: `Salvar Preset "${presetData.name}" no Windows`,
+          defaultPath: cleanFileName,
+          filters: [{ name: 'Arquivo Preset JSON (*.json)', extensions: ['json'] }]
+        });
+
+        if (filePath && window.electronAPI.writeFile) {
+          const success = await window.electronAPI.writeFile(filePath, jsonStr);
+          if (success && window.showToastNotification) {
+            window.showToastNotification('Arquivo Salvo no Windows!', `Preset salvo em:\n${filePath}`, 'success');
+          }
+        }
+      } catch (e) {
+        console.error('[PresetManager] Erro ao salvar arquivo via diálogo nativo:', e);
+      }
+    } else {
+      const blob = new Blob([jsonStr], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = cleanFileName;
+      a.click();
+      URL.revokeObjectURL(url);
+    }
   }
 
   importPresetFromJsonFile(file) {
