@@ -1,6 +1,6 @@
 /**
  * MASTER APPLICATION CONTROLLER
- * Liga a interface UI ao motor de síntese SF2, Mixer Console, Master FX, FX por Pista com Algoritmos de Reverb Valhalla DSP e Modal de Configurações.
+ * Liga a interface UI ao motor de síntese SF2, Mixer Console, Master FX, FX por Pista com Algoritmos de Reverb Valhalla DSP, Cutoff Filter e Modal de Configurações.
  */
 
 document.addEventListener('DOMContentLoaded', () => {
@@ -260,7 +260,16 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
-  // 2. PER-TRACK FX CONTROLS & ALGORITMOS VALHALLA
+  // 2. PER-TRACK FX CONTROLS & FILTRO CUTOFF & ALGORITMOS VALHALLA
+  const btnTrackCutoffToggle = document.getElementById('btnTrackCutoffToggle');
+  if (btnTrackCutoffToggle) {
+    btnTrackCutoffToggle.addEventListener('click', () => {
+      const isAct = btnTrackCutoffToggle.classList.toggle('active');
+      btnTrackCutoffToggle.textContent = isAct ? 'ON' : 'OFF';
+      fxRack.toggleTrackCutoff(isAct);
+    });
+  }
+
   const btnTrackEqToggle = document.getElementById('btnTrackEqToggle');
   if (btnTrackEqToggle) {
     btnTrackEqToggle.addEventListener('click', () => {
@@ -295,7 +304,21 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
-  let knobTrackEqLow, knobTrackEqMid, knobTrackEqHigh, knobTrackDelayTime, knobTrackDelayMix, knobTrackReverbSize, knobTrackReverbMix;
+  let knobTrackCutoff, knobTrackEqLow, knobTrackEqMid, knobTrackEqHigh, knobTrackDelayTime, knobTrackDelayMix, knobTrackReverbSize, knobTrackReverbMix;
+
+  const knobTrackCutoffEl = document.getElementById('knobTrackCutoff');
+  if (knobTrackCutoffEl) {
+    knobTrackCutoff = new RotaryKnob(knobTrackCutoffEl, {
+      title: 'CUTOFF', min: 200, max: 20000, step: 100, value: 20000, unit: 'Hz',
+      onChange: (val) => fxRack.setCutoffFrequency(val)
+    });
+    midiLearn.attach(knobTrackCutoffEl, 'Filtro Cutoff Pista', (normVal) => {
+      // Curva logarítmica de frequência Cutoff (200 Hz a 20.000 Hz)
+      const freqHz = Math.round(200 * Math.pow(100, normVal));
+      fxRack.setCutoffFrequency(freqHz);
+      if (knobTrackCutoff) knobTrackCutoff.setValue(freqHz);
+    });
+  }
 
   const knobTrackLowEl = document.getElementById('knobTrackEqLow');
   if (knobTrackLowEl) {
@@ -312,7 +335,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
   const knobTrackMidEl = document.getElementById('knobTrackEqMid');
   if (knobTrackMidEl) {
-    knobTrackEqMid = new RotaryKnob(knobTrackMidEl, {
+    knobTrackMid = new RotaryKnob(knobTrackMidEl, {
       title: 'MÉDIO', min: -12, max: 12, step: 0.5, value: 0, unit: 'dB',
       onChange: (val) => fxRack.setEqMidGain(val)
     });
@@ -368,13 +391,17 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
-  // Atualizar Knobs, Toggles e Modo Reverb da pista individual ao trocar de canal no Mixer!
+  // Atualizar Knobs, Toggles, Cutoff e Modo Reverb da pista individual ao trocar de canal no Mixer!
   fxRack.onSelectionChange((ch, params) => {
     const chName = synth.channels[ch] ? synth.channels[ch].name : `CH ${ch < 10 ? '0' + ch : ch}`;
     if (fxRackTitleEl) {
       fxRackTitleEl.textContent = `EFEITOS DA PISTA - ${chName.toUpperCase()}`;
     }
 
+    if (btnTrackCutoffToggle) {
+      btnTrackCutoffToggle.classList.toggle('active', params.cutoffEnabled !== false);
+      btnTrackCutoffToggle.textContent = params.cutoffEnabled !== false ? 'ON' : 'OFF';
+    }
     if (btnTrackEqToggle) {
       btnTrackEqToggle.classList.toggle('active', params.eqEnabled !== false);
       btnTrackEqToggle.textContent = params.eqEnabled !== false ? 'ON' : 'OFF';
@@ -392,6 +419,7 @@ document.addEventListener('DOMContentLoaded', () => {
       selectTrackReverbMode.value = params.reverbMode || 'concert_hall';
     }
 
+    if (knobTrackCutoff) knobTrackCutoff.setValue(params.cutoffFreq || 20000);
     if (knobTrackEqLow) knobTrackEqLow.setValue(params.eqLow);
     if (knobTrackEqMid) knobTrackEqMid.setValue(params.eqMid);
     if (knobTrackEqHigh) knobTrackEqHigh.setValue(params.eqHigh);

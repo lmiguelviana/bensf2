@@ -1,6 +1,6 @@
 /**
- * MASTER & PER-TRACK FX RACK ENGINE (COM ALGORITMOS DE REVERB ESTILO VALHALLA)
- * Módulo de processamento de efeitos com Master FX Global e FX por pista individual com Modos de Reverb Valhalla.
+ * MASTER & PER-TRACK FX RACK ENGINE (COM CUTOFF LOWPASS FILTER & ALGORITMOS VALHALLA)
+ * Módulo de processamento de efeitos com Master FX Global, FX por pista individual e Filtro Passa-Baixas Cutoff.
  */
 
 class FxRackManager {
@@ -94,8 +94,13 @@ class FxRackManager {
       this.masterReverbGain.connect(this.audioCtx.limiterNode);
     }
 
-    // 2. Inicializar Nódulos de Efeito para cada um dos 16 canais
+    // 2. Inicializar Nódulos de Efeito para cada um dos 16 canais (com Filtro Cutoff)
     for (let ch = 1; ch <= 16; ch++) {
+      const cutoffFilter = ctx.createBiquadFilter();
+      cutoffFilter.type = 'lowpass';
+      cutoffFilter.frequency.value = 20000;
+      cutoffFilter.Q.value = 1.0;
+
       const eqLow = ctx.createBiquadFilter();
       eqLow.type = 'lowshelf';
       eqLow.frequency.value = 100;
@@ -112,6 +117,7 @@ class FxRackManager {
       eqHigh.frequency.value = 8000;
       eqHigh.gain.value = 0;
 
+      cutoffFilter.connect(eqLow);
       eqLow.connect(eqMid);
       eqMid.connect(eqHigh);
 
@@ -140,6 +146,7 @@ class FxRackManager {
       eqHigh.connect(reverbNode);
 
       this.channelFx.set(ch, {
+        cutoffFilter,
         eqLow,
         eqMid,
         eqHigh,
@@ -148,6 +155,8 @@ class FxRackManager {
         reverbNode,
         reverbGain,
         params: {
+          cutoffEnabled: true,
+          cutoffFreq: 20000,
           eqEnabled: true,
           delayEnabled: true,
           reverbEnabled: true,
@@ -163,7 +172,7 @@ class FxRackManager {
       });
     }
 
-    console.log('[FxRack] Motor de Efeitos Master e por Pista com Algoritmos Valhalla inicializados.');
+    console.log('[FxRack] Motor de Efeitos Master, Filtros Cutoff e Canais com Algoritmos Valhalla inicializados.');
   }
 
   // Gerador de Resposta de Impulso Sintético estilo Valhalla DSP (com amortecimento de frequências agudas)
@@ -309,6 +318,26 @@ class FxRackManager {
     }
   }
 
+  // Controle do Filtro Passa-Baixas (Cutoff Frequency) da pista individual
+  toggleTrackCutoff(enabled, channel = this.selectedChannel) {
+    const fx = this.channelFx.get(channel);
+    if (fx) {
+      fx.params.cutoffEnabled = enabled;
+      const targetFreq = enabled ? fx.params.cutoffFreq : 20000;
+      fx.cutoffFilter.frequency.setTargetAtTime(targetFreq, this.audioCtx.getCurrentTime(), 0.01);
+    }
+  }
+
+  setCutoffFrequency(freqHz, channel = this.selectedChannel) {
+    const fx = this.channelFx.get(channel);
+    if (fx) {
+      fx.params.cutoffFreq = freqHz;
+      if (fx.params.cutoffEnabled !== false) {
+        fx.cutoffFilter.frequency.setTargetAtTime(freqHz, this.audioCtx.getCurrentTime(), 0.01);
+      }
+    }
+  }
+
   // Toggles ON/OFF dos Efeitos por Pista Individual
   toggleTrackEq(enabled, channel = this.selectedChannel) {
     const fx = this.channelFx.get(channel);
@@ -430,7 +459,7 @@ class FxRackManager {
     }
 
     sourceGainNode.disconnect();
-    sourceGainNode.connect(fx.eqLow);
+    sourceGainNode.connect(fx.cutoffFilter);
 
     fx.eqHigh.connect(targetPannerNode);
     fx.delayGain.connect(targetPannerNode);
