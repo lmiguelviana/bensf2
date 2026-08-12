@@ -1,6 +1,6 @@
 /**
  * MASTER APPLICATION CONTROLLER
- * Liga a interface UI ao motor de síntese SF2, Mixer Console, Master FX, FX por Pista com Algoritmos de Reverb Valhalla DSP, Chorus Estéreo, Cutoff Filter e Modal de Configurações.
+ * Liga a interface UI ao motor de síntese SF2, Mixer Console, Master FX, FX por Pista com Envelope ADSR, Algoritmos Valhalla, Chorus Estéreo, Cutoff e Modal de Configurações.
  */
 
 document.addEventListener('DOMContentLoaded', () => {
@@ -308,7 +308,61 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
-  // 2. PER-TRACK FX CONTROLS & FILTRO CUTOFF & STEREO CHORUS & ALGORITMOS VALHALLA
+  // 2. PER-TRACK FX CONTROLS & ENVELOPE ADSR & FILTRO CUTOFF & STEREO CHORUS & ALGORITMOS VALHALLA
+  let knobTrackAdsrAttack, knobTrackAdsrDecay, knobTrackAdsrSustain, knobTrackAdsrRelease;
+
+  const knobAttackEl = document.getElementById('knobTrackAdsrAttack');
+  if (knobAttackEl) {
+    knobTrackAdsrAttack = new RotaryKnob(knobAttackEl, {
+      title: 'ATTACK', min: 1, max: 2000, step: 5, value: 5, unit: 'ms',
+      onChange: (val) => {
+        const ch = fxRack.selectedChannel;
+        if (synth.channels[ch] && synth.channels[ch].adsr) {
+          synth.channels[ch].adsr.attack = val / 1000.0;
+        }
+      }
+    });
+  }
+
+  const knobDecayEl = document.getElementById('knobTrackAdsrDecay');
+  if (knobDecayEl) {
+    knobTrackAdsrDecay = new RotaryKnob(knobDecayEl, {
+      title: 'DECAY', min: 10, max: 3000, step: 10, value: 100, unit: 'ms',
+      onChange: (val) => {
+        const ch = fxRack.selectedChannel;
+        if (synth.channels[ch] && synth.channels[ch].adsr) {
+          synth.channels[ch].adsr.decay = val / 1000.0;
+        }
+      }
+    });
+  }
+
+  const knobSustainEl = document.getElementById('knobTrackAdsrSustain');
+  if (knobSustainEl) {
+    knobTrackAdsrSustain = new RotaryKnob(knobSustainEl, {
+      title: 'SUSTAIN', min: 0, max: 100, step: 1, value: 75, unit: '%',
+      onChange: (val) => {
+        const ch = fxRack.selectedChannel;
+        if (synth.channels[ch] && synth.channels[ch].adsr) {
+          synth.channels[ch].adsr.sustain = val / 100.0;
+        }
+      }
+    });
+  }
+
+  const knobReleaseEl = document.getElementById('knobTrackAdsrRelease');
+  if (knobReleaseEl) {
+    knobTrackAdsrRelease = new RotaryKnob(knobReleaseEl, {
+      title: 'RELEASE', min: 10, max: 5000, step: 10, value: 250, unit: 'ms',
+      onChange: (val) => {
+        const ch = fxRack.selectedChannel;
+        if (synth.channels[ch] && synth.channels[ch].adsr) {
+          synth.channels[ch].adsr.release = val / 1000.0;
+        }
+      }
+    });
+  }
+
   const btnTrackCutoffToggle = document.getElementById('btnTrackCutoffToggle');
   if (btnTrackCutoffToggle) {
     btnTrackCutoffToggle.addEventListener('click', () => {
@@ -460,6 +514,14 @@ document.addEventListener('DOMContentLoaded', () => {
     const chName = synth.channels[ch] ? synth.channels[ch].name : `CH ${ch < 10 ? '0' + ch : ch}`;
     if (fxRackTitleEl) {
       fxRackTitleEl.textContent = `EFEITOS DA PISTA - ${chName.toUpperCase()}`;
+    }
+
+    const chObj = synth.channels[ch];
+    if (chObj && chObj.adsr) {
+      if (knobTrackAdsrAttack) knobTrackAdsrAttack.setValue(Math.round(chObj.adsr.attack * 1000));
+      if (knobTrackAdsrDecay) knobTrackAdsrDecay.setValue(Math.round(chObj.adsr.decay * 1000));
+      if (knobTrackAdsrSustain) knobTrackAdsrSustain.setValue(Math.round(chObj.adsr.sustain * 100));
+      if (knobTrackAdsrRelease) knobTrackAdsrRelease.setValue(Math.round(chObj.adsr.release * 1000));
     }
 
     if (btnTrackCutoffToggle) {

@@ -1,6 +1,6 @@
 /**
- * MULTITIMBRIC MIXER CONSOLE MANAGER (WITH INLINE TRACK RENAMING, MIDI LEARN & TRACK REMOVAL)
- * Gerenciador dinâmico de 16 pistas de canais MIDI com opção de adicionar/remover pistas, edição inline de nomes de faixa e MIDI Learn.
+ * MULTITIMBRIC MIXER CONSOLE MANAGER (WITH SEMITONE TRANSPOSE, INLINE RENAMING, MIDI LEARN & TRACK REMOVAL)
+ * Gerenciador dinâmico de 16 pistas de canais MIDI com transposição por semitões, oitavas, edição inline de nomes e MIDI Learn.
  */
 
 class MixerConsoleManager {
@@ -77,6 +77,7 @@ class MixerConsoleManager {
       muted: false, 
       solo: false, 
       transpose: 0, 
+      semitoneTranspose: 0,
       assignedPresetIndex: (ch - 1),
       assignedMidiChannel: ch 
     };
@@ -135,15 +136,30 @@ class MixerConsoleManager {
         <input type="range" class="knob-slider ch-pan" data-channel="${ch}" min="-1" max="1" step="0.05" value="${chConfig.pan}" title="Clique com o botão direito para MIDI Learn">
       </div>
 
-      <div class="knob-group">
-        <div class="knob-label">OITAVA</div>
-        <select class="ch-transpose preset-select" data-channel="${ch}" style="font-size: 11px; padding: 2px 4px;">
-          <option value="-2" ${chConfig.transpose === -2 ? 'selected' : ''}>-2</option>
-          <option value="-1" ${chConfig.transpose === -1 ? 'selected' : ''}>-1</option>
-          <option value="0" ${chConfig.transpose === 0 ? 'selected' : ''}>0 (Std)</option>
-          <option value="1" ${chConfig.transpose === 1 ? 'selected' : ''}>+1</option>
-          <option value="2" ${chConfig.transpose === 2 ? 'selected' : ''}>+2</option>
-        </select>
+      <div style="display: flex; gap: 4px; width: 100%;">
+        <div class="knob-group" style="flex: 1;">
+          <div class="knob-label">OITAVA</div>
+          <select class="ch-transpose preset-select" data-channel="${ch}" style="font-size: 10px; padding: 2px;">
+            <option value="-2" ${chConfig.transpose === -2 ? 'selected' : ''}>-2</option>
+            <option value="-1" ${chConfig.transpose === -1 ? 'selected' : ''}>-1</option>
+            <option value="0" ${chConfig.transpose === 0 ? 'selected' : ''}>0 (Std)</option>
+            <option value="1" ${chConfig.transpose === 1 ? 'selected' : ''}>+1</option>
+            <option value="2" ${chConfig.transpose === 2 ? 'selected' : ''}>+2</option>
+          </select>
+        </div>
+
+        <div class="knob-group" style="flex: 1;">
+          <div class="knob-label">SEMITOM</div>
+          <select class="ch-semitone preset-select" data-channel="${ch}" style="font-size: 10px; padding: 2px;">
+            <option value="-12" ${chConfig.semitoneTranspose === -12 ? 'selected' : ''}>-12</option>
+            <option value="-7" ${chConfig.semitoneTranspose === -7 ? 'selected' : ''}>-7</option>
+            <option value="-5" ${chConfig.semitoneTranspose === -5 ? 'selected' : ''}>-5</option>
+            <option value="0" ${chConfig.semitoneTranspose === 0 ? 'selected' : ''}>0</option>
+            <option value="5" ${chConfig.semitoneTranspose === 5 ? 'selected' : ''}>+5</option>
+            <option value="7" ${chConfig.semitoneTranspose === 7 ? 'selected' : ''}>+7</option>
+            <option value="12" ${chConfig.semitoneTranspose === 12 ? 'selected' : ''}>+12</option>
+          </select>
+        </div>
       </div>
 
       <div class="button-group-row">
@@ -309,6 +325,16 @@ class MixerConsoleManager {
       }
     });
 
+    const semitoneSelect = strip.querySelector('.ch-semitone');
+    if (semitoneSelect) {
+      semitoneSelect.addEventListener('change', (e) => {
+        const val = parseInt(e.target.value, 10);
+        if (this.synth.channels[ch]) {
+          this.synth.channels[ch].semitoneTranspose = val;
+        }
+      });
+    }
+
     const muteBtn = strip.querySelector('.btn-mute');
     muteBtn.addEventListener('click', (e) => {
       e.stopPropagation();
@@ -367,9 +393,7 @@ class MixerConsoleManager {
       return;
     }
 
-    // Silenciar o canal removido antes de excluir
     this.synth.setChannelMute(ch, true);
-
     this.totalChannels--;
 
     const selectEl = document.getElementById('mixerChannelCountSelect');

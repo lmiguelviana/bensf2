@@ -151,7 +151,7 @@
           <!-- Renderizado dinamicamente via MixerConsoleManager -->
         </div>
 
-        <!-- Painel de Efeitos INDIVIDUAL por Pista (Com Cutoff Filter, Stereo Chorus & Valhalla Reverbs) -->
+        <!-- Painel de Efeitos INDIVIDUAL por Pista (Com ADSR, Cutoff Filter, Stereo Chorus & Valhalla Reverbs) -->
         <div class="track-fx-subcard" style="background: rgba(12, 16, 25, 0.7); border-radius: var(--radius-md); padding: 10px; border: 1px solid rgba(0, 242, 254, 0.2);">
           <div class="card-title" style="margin-bottom: 8px;">
             <span id="fxRackTitleText" style="color: var(--accent-cyan); font-weight: 800;">EFEITOS DA PISTA - CH 01: LAYER 1</span>
@@ -159,6 +159,20 @@
           </div>
 
           <div class="fx-rack-container">
+            <!-- Módulo Envelope ADSR por Pista -->
+            <div class="fx-module-card" style="align-items: center;">
+              <div class="fx-module-title" style="width: 100%;">
+                <span>ENVELOPE ADSR (SOM)</span>
+                <span style="font-size: 9px; color: var(--accent-cyan);">AMPLITUDE</span>
+              </div>
+              <div style="display: flex; gap: 8px; justify-content: center; width: 100%; margin-top: 4px;">
+                <div id="knobTrackAdsrAttack"></div>
+                <div id="knobTrackAdsrDecay"></div>
+                <div id="knobTrackAdsrSustain"></div>
+                <div id="knobTrackAdsrRelease"></div>
+              </div>
+            </div>
+
             <!-- Módulo Filtro Passa-Baixas Cutoff por Pista -->
             <div class="fx-module-card" style="align-items: center;">
               <div class="fx-module-title" style="width: 100%;">

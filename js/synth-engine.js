@@ -1,6 +1,6 @@
 /**
- * POLYPHONIC WAVETABLE SYNTHESIZER ENGINE (MULTITIMBRIC WITH PER-TRACK FX & CUSTOM NAMES)
- * Processador de síntese polifônica com suporte a renomeação de faixas e preset persistence.
+ * POLYPHONIC WAVETABLE SYNTHESIZER ENGINE (MULTITIMBRIC WITH ADSR ENVELOPES, SEMITONE TRANSPOSE & PER-TRACK FX)
+ * Processador de síntese polifônica com suporte a envelopes ADSR customizáveis por pista, transposição por semitões e renomeação de faixas.
  */
 
 class SynthEngine {
@@ -17,7 +17,7 @@ class SynthEngine {
     this.pitchBendSemi = new Map();
 
     this.adsr = {
-      attack: 0.01,
+      attack: 0.005,
       decay: 0.1,
       sustain: 0.75,
       release: 0.25
@@ -55,7 +55,9 @@ class SynthEngine {
         pan: 0.0,
         muted: false,
         solo: false,
-        transpose: 0,
+        transpose: 0, // Oitava (-2 a +2)
+        semitoneTranspose: 0, // Semitões (-12 a +12)
+        adsr: { attack: 0.005, decay: 0.1, sustain: 0.75, release: 0.25 },
         assignedPresetIndex: 0,
         assignedMidiChannel: ch
       };
@@ -188,7 +190,7 @@ class SynthEngine {
       const isMatchingChannel = chConfig.assignedMidiChannel === 'all' || chConfig.assignedMidiChannel === channel || ch === channel;
       if (!isMatchingChannel) continue;
 
-      const actualNote = Math.max(0, Math.min(127, note + (chConfig.transpose * 12)));
+      const actualNote = Math.max(0, Math.min(127, note + (chConfig.transpose * 12) + (chConfig.semitoneTranspose || 0)));
       const voiceKey = `${ch}_${note}`;
 
       if (this.activeVoices.has(voiceKey)) {
@@ -204,11 +206,12 @@ class SynthEngine {
       const gainNode = ctx.createGain();
       const velGain = this.calculateVelocityGain(velocity);
 
-      const attackEnd = now + this.adsr.attack;
-      const decayEnd = attackEnd + this.adsr.decay;
-      const sustainLevel = velGain * this.adsr.sustain;
+      const adsr = chConfig.adsr || this.adsr;
+      const attackEnd = now + adsr.attack;
+      const decayEnd = attackEnd + adsr.decay;
+      const sustainLevel = Math.max(0.001, velGain * adsr.sustain);
 
-      gainNode.gain.setValueAtTime(0, now);
+      gainNode.gain.setValueAtTime(0.0001, now);
       gainNode.gain.linearRampToValueAtTime(velGain, attackEnd);
       gainNode.gain.linearRampToValueAtTime(sustainLevel, decayEnd);
 
@@ -267,6 +270,7 @@ class SynthEngine {
         note: actualNote,
         channel: ch,
         originalPitch: basePitch,
+        adsr: adsr,
         startTime: now
       });
     }
@@ -288,7 +292,9 @@ class SynthEngine {
       if (!ctx) continue;
 
       const now = ctx.currentTime;
-      const releaseEnd = now + this.adsr.release;
+      const adsr = voice.adsr || chConfig.adsr || this.adsr;
+      const releaseTime = adsr.release || 0.25;
+      const releaseEnd = now + releaseTime;
 
       voice.gainNode.gain.cancelScheduledValues(now);
       voice.gainNode.gain.setValueAtTime(voice.gainNode.gain.value, now);
@@ -300,7 +306,7 @@ class SynthEngine {
           voice.sourceNode.disconnect();
           voice.gainNode.disconnect();
         } catch (e) {}
-      }, this.adsr.release * 1000 + 50);
+      }, releaseTime * 1000 + 50);
 
       this.activeVoices.delete(voiceKey);
     }
