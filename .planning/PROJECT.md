@@ -6,7 +6,7 @@ Um **Sintetizador Sampler de SF2 e Rack de Performance ao Vivo Cross-Platform** 
 
 ## Core Value
 
-Conectar um **teclado controlador MIDI físico** (via cabo USB-OTG ou Bluetooth), carregar múltiplos bancos de som SF2, manipular canais MIDI em tempo real, controlar volume, panorama (PAN), Mute/Solo, aplicar efeitos (Reverb, Delay, EQ, Limiter) e **Salvar e Carregar Presets personalizados** instantaneamente em apresentações ao vivo ou ensaios, disponível diretamente para download nas lojas de aplicativos (Google Play Store).
+Conectar um **teclado controlador MIDI físico** (via cabo USB-OTG ou Bluetooth), carregar múltiplos bancos de som SF2, manipular canais MIDI em tempo real, controlar volume, panorama (PAN), Mute/Solo, aplicar efeitos (Reverb, Delay, EQ, Limiter) e **Salvar e Carregar Presets personalizados** instantaneamente em apresentações ao vivo ou ensaios, disponível diretamente para download nas lojas de aplicativos (Google Play Store via TWA/Manifest).
 
 ## Requirements
 
@@ -22,7 +22,7 @@ Conectar um **teclado controlador MIDI físico** (via cabo USB-OTG ou Bluetooth)
 - [ ] **Rack de Efeitos (FX Rack)**: Processadores de Reverb Estéreo, Delay, Equalizador de 3 Bandas (Low/Mid/High) e Limiter Master para prevenção de distorção.
 - [ ] **Teclado Virtual Auxiliar Multi-touch / QWERTY**: Teclado na tela sensível ao toque no Mobile e atalhos no teclado do PC para tocar sem controlador.
 - [ ] **Gerenciador de Presets (Preset System)**: Salvar e carregar o estado completo de instrumentos, mixer e efeitos em presets personalizados locais ou exportáveis em JSON (com suporte a atalhos `Ctrl+S` no Electron).
-- [ ] **Distribuição em Loja (Google Play Store & Electron Desktop)**: Preparação de build para Google Play Store via **Capacitor / TWA (Android App Bundle .aab)** e executável Windows/Mac via Electron.
+- [ ] **Distribuição na Google Play Store (TWA / Manifest)**: Geração de pacote Android App Bundle (.aab) para distribuição oficial na Google Play Store usando Bubblewrap / Trusted Web Activity (TWA) a partir do `manifest.json`.
 
 ### Out of Scope
 
@@ -34,7 +34,7 @@ Conectar um **teclado controlador MIDI físico** (via cabo USB-OTG ou Bluetooth)
 
 | Decision | Rationale | Outcome |
 |----------|-----------|---------|
-| Google Play Store Build via Capacitor / TWA | Permite publicar o app como aplicativo nativo na Google Play Store (.aab / .apk) mantendo performance máxima de áudio | Aprovado |
+| Google Play Store via TWA / Manifest | Permite empacotar o projeto via Bubblewrap CLI a partir do manifest.json para gerar o Android App Bundle (.aab) oficial da loja | Aprovado |
 | WebMIDI API Nativas | Suporte direto para teclados controladores MIDI USB e Bluetooth no Chrome Mobile/Android e Electron | Aprovado |
 | Web Audio API + JS SF2 Engine | Latência ultrabaixa imediata para resposta tátil no teclado | Aprovado |
 | Preset System via JSON & LocalStorage / Electron Store | Permite salvamento instantâneo e alternância de timbres durante apresentações | Aprovado |
@@ -44,4 +44,4 @@ Conectar um **teclado controlador MIDI físico** (via cabo USB-OTG ou Bluetooth)
 This document evolves at phase transitions and milestone boundaries.
 
 ---
-*Last updated: 2026-08-12 (Ajustado para publicação na Google Play Store)*
+*Last updated: 2026-08-12 (Ajustado para publicação oficial na Google Play Store via TWA/Manifest)*
