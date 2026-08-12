@@ -4,10 +4,11 @@
  */
 
 class VelocityVisualizerManager {
-  constructor(canvasElement, synthEngine) {
+  constructor(canvasElement, synthEngine, settingsGetter) {
     this.canvas = canvasElement;
     this.ctx = canvasElement ? canvasElement.getContext('2d') : null;
     this.synth = synthEngine;
+    this.settingsGetter = settingsGetter || null;
     this.activeMarker = null; // { inVel, outVel, alpha }
     this.animationId = null;
 
@@ -50,22 +51,31 @@ class VelocityVisualizerManager {
       ctx.lineTo(x, height);
       ctx.stroke();
     }
-    for (let y = 20; y < height; y += 20) {
+    for (let y = 15; y < height; y += 15) {
       ctx.beginPath();
       ctx.moveTo(0, y);
       ctx.lineTo(width, y);
       ctx.stroke();
     }
 
-    const settings = settingsOverride || (this.synth && this.synth.globalVelocitySettings ? this.synth.globalVelocitySettings : { mode: 'normal', minVel: 1, maxVel: 127 });
+    let settings = settingsOverride;
+    if (!settings && typeof this.settingsGetter === 'function') {
+      settings = this.settingsGetter();
+    }
+    if (!settings && this.synth && this.synth.globalVelocitySettings) {
+      settings = this.synth.globalVelocitySettings;
+    }
+    if (!settings) {
+      settings = { mode: 'normal', minVel: 1, maxVel: 127, curvePower: 2.0 };
+    }
 
     // Desenhar 127 barras verticais de entrada vs saída (Estilo Kontakt / Ableton Live)
     const barWidth = width / 127.0;
 
     for (let i = 1; i <= 127; i++) {
       let normGain = 0;
-      const minV = settings.minVel !== undefined ? settings.minVel : 1;
-      const maxV = settings.maxVel !== undefined ? settings.maxVel : 127;
+      const minV = settings.minVel !== undefined ? parseInt(settings.minVel, 10) : 1;
+      const maxV = settings.maxVel !== undefined ? parseInt(settings.maxVel, 10) : 127;
 
       if (i < minV || i > maxV) {
         normGain = 0;
@@ -79,11 +89,9 @@ class VelocityVisualizerManager {
           normGain = Math.pow(normIn, 2.8);
         } else if (settings.mode === 'compressed') {
           normGain = 0.3 + (0.7 * Math.pow(normIn, 1.5));
-        } else if (settings.mode === 'custom') {
-          const p = settings.curvePower !== undefined ? settings.curvePower : 2.0;
-          normGain = Math.pow(normIn, p);
         } else {
-          normGain = Math.pow(normIn, 2.0); // Normal
+          const p = settings.curvePower !== undefined ? parseFloat(settings.curvePower) : 2.0;
+          normGain = Math.pow(normIn, p);
         }
       }
 
@@ -106,8 +114,8 @@ class VelocityVisualizerManager {
     ctx.lineWidth = 1.5;
     for (let i = 1; i <= 127; i++) {
       let normGain = 0;
-      const minV = settings.minVel !== undefined ? settings.minVel : 1;
-      const maxV = settings.maxVel !== undefined ? settings.maxVel : 127;
+      const minV = settings.minVel !== undefined ? parseInt(settings.minVel, 10) : 1;
+      const maxV = settings.maxVel !== undefined ? parseInt(settings.maxVel, 10) : 127;
 
       if (i < minV || i > maxV) {
         normGain = 0;
@@ -118,7 +126,10 @@ class VelocityVisualizerManager {
         if (settings.mode === 'soft') normGain = Math.pow(normIn, 1.2);
         else if (settings.mode === 'hard') normGain = Math.pow(normIn, 2.8);
         else if (settings.mode === 'compressed') normGain = 0.3 + (0.7 * Math.pow(normIn, 1.5));
-        else normGain = Math.pow(normIn, 2.0);
+        else {
+          const p = settings.curvePower !== undefined ? parseFloat(settings.curvePower) : 2.0;
+          normGain = Math.pow(normIn, p);
+        }
       }
 
       const barHeight = normGain * (height - 6);

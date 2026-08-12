@@ -859,7 +859,14 @@ document.addEventListener('DOMContentLoaded', () => {
   let trackVelocityVisualizer = null;
 
   if (trackVelCanvas && window.VelocityVisualizerManager && synth) {
-    trackVelocityVisualizer = new VelocityVisualizerManager(trackVelCanvas, synth);
+    trackVelocityVisualizer = new VelocityVisualizerManager(trackVelCanvas, synth, () => {
+      const activeCh = fxRack ? fxRack.selectedChannel : 1;
+      const chObj = synth.channels[activeCh];
+      if (chObj && chObj.velocitySettings) {
+        return chObj.velocitySettings.useGlobal ? synth.globalVelocitySettings : chObj.velocitySettings;
+      }
+      return synth.globalVelocitySettings;
+    });
   }
 
   function populateVelocityCurveDropdown() {
