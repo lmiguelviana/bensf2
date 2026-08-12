@@ -1,6 +1,6 @@
 /**
- * MULTITIMBRIC MIXER CONSOLE MANAGER (WITH TRACK RENAMING & MIDI LEARN)
- * Gerenciador dinâmico de 16 pistas de canais MIDI com opção de renomear nome das faixas, FX por pista e MIDI Learn.
+ * MULTITIMBRIC MIXER CONSOLE MANAGER (WITH INLINE TRACK RENAMING & MIDI LEARN)
+ * Gerenciador dinâmico de 16 pistas de canais MIDI com edição inline de nomes de faixa (duplo clique + caixa branca + botão OK).
  */
 
 class MixerConsoleManager {
@@ -97,10 +97,9 @@ class MixerConsoleManager {
     }
 
     strip.innerHTML = `
-      <div class="channel-header" title="Clique duas vezes ou aperte ✏️ para renomear esta faixa">
-        <div style="display: flex; align-items: center; justify-content: center; gap: 4px; width: 100%;">
+      <div class="channel-header" title="Clique duas vezes sobre o nome para editar">
+        <div class="ch-name-container" style="display: flex; align-items: center; justify-content: center; width: 100%;">
           <span class="ch-name-text">${chConfig.name}</span>
-          <span class="btn-rename-icon" style="font-size: 9px; opacity: 0.6; cursor: pointer;">✏️</span>
         </div>
         <span class="selected-badge" style="font-size: 8px; color: var(--accent-cyan); display: none;">● FX SELECIONADO</span>
       </div>
@@ -150,31 +149,74 @@ class MixerConsoleManager {
       </div>
     `;
 
-    // Função de Renomear a Faixa
-    const renameTrack = () => {
+    // Handler de Edição Inline por Duplo Clique
+    const headerEl = strip.querySelector('.channel-header');
+    let isEditingInline = false;
+
+    headerEl.addEventListener('dblclick', (e) => {
+      e.stopPropagation();
+      if (isEditingInline) return;
+      isEditingInline = true;
+
       const currentName = this.synth.channels[ch] ? this.synth.channels[ch].name : `CH ${ch}: LAYER ${ch}`;
-      const newName = prompt(`Digite o novo nome para a Pista CH ${ch < 10 ? '0' + ch : ch}:`, currentName);
-      if (newName !== null && newName.trim() !== '') {
+
+      headerEl.innerHTML = `
+        <div class="inline-rename-container" style="display: flex; gap: 4px; width: 100%; align-items: center; justify-content: center;">
+          <input type="text" class="inline-rename-input" value="${currentName}" style="flex: 1; min-width: 0; background: #ffffff; color: #000000; font-family: var(--font-heading); font-weight: 700; font-size: 11px; padding: 2px 4px; border-radius: 4px; border: 1px solid var(--accent-cyan); outline: none;">
+          <button class="inline-rename-ok-btn btn btn-primary" style="padding: 2px 6px; font-size: 10px; font-weight: 800; border-radius: 4px;">OK</button>
+        </div>
+      `;
+
+      const inputEl = headerEl.querySelector('.inline-rename-input');
+      const okBtn = headerEl.querySelector('.inline-rename-ok-btn');
+
+      if (inputEl) {
+        inputEl.focus();
+        inputEl.select();
+      }
+
+      const saveInlineName = () => {
+        if (!isEditingInline) return;
+        isEditingInline = false;
+        const newName = inputEl.value.trim() || currentName;
         this.synth.setChannelName(ch, newName);
-        const nameTextEl = strip.querySelector('.ch-name-text');
-        if (nameTextEl) nameTextEl.textContent = newName.trim();
+
+        headerEl.innerHTML = `
+          <div class="ch-name-container" style="display: flex; align-items: center; justify-content: center; width: 100%;">
+            <span class="ch-name-text">${newName}</span>
+          </div>
+          <span class="selected-badge" style="font-size: 8px; color: var(--accent-cyan); display: ${ch === this.selectedChannel ? 'inline-block' : 'none'};">● FX SELECIONADO</span>
+        `;
 
         if (this.selectedChannel === ch && this.fxRack) {
           this.fxRack.notifySelectionChange();
         }
+      };
+
+      if (okBtn) {
+        okBtn.addEventListener('click', (ev) => {
+          ev.stopPropagation();
+          saveInlineName();
+        });
       }
-    };
 
-    const headerEl = strip.querySelector('.channel-header');
-    headerEl.addEventListener('dblclick', (e) => {
-      e.stopPropagation();
-      renameTrack();
-    });
-
-    const renameBtn = strip.querySelector('.btn-rename-icon');
-    renameBtn.addEventListener('click', (e) => {
-      e.stopPropagation();
-      renameTrack();
+      if (inputEl) {
+        inputEl.addEventListener('keydown', (ev) => {
+          if (ev.key === 'Enter') {
+            ev.preventDefault();
+            saveInlineName();
+          } else if (ev.key === 'Escape') {
+            ev.preventDefault();
+            isEditingInline = false;
+            headerEl.innerHTML = `
+              <div class="ch-name-container" style="display: flex; align-items: center; justify-content: center; width: 100%;">
+                <span class="ch-name-text">${currentName}</span>
+              </div>
+              <span class="selected-badge" style="font-size: 8px; color: var(--accent-cyan); display: ${ch === this.selectedChannel ? 'inline-block' : 'none'};">● FX SELECIONADO</span>
+            `;
+          }
+        });
+      }
     });
 
     // Selecionar pista ao clicar no strip
