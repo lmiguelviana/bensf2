@@ -152,7 +152,7 @@ class MixerConsoleManager {
     }
 
     let semitoneOptionsHtml = '';
-    for (let s = -12; s <= 12; s++) {
+    for (let s = 0; s <= 12; s++) {
       const isSelected = (chConfig.semitoneTranspose === s || (s === 0 && (chConfig.semitoneTranspose === undefined || chConfig.semitoneTranspose === null))) ? 'selected' : '';
       const label = s > 0 ? `+${s}` : `${s}`;
       semitoneOptionsHtml += `<option value="${s}" ${isSelected}>${label}</option>`;
