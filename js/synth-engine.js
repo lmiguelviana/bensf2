@@ -1,6 +1,6 @@
 /**
- * POLYPHONIC WAVETABLE SYNTHESIZER ENGINE (OTIMIZADO COM GSD-SOUNDFONT-ENGINE)
- * Processador de síntese polifônica para reprodução de áudio SF2, envelopes ADSR, pontos de loop e Pitch Bend.
+ * POLYPHONIC WAVETABLE SYNTHESIZER ENGINE (MULTITIMBRIC)
+ * Processador de síntese polifônica para reprodução de áudio SF2 multitimbrico por pista/canal.
  */
 
 class SynthEngine {
@@ -8,24 +8,21 @@ class SynthEngine {
     this.audioCtx = audioEngineContext;
     this.activeVoices = new Map(); // Key: `${channel}_${note}`, Value: voice object
     
-    // Polifonia: Auto por padrão + Sobrescrita manual
     this.isAutoPolyphony = true;
     this.maxPolyphony = this.detectOptimalPolyphony(); 
     
-    this.velocityCurve = 'normal'; // 'soft', 'normal', 'hard'
+    this.velocityCurve = 'normal';
     this.parsedSf2Data = null;
     this.decodedAudioBuffers = new Map(); // SampleIndex -> { audioBuffer, loopStart, loopEnd, hasLoop }
-    this.pitchBendSemi = new Map(); // channel -> semitones (-2 a +2)
+    this.pitchBendSemi = new Map();
 
-    // Configuração ADSR Padrão
     this.adsr = {
-      attack: 0.01,   // Segundos
-      decay: 0.1,     // Segundos
-      sustain: 0.75,  // Nível (0 a 1)
-      release: 0.25   // Segundos
+      attack: 0.01,
+      decay: 0.1,
+      sustain: 0.75,
+      release: 0.25
     };
 
-    // Roteamento de Canais (1 a 16)
     this.channels = {};
     this.initChannels();
   }
@@ -58,7 +55,8 @@ class SynthEngine {
         muted: false,
         solo: false,
         transpose: 0,
-        selectedPreset: null
+        assignedPresetIndex: 0, // Índice do preset SF2 atribuído a esta pista
+        assignedMidiChannel: ch // Canal MIDI escutado (1-16 ou 'all')
       };
 
       this.pitchBendSemi.set(ch, 0);
@@ -69,17 +67,14 @@ class SynthEngine {
     if (limitSetting === 'auto') {
       this.isAutoPolyphony = true;
       this.maxPolyphony = this.detectOptimalPolyphony();
-      console.log(`[SynthEngine] Polifonia Automática Ativada: ${this.maxPolyphony} vozes`);
     } else {
       this.isAutoPolyphony = false;
       this.maxPolyphony = parseInt(limitSetting, 10) || 32;
-      console.log(`[SynthEngine] Polifonia Manual Ajustada: ${this.maxPolyphony} vozes`);
     }
   }
 
   setVelocityCurve(curveType) {
     this.velocityCurve = curveType;
-    console.log(`[SynthEngine] Curva de velocidade ajustada para: ${this.velocityCurve}`);
   }
 
   calculateVelocityGain(velocity) {
@@ -110,7 +105,6 @@ class SynthEngine {
             channelData[i] = pcmData[sh.start + i] / 32768.0;
           }
 
-          // Extrair pontos de Loop para sustentação infinita sem corte de áudio
           const hasLoop = sh.endLoop > sh.startLoop && sh.startLoop > sh.start;
           const loopStartSec = hasLoop ? (sh.startLoop - sh.start) / sh.sampleRate : 0;
           const loopEndSec = hasLoop ? (sh.endLoop - sh.start) / sh.sampleRate : 0;
@@ -126,13 +120,26 @@ class SynthEngine {
       });
     }
 
-    console.log(`[SynthEngine] Banco SF2 carregado com ${this.decodedAudioBuffers.size} áudio buffers e suporte a Loop Points.`);
+    // Atribuir por padrão timbres sequenciais aos canais 1..16 se disponíveis
+    if (sf2ParsedObj.presets && sf2ParsedObj.presets.length > 0) {
+      for (let ch = 1; ch <= 16; ch++) {
+        this.channels[ch].assignedPresetIndex = (ch - 1) % sf2ParsedObj.presets.length;
+      }
+    }
+
+    console.log(`[SynthEngine] Banco SF2 carregado com ${sf2ParsedObj.presets ? sf2ParsedObj.presets.length : 0} timbres atribuíveis às pistas.`);
+  }
+
+  setChannelPreset(channel, presetIndex) {
+    if (this.channels[channel]) {
+      this.channels[channel].assignedPresetIndex = parseInt(presetIndex, 10) || 0;
+      console.log(`[SynthEngine] Canal ${channel} atribuído ao Timbre Preset #${presetIndex}`);
+    }
   }
 
   setPitchBend(channel, semitones) {
     this.pitchBendSemi.set(channel, semitones);
 
-    // Atualizar vozes ativas deste canal em tempo real
     this.activeVoices.forEach((voice) => {
       if (voice.channel === channel && voice.sourceNode) {
         const basePitch = voice.originalPitch || 60;
@@ -153,96 +160,107 @@ class SynthEngine {
     const ctx = this.audioCtx.init();
     this.audioCtx.resume();
 
-    const chConfig = this.channels[channel] || this.channels[1];
-    if (chConfig.muted) return;
+    // Roteamento Multitimbrico: tocar em todos os canais configurados para este canal MIDI ou 'all'
+    for (let ch = 1; ch <= 16; ch++) {
+      const chConfig = this.channels[ch];
+      if (!chConfig || chConfig.muted) continue;
 
-    const actualNote = Math.max(0, Math.min(127, note + (chConfig.transpose * 12)));
-    const voiceKey = `${channel}_${note}`;
+      const isMatchingChannel = chConfig.assignedMidiChannel === 'all' || chConfig.assignedMidiChannel === channel || ch === channel;
+      if (!isMatchingChannel) continue;
 
-    if (this.activeVoices.has(voiceKey)) {
-      this.noteOff(note, channel);
+      const actualNote = Math.max(0, Math.min(127, note + (chConfig.transpose * 12)));
+      const voiceKey = `${ch}_${note}`;
+
+      if (this.activeVoices.has(voiceKey)) {
+        this.stopVoiceImmediate(voiceKey);
+      }
+
+      if (this.activeVoices.size >= this.maxPolyphony) {
+        const oldestKey = this.activeVoices.keys().next().value;
+        this.stopVoiceImmediate(oldestKey);
+      }
+
+      const now = ctx.currentTime;
+      const gainNode = ctx.createGain();
+      const velGain = this.calculateVelocityGain(velocity);
+
+      const attackEnd = now + this.adsr.attack;
+      const decayEnd = attackEnd + this.adsr.decay;
+      const sustainLevel = velGain * this.adsr.sustain;
+
+      gainNode.gain.setValueAtTime(0, now);
+      gainNode.gain.linearRampToValueAtTime(velGain, attackEnd);
+      gainNode.gain.linearRampToValueAtTime(sustainLevel, decayEnd);
+
+      // Escolher amostra atribuída ao preset desta pista
+      const sampleIndices = Array.from(this.decodedAudioBuffers.keys());
+      const presetOffset = chConfig.assignedPresetIndex || 0;
+      const matchedIdx = sampleIndices[(actualNote + presetOffset) % sampleIndices.length];
+      const sampleObj = this.decodedAudioBuffers.get(matchedIdx);
+
+      const sourceNode = ctx.createBufferSource();
+      sourceNode.buffer = sampleObj.audioBuffer;
+
+      if (sampleObj.hasLoop) {
+        sourceNode.loop = true;
+        sourceNode.loopStart = sampleObj.loopStart;
+        sourceNode.loopEnd = sampleObj.loopEnd;
+      }
+
+      const currentBend = this.pitchBendSemi.get(ch) || 0;
+      const basePitch = sampleObj.originalPitch || 60;
+      const totalNoteShift = (actualNote + currentBend) - basePitch;
+      const pitchRatio = Math.pow(2, totalNoteShift / 12);
+      sourceNode.playbackRate.value = pitchRatio;
+
+      sourceNode.connect(gainNode);
+      gainNode.connect(chConfig.gainNode);
+
+      sourceNode.start(now);
+
+      this.activeVoices.set(voiceKey, {
+        sourceNode,
+        gainNode,
+        note: actualNote,
+        channel: ch,
+        originalPitch: basePitch,
+        startTime: now
+      });
     }
-
-    if (this.activeVoices.size >= this.maxPolyphony) {
-      const oldestKey = this.activeVoices.keys().next().value;
-      this.stopVoiceImmediate(oldestKey);
-    }
-
-    const now = ctx.currentTime;
-    const gainNode = ctx.createGain();
-    const velGain = this.calculateVelocityGain(velocity);
-
-    const attackEnd = now + this.adsr.attack;
-    const decayEnd = attackEnd + this.adsr.decay;
-    const sustainLevel = velGain * this.adsr.sustain;
-
-    gainNode.gain.setValueAtTime(0, now);
-    gainNode.gain.linearRampToValueAtTime(velGain, attackEnd);
-    gainNode.gain.linearRampToValueAtTime(sustainLevel, decayEnd);
-
-    const sampleIndices = Array.from(this.decodedAudioBuffers.keys());
-    const matchedIdx = sampleIndices[actualNote % sampleIndices.length];
-    const sampleObj = this.decodedAudioBuffers.get(matchedIdx);
-
-    const sourceNode = ctx.createBufferSource();
-    sourceNode.buffer = sampleObj.audioBuffer;
-
-    // Configurar Loop Points de Sustentação de Órgão/Strings se disponível no SF2
-    if (sampleObj.hasLoop) {
-      sourceNode.loop = true;
-      sourceNode.loopStart = sampleObj.loopStart;
-      sourceNode.loopEnd = sampleObj.loopEnd;
-    }
-
-    // Calcular afinação + Pitch Bend atual
-    const currentBend = this.pitchBendSemi.get(channel) || 0;
-    const basePitch = sampleObj.originalPitch || 60;
-    const totalNoteShift = (actualNote + currentBend) - basePitch;
-    const pitchRatio = Math.pow(2, totalNoteShift / 12);
-    sourceNode.playbackRate.value = pitchRatio;
-
-    sourceNode.connect(gainNode);
-    gainNode.connect(chConfig.gainNode);
-
-    sourceNode.start(now);
-
-    this.activeVoices.set(voiceKey, {
-      sourceNode,
-      gainNode,
-      note: actualNote,
-      channel,
-      originalPitch: basePitch,
-      startTime: now
-    });
   }
 
   noteOff(note, channel = 1) {
-    const chConfig = this.channels[channel] || this.channels[1];
-    const actualNote = Math.max(0, Math.min(127, note + (chConfig.transpose * 12)));
-    const voiceKey = `${channel}_${note}`;
+    for (let ch = 1; ch <= 16; ch++) {
+      const chConfig = this.channels[ch];
+      if (!chConfig) continue;
 
-    const voice = this.activeVoices.get(voiceKey);
-    if (!voice) return;
+      const isMatchingChannel = chConfig.assignedMidiChannel === 'all' || chConfig.assignedMidiChannel === channel || ch === channel;
+      if (!isMatchingChannel) continue;
 
-    const ctx = this.audioCtx.ctx;
-    if (!ctx) return;
+      const voiceKey = `${ch}_${note}`;
+      const voice = this.activeVoices.get(voiceKey);
+      if (!voice) continue;
 
-    const now = ctx.currentTime;
-    const releaseEnd = now + this.adsr.release;
+      const ctx = this.audioCtx.ctx;
+      if (!ctx) continue;
 
-    voice.gainNode.gain.cancelScheduledValues(now);
-    voice.gainNode.gain.setValueAtTime(voice.gainNode.gain.value, now);
-    voice.gainNode.gain.exponentialRampToValueAtTime(0.0001, releaseEnd);
+      const now = ctx.currentTime;
+      const releaseEnd = now + this.adsr.release;
 
-    setTimeout(() => {
-      try {
-        voice.sourceNode.stop();
-        voice.sourceNode.disconnect();
-        voice.gainNode.disconnect();
-      } catch (e) {}
-    }, this.adsr.release * 1000 + 50);
+      voice.gainNode.gain.cancelScheduledValues(now);
+      voice.gainNode.gain.setValueAtTime(voice.gainNode.gain.value, now);
+      voice.gainNode.gain.exponentialRampToValueAtTime(0.0001, releaseEnd);
 
-    this.activeVoices.delete(voiceKey);
+      setTimeout(() => {
+        try {
+          voice.sourceNode.stop();
+          voice.sourceNode.disconnect();
+          voice.gainNode.disconnect();
+        } catch (e) {}
+      }, this.adsr.release * 1000 + 50);
+
+      this.activeVoices.delete(voiceKey);
+    }
   }
 
   stopVoiceImmediate(voiceKey) {

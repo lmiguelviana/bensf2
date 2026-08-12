@@ -21,8 +21,8 @@ document.addEventListener('DOMContentLoaded', () => {
   const presetManager = new PresetManager(synth, fxRack, mixerConsole);
   window.presetManager = presetManager;
 
-  let baseOctave = 2; // Início em C2 por padrão para cobrir 5 a 7 oitavas
-  let totalKeysToRender = 61; // 61 teclas (5 oitavas) por padrão
+  let baseOctave = 2;
+  let totalKeysToRender = 61;
 
   // WebMIDI Manager com iluminação de teclas em tempo real quando o controlador físico toca
   const midiDeviceStatusText = document.getElementById('midiDeviceStatusText');
@@ -223,15 +223,15 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
-  // Renderizar Teclado Virtual Piano (5 Oitavas / 61 teclas ou 7 Oitavas / 88 teclas)
+  // Renderizar Teclado Virtual Piano
   function renderPianoKeyboard() {
     pianoKeysEl.innerHTML = '';
-    const startNote = totalKeysToRender === 88 ? 21 : baseOctave * 12; // 88 teclas inicia em A0 (MIDI 21)
+    const startNote = totalKeysToRender === 88 ? 21 : baseOctave * 12;
     const noteNames = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'];
 
     for (let i = 0; i < totalKeysToRender; i++) {
       const noteNum = startNote + i;
-      if (noteNum > 108) break; // Limite de 88 teclas (C8 = 108)
+      if (noteNum > 108) break;
 
       const noteName = noteNames[noteNum % 12];
       const isBlack = noteName.includes('#');
@@ -290,7 +290,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   });
 
-  // Mapeamento de Teclado QWERTY + Atalhos
+  // Mapeamento de Teclado QWERTY
   const qwertyKeyMap = {
     'a': 0, 'w': 1, 's': 2, 'e': 3, 'd': 4, 'f': 5,
     't': 6, 'g': 7, 'y': 8, 'h': 9, 'u': 10, 'j': 11, 'k': 12
@@ -392,11 +392,14 @@ document.addEventListener('DOMContentLoaded', () => {
         synth.loadSoundFont(parsedData);
         updatePresetListUI(parsedData.presets);
 
+        // Atualizar também todos os seletores de timbres nas pistas do Mixer!
+        mixerConsole.renderMixer();
+
         if (sf2PromptBanner) {
           sf2PromptBanner.style.display = 'none';
         }
 
-        alert(`SoundFont "${file.name}" carregado com sucesso! Timbres prontos para tocar.`);
+        alert(`SoundFont "${file.name}" carregado com sucesso! Timbres prontos para atribuir às pistas.`);
       } catch (err) {
         console.error('Erro ao ler arquivo SF2:', err);
         alert('Erro ao processar o arquivo SF2: ' + err.message);

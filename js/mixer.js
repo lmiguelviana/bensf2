@@ -1,6 +1,6 @@
 /**
  * MULTITIMBRIC MIXER CONSOLE MANAGER
- * Gerenciador dinâmico de pistas de canais MIDI (1 a 16), faders, pan, mute, solo e VU meters.
+ * Gerenciador dinâmico de pistas de canais MIDI (1 a 16), seleção de timbres por faixa, faders, pan, mute e solo.
  */
 
 class MixerConsoleManager {
@@ -24,7 +24,6 @@ class MixerConsoleManager {
       const stripEl = this.createChannelStripElement(ch);
       this.container.appendChild(stripEl);
 
-      // Conectar AnalyserNode para o VU Meter deste canal
       const chConfig = this.synth.channels[ch];
       if (chConfig && chConfig.gainNode) {
         const canvas = stripEl.querySelector(`.vu-canvas-${ch}`);
@@ -38,10 +37,27 @@ class MixerConsoleManager {
     strip.className = 'mixer-channel-strip';
     strip.dataset.channel = ch;
 
-    const chConfig = this.synth.channels[ch] || { volume: 0.8, pan: 0, muted: false, solo: false, transpose: 0 };
+    const chConfig = this.synth.channels[ch] || { volume: 0.8, pan: 0, muted: false, solo: false, transpose: 0, assignedPresetIndex: (ch-1) };
+
+    // Montar opções de timbres do banco SF2 se já estiverem carregadas
+    let presetOptionsHtml = `<option value="0">Default Sound</option>`;
+    if (this.synth.parsedSf2Data && this.synth.parsedSf2Data.presets) {
+      presetOptionsHtml = this.synth.parsedSf2Data.presets.map((p, idx) => {
+        const isSelected = idx === chConfig.assignedPresetIndex ? 'selected' : '';
+        return `<option value="${idx}" ${isSelected}>${p.name} (${p.bank}:${p.preset})</option>`;
+      }).join('');
+    }
 
     strip.innerHTML = `
       <div class="channel-header">CH ${ch < 10 ? '0' + ch : ch}: LAYER ${ch}</div>
+
+      <!-- Seletor de Timbre do Banco SF2 para ESTA PISTA -->
+      <div class="knob-group" style="width: 100%;">
+        <div class="knob-label">TIMBRE / SOM</div>
+        <select class="ch-preset-select preset-select" data-channel="${ch}" style="width: 100%; font-size: 10px; padding: 3px; text-overflow: ellipsis;">
+          ${presetOptionsHtml}
+        </select>
+      </div>
 
       <!-- Area do Fader + VU Meter -->
       <div class="channel-fader-area">
@@ -80,6 +96,12 @@ class MixerConsoleManager {
     `;
 
     // Eventos dos Controles da Pista
+    const presetSelect = strip.querySelector('.ch-preset-select');
+    presetSelect.addEventListener('change', (e) => {
+      const idx = parseInt(e.target.value, 10);
+      this.synth.setChannelPreset(ch, idx);
+    });
+
     const volInput = strip.querySelector('.ch-volume');
     const volDisplay = strip.querySelector(`#volVal_${ch}`);
     volInput.addEventListener('input', (e) => {
@@ -124,7 +146,6 @@ class MixerConsoleManager {
       this.synth.channels[channel].solo = isSolo;
     }
 
-    // Verificar se existe algum canal em modo Solo
     let hasSoloActive = false;
     for (let c = 1; c <= 16; c++) {
       if (this.synth.channels[c] && this.synth.channels[c].solo) {
@@ -133,7 +154,6 @@ class MixerConsoleManager {
       }
     }
 
-    // Se houver algum Solo ativo, mutar os outros canais
     for (let c = 1; c <= this.totalChannels; c++) {
       if (hasSoloActive) {
         const chSolo = this.synth.channels[c] && this.synth.channels[c].solo;
