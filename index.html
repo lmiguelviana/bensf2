@@ -162,16 +162,16 @@
 
           <div id="trackFxBodyContainer" class="fx-rack-container">
             <!-- Módulo Curva de Velocity por Pista (Com SQLite DB & Personalização) -->
-            <div class="fx-module-card" style="align-items: center; flex: 1.4; min-width: 320px;">
-              <div class="fx-module-title" style="width: 100%;">
+            <div class="fx-module-card">
+              <div class="fx-module-title">
                 <span id="trackVelModuleTitle" style="color: var(--accent-cyan); font-weight: 800;">VELOCITY DA PISTA</span>
                 <button id="btnTrackVelToggle" class="btn btn-sm btn-fx-toggle">OFF</button>
               </div>
 
-              <div style="display: flex; flex-direction: column; width: 100%; gap: 6px; margin-top: 4px;">
+              <div style="display: flex; flex-direction: column; width: 100%; gap: 6px; box-sizing: border-box;">
                 <!-- Seletor de Curvas em SQLite DB -->
-                <div style="display: flex; gap: 6px; align-items: center;">
-                  <select id="selectTrackVelMode" class="preset-select" style="flex: 1; font-size: 10px; padding: 3px;">
+                <div style="display: flex; gap: 6px; align-items: center; width: 100%; box-sizing: border-box;">
+                  <select id="selectTrackVelMode" class="preset-select" style="flex: 1; font-size: 10px; padding: 3px; min-width: 0;">
                     <option value="global">🌐 Usar Padrão Global</option>
                     <option value="normal">Standard (Normal)</option>
                     <option value="soft">Soft (Sensível / Leve)</option>
@@ -180,28 +180,28 @@
                     <option value="fixed">Fixo (Velocidade 120)</option>
                     <option value="custom">✏️ Personalizado (Sliders abaixo)</option>
                   </select>
-                  <button id="btnSaveCustomVelCurve" class="btn btn-sm btn-accent" title="Salvar esta curva no Banco de Dados SQLite" style="font-size: 9px; padding: 3px 8px; font-weight: 800;">
+                  <button id="btnSaveCustomVelCurve" class="btn btn-sm btn-accent" title="Salvar esta curva no Banco de Dados SQLite" style="font-size: 9px; padding: 3px 6px; font-weight: 800; white-space: nowrap;">
                     💾 Salvar DB
                   </button>
                 </div>
 
-                <!-- Sliders de Ajuste Fino da Curva Personalizada -->
-                <div id="customVelControlsGroup" style="display: flex; gap: 10px; width: 100%; font-size: 9px; color: var(--text-muted); background: rgba(0,0,0,0.3); padding: 4px 6px; border-radius: 4px; border: 1px solid rgba(255,255,255,0.05);">
-                  <div style="flex: 1;">
-                    <div style="display: flex; justify-content: space-between;"><span>MIN VEL</span><span id="lblVelMin">1</span></div>
-                    <input type="range" id="inputTrackVelMin" min="1" max="127" value="1" style="width: 100%; height: 4px;">
+                <!-- Sliders de Ajuste Fino da Curva Personalizada (Grid Responsivo de 3 Colunas) -->
+                <div id="customVelControlsGroup" style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; width: 100%; font-size: 9px; color: var(--text-muted); background: rgba(0,0,0,0.3); padding: 4px 6px; border-radius: 4px; border: 1px solid rgba(255,255,255,0.05); box-sizing: border-box;">
+                  <div style="min-width: 0;">
+                    <div style="display: flex; justify-content: space-between; font-size: 8px;"><span>MIN</span><span id="lblVelMin">1</span></div>
+                    <input type="range" id="inputTrackVelMin" min="1" max="127" value="1" style="width: 100%; height: 3px;">
                   </div>
-                  <div style="flex: 1;">
-                    <div style="display: flex; justify-content: space-between;"><span>MAX VEL</span><span id="lblVelMax">127</span></div>
-                    <input type="range" id="inputTrackVelMax" min="1" max="127" value="127" style="width: 100%; height: 4px;">
+                  <div style="min-width: 0;">
+                    <div style="display: flex; justify-content: space-between; font-size: 8px;"><span>MAX</span><span id="lblVelMax">127</span></div>
+                    <input type="range" id="inputTrackVelMax" min="1" max="127" value="127" style="width: 100%; height: 3px;">
                   </div>
-                  <div style="flex: 1;">
-                    <div style="display: flex; justify-content: space-between;"><span>CURVA (POWER)</span><span id="lblVelPower">2.0</span></div>
-                    <input type="range" id="inputTrackVelPower" min="0.3" max="4.0" step="0.1" value="2.0" style="width: 100%; height: 4px;">
+                  <div style="min-width: 0;">
+                    <div style="display: flex; justify-content: space-between; font-size: 8px;"><span>CURVA</span><span id="lblVelPower">2.0</span></div>
+                    <input type="range" id="inputTrackVelPower" min="0.3" max="4.0" step="0.1" value="2.0" style="width: 100%; height: 3px;">
                   </div>
                 </div>
 
-                <canvas id="trackVelCanvas" width="320" height="54" style="width: 100%; height: 54px; border-radius: 4px; border: 1px solid rgba(0, 242, 254, 0.25); background: #0a0d14;"></canvas>
+                <canvas id="trackVelCanvas" width="300" height="50" style="width: 100%; height: 50px; border-radius: 4px; border: 1px solid rgba(0, 242, 254, 0.25); background: #0a0d14; box-sizing: border-box;"></canvas>
               </div>
             </div>
             <!-- Módulo Envelope ADSR por Pista -->
