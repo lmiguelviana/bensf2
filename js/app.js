@@ -180,7 +180,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // Lógica de Recolher / Expandir Painel Lateral (Sidebar) & Teclado Virtual
   const sidebarPanel = document.querySelector('.sidebar-panel');
-  const btnToggleSidebar = document.getElementById('btnToggleSidebar');
   const btnCollapseSidebarDirect = document.getElementById('btnCollapseSidebarDirect');
   const btnExpandSidebarFloat = document.getElementById('btnExpandSidebarFloat');
   let isSidebarCollapsed = false;
@@ -189,12 +188,6 @@ document.addEventListener('DOMContentLoaded', () => {
     isSidebarCollapsed = !isSidebarCollapsed;
     if (sidebarPanel) {
       sidebarPanel.style.display = isSidebarCollapsed ? 'none' : 'flex';
-    }
-    if (btnToggleSidebar) {
-      btnToggleSidebar.textContent = isSidebarCollapsed ? '📁 EXIBIR PAINEL ▶' : '📁 Painel ◀';
-      btnToggleSidebar.classList.toggle('active', isSidebarCollapsed);
-      btnToggleSidebar.style.background = isSidebarCollapsed ? 'var(--accent-cyan)' : '';
-      btnToggleSidebar.style.color = isSidebarCollapsed ? '#000' : '';
     }
     if (btnCollapseSidebarDirect) {
       btnCollapseSidebarDirect.textContent = isSidebarCollapsed ? '▶ Expandir' : '◀ Recolher';
@@ -205,11 +198,9 @@ document.addEventListener('DOMContentLoaded', () => {
     showToastNotification('Painel Lateral', isSidebarCollapsed ? 'Painel lateral recolhido. Clique em 📁 BIBLIOTECA ▶ para reexibir.' : 'Painel lateral expandido.', 'info');
   }
 
-  if (btnToggleSidebar) btnToggleSidebar.addEventListener('click', toggleSidebar);
   if (btnCollapseSidebarDirect) btnCollapseSidebarDirect.addEventListener('click', toggleSidebar);
   if (btnExpandSidebarFloat) btnExpandSidebarFloat.addEventListener('click', toggleSidebar);
 
-  const btnToggleKeyboard = document.getElementById('btnToggleKeyboard');
   const btnCollapseKeyboardDirect = document.getElementById('btnCollapseKeyboardDirect');
   const btnExpandKeyboardFloat = document.getElementById('btnExpandKeyboardFloat');
   let isKeyboardCollapsed = false;
@@ -218,12 +209,6 @@ document.addEventListener('DOMContentLoaded', () => {
     isKeyboardCollapsed = !isKeyboardCollapsed;
     if (sectionMidiKeyboard) {
       sectionMidiKeyboard.style.display = isKeyboardCollapsed ? 'none' : 'flex';
-    }
-    if (btnToggleKeyboard) {
-      btnToggleKeyboard.textContent = isKeyboardCollapsed ? '🎹 EXIBIR TECLADO ▲' : '🎹 Teclado ▼';
-      btnToggleKeyboard.classList.toggle('active', isKeyboardCollapsed);
-      btnToggleKeyboard.style.background = isKeyboardCollapsed ? 'var(--accent-purple)' : '';
-      btnToggleKeyboard.style.color = isKeyboardCollapsed ? '#fff' : '';
     }
     if (btnCollapseKeyboardDirect) {
       btnCollapseKeyboardDirect.textContent = isKeyboardCollapsed ? '▲ Expandir Teclado' : '▼ Recolher Teclado';
@@ -234,7 +219,6 @@ document.addEventListener('DOMContentLoaded', () => {
     showToastNotification('Teclado Piano', isKeyboardCollapsed ? 'Teclado virtual recolhido. Clique em 🎹 EXIBIR TECLADO ▲ para reexibir.' : 'Teclado virtual expandido.', 'info');
   }
 
-  if (btnToggleKeyboard) btnToggleKeyboard.addEventListener('click', toggleKeyboard);
   if (btnCollapseKeyboardDirect) btnCollapseKeyboardDirect.addEventListener('click', toggleKeyboard);
   if (btnExpandKeyboardFloat) btnExpandKeyboardFloat.addEventListener('click', toggleKeyboard);
 
