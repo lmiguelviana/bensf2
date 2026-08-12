@@ -1,6 +1,6 @@
 /**
- * MULTITIMBRIC MIXER CONSOLE MANAGER (WITH INLINE TRACK RENAMING & MIDI LEARN)
- * Gerenciador dinâmico de 16 pistas de canais MIDI com edição inline de nomes de faixa (duplo clique + caixa branca + botão OK).
+ * MULTITIMBRIC MIXER CONSOLE MANAGER (WITH INLINE TRACK RENAMING, MIDI LEARN & TRACK REMOVAL)
+ * Gerenciador dinâmico de 16 pistas de canais MIDI com opção de adicionar/remover pistas, edição inline de nomes de faixa e MIDI Learn.
  */
 
 class MixerConsoleManager {
@@ -98,8 +98,11 @@ class MixerConsoleManager {
 
     strip.innerHTML = `
       <div class="channel-header" title="Clique duas vezes sobre o nome para editar">
-        <div class="ch-name-container" style="display: flex; align-items: center; justify-content: center; width: 100%;">
-          <span class="ch-name-text">${chConfig.name}</span>
+        <div class="ch-header-top-bar" style="display: flex; align-items: center; justify-content: space-between; width: 100%;">
+          <div class="ch-name-container" style="display: flex; align-items: center; justify-content: center; flex: 1; overflow: hidden; margin-right: 2px;">
+            <span class="ch-name-text" style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${chConfig.name}</span>
+          </div>
+          <button class="btn-remove-track" data-channel="${ch}" title="Remover pista CH ${ch}">✕</button>
         </div>
         <span class="selected-badge" style="font-size: 8px; color: var(--accent-cyan); display: none;">● FX SELECIONADO</span>
       </div>
@@ -149,6 +152,15 @@ class MixerConsoleManager {
       </div>
     `;
 
+    // Handler do Botão Remover Pista (✕)
+    const btnRemove = strip.querySelector('.btn-remove-track');
+    if (btnRemove) {
+      btnRemove.addEventListener('click', (e) => {
+        e.stopPropagation();
+        this.removeChannel(ch);
+      });
+    }
+
     // Handler de Edição Inline por Duplo Clique
     const headerEl = strip.querySelector('.channel-header');
     let isEditingInline = false;
@@ -182,11 +194,22 @@ class MixerConsoleManager {
         this.synth.setChannelName(ch, newName);
 
         headerEl.innerHTML = `
-          <div class="ch-name-container" style="display: flex; align-items: center; justify-content: center; width: 100%;">
-            <span class="ch-name-text">${newName}</span>
+          <div class="ch-header-top-bar" style="display: flex; align-items: center; justify-content: space-between; width: 100%;">
+            <div class="ch-name-container" style="display: flex; align-items: center; justify-content: center; flex: 1; overflow: hidden; margin-right: 2px;">
+              <span class="ch-name-text" style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${newName}</span>
+            </div>
+            <button class="btn-remove-track" data-channel="${ch}" title="Remover pista CH ${ch}">✕</button>
           </div>
           <span class="selected-badge" style="font-size: 8px; color: var(--accent-cyan); display: ${ch === this.selectedChannel ? 'inline-block' : 'none'};">● FX SELECIONADO</span>
         `;
+
+        const newRemoveBtn = headerEl.querySelector('.btn-remove-track');
+        if (newRemoveBtn) {
+          newRemoveBtn.addEventListener('click', (ev) => {
+            ev.stopPropagation();
+            this.removeChannel(ch);
+          });
+        }
 
         if (this.selectedChannel === ch && this.fxRack) {
           this.fxRack.notifySelectionChange();
@@ -209,11 +232,22 @@ class MixerConsoleManager {
             ev.preventDefault();
             isEditingInline = false;
             headerEl.innerHTML = `
-              <div class="ch-name-container" style="display: flex; align-items: center; justify-content: center; width: 100%;">
-                <span class="ch-name-text">${currentName}</span>
+              <div class="ch-header-top-bar" style="display: flex; align-items: center; justify-content: space-between; width: 100%;">
+                <div class="ch-name-container" style="display: flex; align-items: center; justify-content: center; flex: 1; overflow: hidden; margin-right: 2px;">
+                  <span class="ch-name-text" style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${currentName}</span>
+                </div>
+                <button class="btn-remove-track" data-channel="${ch}" title="Remover pista CH ${ch}">✕</button>
               </div>
               <span class="selected-badge" style="font-size: 8px; color: var(--accent-cyan); display: ${ch === this.selectedChannel ? 'inline-block' : 'none'};">● FX SELECIONADO</span>
             `;
+
+            const newRemoveBtn = headerEl.querySelector('.btn-remove-track');
+            if (newRemoveBtn) {
+              newRemoveBtn.addEventListener('click', (ev) => {
+                ev.stopPropagation();
+                this.removeChannel(ch);
+              });
+            }
           }
         });
       }
@@ -322,6 +356,35 @@ class MixerConsoleManager {
     if (this.totalChannels < 16) {
       this.totalChannels++;
       this.renderMixer();
+    }
+  }
+
+  removeChannel(ch) {
+    if (this.totalChannels <= 1) {
+      if (window.showToastNotification) {
+        window.showToastNotification('Operação Não Permitida', 'É necessário manter pelo menos 1 pista ativa no Mixer.', 'warning');
+      }
+      return;
+    }
+
+    // Silenciar o canal removido antes de excluir
+    this.synth.setChannelMute(ch, true);
+
+    this.totalChannels--;
+
+    const selectEl = document.getElementById('mixerChannelCountSelect');
+    if (selectEl) {
+      selectEl.value = this.totalChannels;
+    }
+
+    if (this.selectedChannel > this.totalChannels) {
+      this.selectedChannel = this.totalChannels;
+    }
+
+    this.renderMixer();
+
+    if (window.showToastNotification) {
+      window.showToastNotification('Pista Removida', `A pista foi removida do Mixer. Total de pistas: ${this.totalChannels}`, 'info');
     }
   }
 }

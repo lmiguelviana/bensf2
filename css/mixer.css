@@ -56,6 +56,27 @@
   gap: 2px;
 }
 
+.btn-remove-track {
+  background: transparent;
+  border: none;
+  color: var(--text-muted);
+  font-size: 11px;
+  font-weight: 800;
+  padding: 2px 5px;
+  cursor: pointer;
+  border-radius: 4px;
+  line-height: 1;
+  transition: all 0.15s ease;
+  opacity: 0.6;
+}
+
+.btn-remove-track:hover {
+  opacity: 1;
+  color: var(--accent-danger) !important;
+  background: rgba(255, 23, 68, 0.25) !important;
+  box-shadow: 0 0 8px rgba(255, 23, 68, 0.4);
+}
+
 .channel-fader-area {
   display: flex;
   align-items: center;
