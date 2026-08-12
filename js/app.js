@@ -1,6 +1,6 @@
 /**
  * MASTER APPLICATION CONTROLLER
- * Liga a interface UI ao motor de síntese SF2, Mixer Console, FX Rack, WebMIDI, SettingsModal, PresetManager e Teclado 100% Responsivo.
+ * Liga a interface UI ao motor de síntese SF2, Mixer Console, FX Rack, WebMIDI, SettingsModal, PresetManager e Teclado Kontakt Ribbon (88 Teclas).
  */
 
 document.addEventListener('DOMContentLoaded', () => {
@@ -21,8 +21,8 @@ document.addEventListener('DOMContentLoaded', () => {
   const presetManager = new PresetManager(synth, fxRack, mixerConsole);
   window.presetManager = presetManager;
 
-  let baseOctave = 2;
-  let totalKeysToRender = 61;
+  let baseOctave = 1;
+  let totalKeysToRender = 88; // Padrão 88 teclas estilo Kontakt / DAW
 
   // WebMIDI Manager com iluminação de teclas em tempo real quando o controlador físico toca
   const midiDeviceStatusText = document.getElementById('midiDeviceStatusText');
@@ -41,6 +41,30 @@ document.addEventListener('DOMContentLoaded', () => {
   const settingsModal = new SettingsModalManager(window.audioEngine, webMidi);
   settingsModal.init();
   window.settingsModal = settingsModal;
+
+  // Pitch Bend & Mod Wheel Controles Físicos na Tela (Lado Esquerdo do Teclado)
+  const pitchWheelInput = document.getElementById('pitchWheel');
+  const modWheelInput = document.getElementById('modWheel');
+
+  if (pitchWheelInput) {
+    const resetPitch = () => {
+      pitchWheelInput.value = 0;
+      synth.setPitchBend('all', 0);
+    };
+    pitchWheelInput.addEventListener('input', (e) => {
+      const val = parseFloat(e.target.value) * 2.0; // +/- 2 semitones
+      synth.setPitchBend('all', val);
+    });
+    pitchWheelInput.addEventListener('mouseup', resetPitch);
+    pitchWheelInput.addEventListener('touchend', resetPitch);
+  }
+
+  if (modWheelInput) {
+    modWheelInput.addEventListener('input', (e) => {
+      const val = parseFloat(e.target.value);
+      fxRack.setReverbMix(val * 0.5);
+    });
+  }
 
   // Interceptar NoteOn/NoteOff do Synth para iluminação visual do teclado
   const originalNoteOn = synth.noteOn.bind(synth);
@@ -61,7 +85,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   };
 
-  // Registrar Service Worker para PWA (Instalação no Android + Suporte Offline)
+  // Registrar Service Worker para PWA
   if ('serviceWorker' in navigator) {
     navigator.serviceWorker.register('./sw.js').then(() => {
       console.log('[PWA] Service Worker registrado com sucesso!');
@@ -233,12 +257,12 @@ document.addEventListener('DOMContentLoaded', () => {
   // Seletor de Extensão de Teclado (24, 61, 88 teclas)
   if (keyboardRangeSelect) {
     keyboardRangeSelect.addEventListener('change', (e) => {
-      totalKeysToRender = parseInt(e.target.value, 10) || 61;
+      totalKeysToRender = parseInt(e.target.value, 10) || 88;
       renderPianoKeyboard();
     });
   }
 
-  // Renderizar Teclado Virtual Piano 100% Responsivo
+  // Renderizar Teclado Virtual Piano Estilo Kontakt / DAW Ribbon (Apenas números 1,2,3,4... nas teclas C)
   function renderPianoKeyboard() {
     pianoKeysEl.innerHTML = '';
     const startNote = totalKeysToRender === 88 ? 21 : baseOctave * 12;
@@ -251,8 +275,8 @@ document.addEventListener('DOMContentLoaded', () => {
       if (!noteNames[noteNum % 12].includes('#')) whiteCount++;
     }
 
-    const blackWidthPct = (100.0 / whiteCount) * 0.65;
-    const blackMarginPct = (100.0 / whiteCount) * 0.325;
+    const blackWidthPct = (100.0 / whiteCount) * 0.62;
+    const blackMarginPct = (100.0 / whiteCount) * 0.31;
 
     for (let i = 0; i < totalKeysToRender; i++) {
       const noteNum = startNote + i;
@@ -270,10 +294,13 @@ document.addEventListener('DOMContentLoaded', () => {
         keyEl.style.marginLeft = `-${blackMarginPct}%`;
         keyEl.style.marginRight = `-${blackMarginPct}%`;
       } else {
-        const label = document.createElement('span');
-        label.className = 'key-label';
-        label.textContent = `${noteName}${Math.floor(noteNum / 12) - 1}`;
-        keyEl.appendChild(label);
+        // Exibir rótulo discreto APENAS nas teclas C (1, 2, 3, 4, 5, 6, 7, 8) exatamente como no Kontakt!
+        if (noteName === 'C') {
+          const label = document.createElement('span');
+          label.className = 'key-label';
+          label.textContent = `${Math.floor(noteNum / 12) - 1}`;
+          keyEl.appendChild(label);
+        }
       }
 
       const triggerNoteOn = (e) => {
@@ -300,7 +327,9 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     const endOctave = Math.floor((startNote + totalKeysToRender) / 12) - 1;
-    octaveDisplay.textContent = `Oitava: C${baseOctave}-C${endOctave}`;
+    if (octaveDisplay) {
+      octaveDisplay.textContent = `C${Math.floor(startNote / 12) - 1} - C${endOctave}`;
+    }
   }
 
   renderPianoKeyboard();

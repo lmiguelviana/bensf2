@@ -244,33 +244,48 @@
     </section>
   </main>
 
-  <!-- Virtual Piano Keyboard Footer -->
+  <!-- Virtual Piano Keyboard Footer - Ultra-Compact Strip (Estilo Kontakt / Numa Player) -->
   <footer id="sectionMidiKeyboard" class="keyboard-container">
-    <div class="keyboard-controls">
-      <div class="octave-controls">
-        <button id="btnOctaveDown" class="btn" style="padding: 4px 10px;">- Oitava (Z)</button>
-        <span id="octaveDisplay" class="octave-display">Oitava: C2-C7</span>
-        <button id="btnOctaveUp" class="btn" style="padding: 4px 10px;">+ Oitava (X)</button>
-
-        <!-- Seletor de Extensão de Teclado (5 Oitavas / 61 Teclas por Padrão ou 7 Oitavas / 88 Teclas) -->
-        <div class="preset-selector-group" style="margin-left: 10px;">
-          <span class="preset-label">Extensão:</span>
-          <select id="keyboardRangeSelect" class="preset-select" style="font-size: 11px;">
-            <option value="24">2 Oitavas (24 Teclas)</option>
-            <option value="61" selected>5 Oitavas (61 Teclas - Sintetizador Padrão)</option>
-            <option value="88">7 Oitavas (88 Teclas - Piano Completo)</option>
-          </select>
-        </div>
+    
+    <!-- Pitch & Mod Wheels (Lado Esquerdo) -->
+    <div class="pitch-mod-wheels">
+      <div class="wheel-group">
+        <span class="wheel-label">PITCH</span>
+        <input type="range" id="pitchWheel" min="-1" max="1" step="0.01" value="0" class="vertical-wheel" title="Pitch Bend Wheel">
       </div>
-
-      <div style="font-size: 12px; color: var(--text-muted);">
-        💡 Teclas QWERTY: <b>A-S-D-F</b> (Brancas), <b>W-E-T-Y</b> (Pretas), <b>Z / X</b> (Oitavas), <b>Espaço</b> (Mute)
+      <div class="wheel-group">
+        <span class="wheel-label">MOD</span>
+        <input type="range" id="modWheel" min="0" max="1" step="0.01" value="0" class="vertical-wheel" title="Modulation Wheel (CC1)">
       </div>
     </div>
 
-    <!-- Interactive Keys Container -->
-    <div id="pianoKeys" class="piano-keys-wrapper">
-      <!-- Teclas renderizadas dinamicamente via JS (5 a 7 oitavas) -->
+    <!-- Teclado Piano Ribbon Compacto (88 Teclas) -->
+    <div class="keyboard-ribbon-area">
+      <div class="keyboard-controls-bar">
+        <div class="octave-controls">
+          <button id="btnOctaveDown" class="btn btn-sm" style="padding: 2px 6px; font-size: 10px;">- Oitava (Z)</button>
+          <span id="octaveDisplay" class="octave-display">C1 - C8</span>
+          <button id="btnOctaveUp" class="btn btn-sm" style="padding: 2px 6px; font-size: 10px;">+ Oitava (X)</button>
+        </div>
+
+        <div class="preset-selector-group">
+          <span class="preset-label">Extensão:</span>
+          <select id="keyboardRangeSelect" class="preset-select" style="font-size: 10px; padding: 1px 4px;">
+            <option value="88" selected>88 Teclas (Piano Completo Kontakt)</option>
+            <option value="61">61 Teclas (5 Oitavas)</option>
+            <option value="24">24 Teclas (2 Oitavas)</option>
+          </select>
+        </div>
+
+        <div style="font-size: 10px; color: var(--text-muted);">
+          💡 QWERTY: <b>A-S-D-F</b> / <b>W-E-T-Y</b> | <b>Z / X</b> (Oitavas)
+        </div>
+      </div>
+
+      <!-- Interactive Keys Container -->
+      <div id="pianoKeys" class="piano-keys-wrapper">
+        <!-- Teclas renderizadas dinamicamente via JS -->
+      </div>
     </div>
   </footer>
 
