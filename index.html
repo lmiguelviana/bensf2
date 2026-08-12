@@ -10,8 +10,10 @@
   <meta name="theme-color" content="#07090e">
   <meta name="description" content="Sintetizador Sampler de SF2 e Rack para Teclado MIDI Físico (Desktop & Mobile)">
 
-  <!-- App Stylesheet -->
+  <!-- App Stylesheets -->
   <link rel="stylesheet" href="css/main.css">
+  <link rel="stylesheet" href="css/mixer.css">
+  <link rel="stylesheet" href="css/synth-rack.css">
 </head>
 <body>
 
@@ -36,7 +38,7 @@
         </select>
       </div>
 
-      <!-- Configurações de Polifonia (Auto + Manual) e Velocidade -->
+      <!-- Configurações de Polifonia e Velocidade -->
       <div class="preset-selector-group">
         <span class="preset-label">Polifonia:</span>
         <select id="polyphonySelect" class="preset-select">
@@ -125,82 +127,108 @@
         <span>ℹ️ <b>Aviso:</b> O som permanecerá silencioso até que você selecione e carregue um arquivo <b>.sf2</b> no painel à esquerda.</span>
       </div>
 
+      <!-- Console de Mixagem 16-Canais -->
       <section class="glass-card">
         <div class="card-title">
-          <span>Mixer de Camadas (Layers & Channels)</span>
+          <span>Mixer Console Multitimbrico (Layers & Channels)</span>
           <button id="btnAddChannel" class="btn btn-primary" style="padding: 4px 10px; font-size: 11px;">+ Nova Pista</button>
         </div>
 
         <!-- Mixer Channel Strips Container -->
-        <div id="mixerContainer" style="display: flex; gap: 16px; overflow-x: auto; padding: 10px 0;">
-          
-          <!-- Channel 1 Strip -->
-          <div class="glass-card" style="width: 140px; text-align: center; padding: 12px; background: rgba(0,0,0,0.3);">
-            <div style="font-weight: 700; font-size: 13px; color: var(--accent-cyan); margin-bottom: 8px;">CH 01: SF2 LAYER</div>
-            
-            <!-- Volume Fader -->
-            <div style="height: 120px; display: flex; align-items: center; justify-content: center; margin: 10px 0;">
-              <input type="range" class="ch-volume" data-channel="1" min="0" max="1" step="0.01" value="0.8" orient="vertical" style="height: 100%; width: 24px; accent-color: var(--accent-cyan);">
-            </div>
-            
-            <div style="font-size: 11px; color: var(--text-muted); margin-bottom: 8px;">Volume</div>
-
-            <!-- Pan Control -->
-            <div style="margin-bottom: 10px;">
-              <div style="font-size: 10px; color: var(--text-muted);">PAN</div>
-              <input type="range" class="ch-pan" data-channel="1" min="-1" max="1" step="0.05" value="0" style="width: 80%; accent-color: var(--accent-purple);">
-            </div>
-
-            <!-- Mute & Solo -->
-            <div style="display: flex; gap: 6px; justify-content: center;">
-              <button class="btn ch-mute" data-channel="1" style="padding: 4px 8px; font-size: 10px;">M</button>
-              <button class="btn ch-solo" data-channel="1" style="padding: 4px 8px; font-size: 10px;">S</button>
-            </div>
-          </div>
-
-          <!-- Channel 2 Strip -->
-          <div class="glass-card" style="width: 140px; text-align: center; padding: 12px; background: rgba(0,0,0,0.3);">
-            <div style="font-weight: 700; font-size: 13px; color: var(--accent-purple); margin-bottom: 8px;">CH 02: SF2 LAYER</div>
-            
-            <div style="height: 120px; display: flex; align-items: center; justify-content: center; margin: 10px 0;">
-              <input type="range" class="ch-volume" data-channel="2" min="0" max="1" step="0.01" value="0.6" orient="vertical" style="height: 100%; width: 24px; accent-color: var(--accent-purple);">
-            </div>
-            
-            <div style="font-size: 11px; color: var(--text-muted); margin-bottom: 8px;">Volume</div>
-
-            <div style="margin-bottom: 10px;">
-              <div style="font-size: 10px; color: var(--text-muted);">PAN</div>
-              <input type="range" class="ch-pan" data-channel="2" min="-1" max="1" step="0.05" value="0" style="width: 80%; accent-color: var(--accent-purple);">
-            </div>
-
-            <div style="display: flex; gap: 6px; justify-content: center;">
-              <button class="btn ch-mute" data-channel="2" style="padding: 4px 8px; font-size: 10px;">M</button>
-              <button class="btn ch-solo" data-channel="2" style="padding: 4px 8px; font-size: 10px;">S</button>
-            </div>
-          </div>
-
+        <div id="mixerContainer" class="mixer-strip-container">
+          <!-- Renderizado dinamicamente via MixerConsoleManager -->
         </div>
       </section>
 
-      <!-- Master FX Rack -->
+      <!-- Rack de Processamento de Efeitos (FX Rack) -->
       <section class="glass-card">
         <div class="card-title">
-          <span>Rack de Efeitos Master (FX)</span>
+          <span>Rack de Efeitos Master (FX Rack)</span>
           <span>🎛️</span>
         </div>
-        <div style="display: flex; gap: 24px; flex-wrap: wrap;">
-          <div>
-            <div style="font-size: 12px; font-weight: 600; color: var(--text-muted); margin-bottom: 4px;">Reverb Room Size</div>
-            <input type="range" id="fxReverbSize" min="0" max="1" step="0.01" value="0.4" style="accent-color: var(--accent-cyan);">
+
+        <div class="fx-rack-container">
+          
+          <!-- Módulo Equalizador 3-Bandas -->
+          <div class="fx-module-card">
+            <div class="fx-module-title">
+              <span>Equalizador (3-Band EQ)</span>
+              <span>🎚️</span>
+            </div>
+            
+            <div class="fx-control-row">
+              <span>Grave (100Hz):</span>
+              <input type="range" id="eqLowGain" class="fx-slider" min="-12" max="12" step="0.5" value="0">
+              <span id="eqLowVal" class="fx-value-display">0 dB</span>
+            </div>
+
+            <div class="fx-control-row">
+              <span>Médio (1kHz):</span>
+              <input type="range" id="eqMidGain" class="fx-slider" min="-12" max="12" step="0.5" value="0">
+              <span id="eqMidVal" class="fx-value-display">0 dB</span>
+            </div>
+
+            <div class="fx-control-row">
+              <span>Agudo (8kHz):</span>
+              <input type="range" id="eqHighGain" class="fx-slider" min="-12" max="12" step="0.5" value="0">
+              <span id="eqHighVal" class="fx-value-display">0 dB</span>
+            </div>
           </div>
-          <div>
-            <div style="font-size: 12px; font-weight: 600; color: var(--text-muted); margin-bottom: 4px;">Reverb Wet/Dry</div>
-            <input type="range" id="fxReverbMix" min="0" max="1" step="0.01" value="0.25" style="accent-color: var(--accent-cyan);">
+
+          <!-- Módulo Stereo Delay -->
+          <div class="fx-module-card">
+            <div class="fx-module-title">
+              <span>Stereo Delay / Echo</span>
+              <span>⏱️</span>
+            </div>
+            
+            <div class="fx-control-row">
+              <span>Tempo Delay:</span>
+              <input type="range" id="delayTime" class="fx-slider" min="0.05" max="1.0" step="0.05" value="0.3">
+              <span id="delayTimeVal" class="fx-value-display">300 ms</span>
+            </div>
+
+            <div class="fx-control-row">
+              <span>Mistura Wet/Dry:</span>
+              <input type="range" id="delayMix" class="fx-slider" min="0" max="1" step="0.01" value="0.2">
+              <span id="delayMixVal" class="fx-value-display">20%</span>
+            </div>
           </div>
-          <div>
-            <div style="font-size: 12px; font-weight: 600; color: var(--text-muted); margin-bottom: 4px;">Master Limiter</div>
-            <div style="color: var(--accent-emerald); font-weight: 700; font-size: 12px; margin-top: 4px;">● Ativo (-1.0 dB)</div>
+
+          <!-- Módulo Reverb Estéreo -->
+          <div class="fx-module-card">
+            <div class="fx-module-title">
+              <span>Reverb Estéreo</span>
+              <span>🏛️</span>
+            </div>
+            
+            <div class="fx-control-row">
+              <span>Tamanho Sala:</span>
+              <input type="range" id="fxReverbSize" class="fx-slider" min="0.1" max="1.0" step="0.01" value="0.4">
+              <span id="reverbSizeVal" class="fx-value-display">40%</span>
+            </div>
+
+            <div class="fx-control-row">
+              <span>Mistura Wet/Dry:</span>
+              <input type="range" id="fxReverbMix" class="fx-slider" min="0" max="1" step="0.01" value="0.25">
+              <span id="reverbMixVal" class="fx-value-display">25%</span>
+            </div>
           </div>
+
+          <!-- Módulo Master Limiter Status -->
+          <div class="fx-module-card" style="justify-content: center; text-align: center;">
+            <div class="fx-module-title">
+              <span>Master Limiter</span>
+              <span>🛡️</span>
+            </div>
+            <div style="color: var(--accent-emerald); font-weight: 700; font-size: 13px; margin-top: 10px;">
+              ● Proteção Ativa (-1.0 dB)
+            </div>
+            <div style="font-size: 10px; color: var(--text-muted); margin-top: 4px;">
+              Prevenção automática contra distorção em speakers mobile
+            </div>
+          </div>
+
         </div>
       </section>
 
@@ -231,6 +259,9 @@
   <script src="js/audio-context.js"></script>
   <script src="js/sf2-parser.js"></script>
   <script src="js/synth-engine.js"></script>
+  <script src="js/fx-rack.js"></script>
+  <script src="js/vu-meter.js"></script>
+  <script src="js/mixer.js"></script>
   <script src="js/app.js"></script>
 </body>
 </html>

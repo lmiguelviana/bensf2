@@ -1,13 +1,25 @@
 /**
  * MASTER APPLICATION CONTROLLER
- * Liga a interface UI ao motor de síntese SF2 e gerenciador de áudio.
+ * Liga a interface UI ao motor de síntese SF2, Mixer Console e FX Rack.
  */
 
 document.addEventListener('DOMContentLoaded', () => {
   const synth = new SynthEngine(window.audioEngine);
   window.synth = synth;
 
-  let baseOctave = 3; // Oitava base (C3 = nota 48)
+  // Instanciar FX Rack e VU Meter Manager
+  const fxRack = new FxRackManager(window.audioEngine);
+  fxRack.init();
+  window.fxRack = fxRack;
+
+  const vuMeter = new VuMeterManager(window.audioEngine);
+  window.vuMeter = vuMeter;
+
+  const mixerConsole = new MixerConsoleManager(synth, vuMeter);
+  mixerConsole.init(document.getElementById('mixerContainer'));
+  window.mixerConsole = mixerConsole;
+
+  let baseOctave = 3;
 
   // Registrar Service Worker para PWA (Instalação no Android + Suporte Offline)
   if ('serviceWorker' in navigator) {
@@ -27,10 +39,37 @@ document.addEventListener('DOMContentLoaded', () => {
   const sf2PromptBanner = document.getElementById('sf2PromptBanner');
   const polyphonySelect = document.getElementById('polyphonySelect');
   const velocityCurveSelect = document.getElementById('velocityCurveSelect');
+  const btnAddChannel = document.getElementById('btnAddChannel');
+
   const pianoKeysEl = document.getElementById('pianoKeys');
   const octaveDisplay = document.getElementById('octaveDisplay');
   const btnOctaveUp = document.getElementById('btnOctaveUp');
   const btnOctaveDown = document.getElementById('btnOctaveDown');
+
+  // Controles de Efeitos FX
+  const eqLowGain = document.getElementById('eqLowGain');
+  const eqLowVal = document.getElementById('eqLowVal');
+  const eqMidGain = document.getElementById('eqMidGain');
+  const eqMidVal = document.getElementById('eqMidVal');
+  const eqHighGain = document.getElementById('eqHighGain');
+  const eqHighVal = document.getElementById('eqHighVal');
+
+  const delayTime = document.getElementById('delayTime');
+  const delayTimeVal = document.getElementById('delayTimeVal');
+  const delayMix = document.getElementById('delayMix');
+  const delayMixVal = document.getElementById('delayMixVal');
+
+  const fxReverbSize = document.getElementById('fxReverbSize');
+  const reverbSizeVal = document.getElementById('reverbSizeVal');
+  const fxReverbMix = document.getElementById('fxReverbMix');
+  const reverbMixVal = document.getElementById('reverbMixVal');
+
+  // Bind Adicionar Nova Pista no Mixer
+  if (btnAddChannel) {
+    btnAddChannel.addEventListener('click', () => {
+      mixerConsole.addChannel();
+    });
+  }
 
   // 1. Configurações de Polifonia e Velocidade
   polyphonySelect.addEventListener('change', (e) => {
@@ -41,10 +80,67 @@ document.addEventListener('DOMContentLoaded', () => {
     synth.setVelocityCurve(e.target.value);
   });
 
+  // Binds dos Efeitos FX Rack (EQ, Delay, Reverb)
+  if (eqLowGain) {
+    eqLowGain.addEventListener('input', (e) => {
+      const val = parseFloat(e.target.value);
+      fxRack.setEqLowGain(val);
+      eqLowVal.textContent = `${val > 0 ? '+' : ''}${val} dB`;
+    });
+  }
+
+  if (eqMidGain) {
+    eqMidGain.addEventListener('input', (e) => {
+      const val = parseFloat(e.target.value);
+      fxRack.setEqMidGain(val);
+      eqMidVal.textContent = `${val > 0 ? '+' : ''}${val} dB`;
+    });
+  }
+
+  if (eqHighGain) {
+    eqHighGain.addEventListener('input', (e) => {
+      const val = parseFloat(e.target.value);
+      fxRack.setEqHighGain(val);
+      eqHighVal.textContent = `${val > 0 ? '+' : ''}${val} dB`;
+    });
+  }
+
+  if (delayTime) {
+    delayTime.addEventListener('input', (e) => {
+      const val = parseFloat(e.target.value);
+      fxRack.setDelayTime(val);
+      delayTimeVal.textContent = `${Math.round(val * 1000)} ms`;
+    });
+  }
+
+  if (delayMix) {
+    delayMix.addEventListener('input', (e) => {
+      const val = parseFloat(e.target.value);
+      fxRack.setDelayMix(val);
+      delayMixVal.textContent = `${Math.round(val * 100)}%`;
+    });
+  }
+
+  if (fxReverbSize) {
+    fxReverbSize.addEventListener('input', (e) => {
+      const val = parseFloat(e.target.value);
+      fxRack.setReverbSize(val);
+      reverbSizeVal.textContent = `${Math.round(val * 100)}%`;
+    });
+  }
+
+  if (fxReverbMix) {
+    fxReverbMix.addEventListener('input', (e) => {
+      const val = parseFloat(e.target.value);
+      fxRack.setReverbMix(val);
+      reverbMixVal.textContent = `${Math.round(val * 100)}%`;
+    });
+  }
+
   // 2. Renderizar Teclado Virtual Piano
   function renderPianoKeyboard() {
     pianoKeysEl.innerHTML = '';
-    const startNote = baseOctave * 12; // C3 = 48
+    const startNote = baseOctave * 12;
     const noteNames = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'];
 
     for (let i = 0; i < 24; i++) {
@@ -106,21 +202,10 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   });
 
-  // 3. Mapeamento de Teclado QWERTY + Atalhos (Z/X oitava, Espaço mute)
+  // 3. Mapeamento de Teclado QWERTY + Atalhos
   const qwertyKeyMap = {
-    'a': 0,  // C
-    'w': 1,  // C#
-    's': 2,  // D
-    'e': 3,  // D#
-    'd': 4,  // E
-    'f': 5,  // F
-    't': 6,  // F#
-    'g': 7,  // G
-    'y': 8,  // G#
-    'h': 9,  // A
-    'u': 10, // A#
-    'j': 11, // B
-    'k': 12  // C (oitava acima)
+    'a': 0, 'w': 1, 's': 2, 'e': 3, 'd': 4, 'f': 5,
+    't': 6, 'g': 7, 'y': 8, 'h': 9, 'u': 10, 'j': 11, 'k': 12
   };
 
   const activeQwertyKeys = new Set();
@@ -252,34 +337,7 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
-  // 5. Binds do Console de Mixer
-  document.querySelectorAll('.ch-volume').forEach(fader => {
-    fader.addEventListener('input', (e) => {
-      const ch = parseInt(e.target.dataset.channel);
-      const val = parseFloat(e.target.value);
-      synth.setChannelVolume(ch, val);
-    });
-  });
-
-  document.querySelectorAll('.ch-pan').forEach(slider => {
-    slider.addEventListener('input', (e) => {
-      const ch = parseInt(e.target.dataset.channel);
-      const val = parseFloat(e.target.value);
-      synth.setChannelPan(ch, val);
-    });
-  });
-
-  document.querySelectorAll('.ch-mute').forEach(btn => {
-    btn.addEventListener('click', (e) => {
-      const ch = parseInt(e.target.dataset.channel);
-      const isMuted = !btn.classList.contains('active');
-      btn.classList.toggle('active', isMuted);
-      btn.style.background = isMuted ? 'var(--accent-danger)' : '';
-      synth.setChannelMute(ch, isMuted);
-    });
-  });
-
-  // 6. Monitor de Áudio e Vozes Polifônicas
+  // 5. Monitor de Áudio e Vozes Polifônicas
   function updateAudioStatus(active) {
     if (active) {
       audioStatusDot.classList.add('active');
