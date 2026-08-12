@@ -228,22 +228,14 @@ class MixerConsoleManager {
         </div>
       </div>
 
-      <!-- CURVA DE VELOCITY DA PISTA (SOBREPOSIÇÃO INDIVIDUAL OU PADRÃO GLOBAL) -->
-      <div class="knob-group" style="width: 100%; margin-top: 3px;">
+      <!-- BADGE STATUS VELOCITY DA PISTA (CONFIGURÁVEL EM EFEITOS DA PISTA) -->
+      <div class="knob-group" style="width: 100%; margin-top: 3px; text-align: center;">
         <div class="knob-label" style="display: flex; justify-content: space-between; align-items: center;">
           <span>VELOCITY</span>
           <span class="ch-vel-badge-${ch}" style="font-size: 8px; color: ${chConfig.velocitySettings && !chConfig.velocitySettings.useGlobal ? 'var(--accent-cyan)' : 'var(--text-muted)'}; font-weight: 800;">
             ${chConfig.velocitySettings && !chConfig.velocitySettings.useGlobal ? '● PISTA' : '🌐 GLOBAL'}
           </span>
         </div>
-        <select class="ch-velocity-select preset-select" data-channel="${ch}" style="width: 100%; font-size: 10px; padding: 2px;">
-          <option value="global" ${!chConfig.velocitySettings || chConfig.velocitySettings.useGlobal ? 'selected' : ''}>🌐 Padrão Global</option>
-          <option value="normal" ${chConfig.velocitySettings && !chConfig.velocitySettings.useGlobal && chConfig.velocitySettings.mode === 'normal' ? 'selected' : ''}>Standard (Normal)</option>
-          <option value="soft" ${chConfig.velocitySettings && !chConfig.velocitySettings.useGlobal && chConfig.velocitySettings.mode === 'soft' ? 'selected' : ''}>Soft (Leve)</option>
-          <option value="hard" ${chConfig.velocitySettings && !chConfig.velocitySettings.useGlobal && chConfig.velocitySettings.mode === 'hard' ? 'selected' : ''}>Hard (Pesado)</option>
-          <option value="compressed" ${chConfig.velocitySettings && !chConfig.velocitySettings.useGlobal && chConfig.velocitySettings.mode === 'compressed' ? 'selected' : ''}>Comprimido (Dyn Compress)</option>
-          <option value="fixed" ${chConfig.velocitySettings && !chConfig.velocitySettings.useGlobal && chConfig.velocitySettings.mode === 'fixed' ? 'selected' : ''}>Fixo (Velocidade 120)</option>
-        </select>
       </div>
 
       <div class="button-group-row" style="margin-top: 4px;">
@@ -678,6 +670,17 @@ class MixerConsoleManager {
     if (window.showToastNotification) {
       window.showToastNotification('Pista Removida', `A pista foi removida do Mixer. Total de pistas: ${this.totalChannels}`, 'info');
     }
+  }
+
+  updateChannelVelocityBadge(ch) {
+    const strip = document.getElementById(`channelStrip_${ch}`);
+    if (!strip) return;
+    const badge = strip.querySelector(`.ch-vel-badge-${ch}`);
+    if (!badge) return;
+    const chConfig = this.synth.channels[ch];
+    const isCustom = chConfig && chConfig.velocitySettings && !chConfig.velocitySettings.useGlobal;
+    badge.textContent = isCustom ? '● PISTA' : '🌐 GLOBAL';
+    badge.style.color = isCustom ? 'var(--accent-cyan)' : 'var(--text-muted)';
   }
 }
 

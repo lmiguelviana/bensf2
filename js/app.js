@@ -828,7 +828,74 @@ document.addEventListener('DOMContentLoaded', () => {
     if (knobTrackDelayMix) knobTrackDelayMix.setValue(params.delayMix);
     if (knobTrackReverbSize) knobTrackReverbSize.setValue(params.reverbSize);
     if (knobTrackReverbMix) knobTrackReverbMix.setValue(params.reverbMix);
+
+    updateTrackVelUI(ch);
   });
+
+  // Track Velocity Visualizer & Controls Setup
+  const trackVelCanvas = document.getElementById('trackVelCanvas');
+  const selectTrackVelMode = document.getElementById('selectTrackVelMode');
+  const trackVelModuleTitle = document.getElementById('trackVelModuleTitle');
+  const trackVelBadge = document.getElementById('trackVelBadge');
+  let trackVelocityVisualizer = null;
+
+  if (trackVelCanvas && window.VelocityVisualizerManager && synth) {
+    trackVelocityVisualizer = new VelocityVisualizerManager(trackVelCanvas, synth);
+  }
+
+  function updateTrackVelUI(ch) {
+    const chObj = synth.channels[ch];
+    if (!chObj) return;
+    if (!chObj.velocitySettings) {
+      chObj.velocitySettings = { useGlobal: true, mode: 'normal', minVel: 1, maxVel: 127 };
+    }
+
+    const isGlobal = chObj.velocitySettings.useGlobal;
+
+    if (selectTrackVelMode) {
+      selectTrackVelMode.value = isGlobal ? 'global' : (chObj.velocitySettings.mode || 'normal');
+    }
+
+    if (trackVelBadge) {
+      trackVelBadge.textContent = isGlobal ? '🌐 GLOBAL' : '● PISTA';
+      trackVelBadge.style.color = isGlobal ? 'var(--text-muted)' : 'var(--accent-cyan)';
+    }
+
+    if (trackVelModuleTitle) {
+      const chName = chObj.name || `CH ${ch}`;
+      trackVelModuleTitle.textContent = `VELOCITY DA PISTA (${chName})`;
+    }
+
+    if (trackVelocityVisualizer) {
+      const currentSettings = isGlobal ? synth.globalVelocitySettings : chObj.velocitySettings;
+      trackVelocityVisualizer.render(currentSettings);
+    }
+  }
+
+  if (selectTrackVelMode) {
+    selectTrackVelMode.addEventListener('change', (e) => {
+      const activeCh = fxRack ? fxRack.selectedChannel : 1;
+      const chObj = synth.channels[activeCh];
+      if (!chObj) return;
+
+      if (!chObj.velocitySettings) {
+        chObj.velocitySettings = { useGlobal: true, mode: 'normal', minVel: 1, maxVel: 127 };
+      }
+
+      const val = e.target.value;
+      if (val === 'global') {
+        chObj.velocitySettings.useGlobal = true;
+      } else {
+        chObj.velocitySettings.useGlobal = false;
+        chObj.velocitySettings.mode = val;
+      }
+
+      if (mixerConsole) {
+        mixerConsole.updateChannelVelocityBadge(activeCh);
+      }
+      updateTrackVelUI(activeCh);
+    });
+  }
 
   // Modal de Nome do Novo Preset (Compatível 100% com Electron & Web)
   const newPresetNameModal = document.getElementById('newPresetNameModal');

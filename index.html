@@ -29,10 +29,13 @@
         <span class="badge-tag">LIVE RIG</span>
       </div>
 
-      <!-- View Switcher Tabs (Mixer & Layers, FX Master) -->
-      <div class="view-tabs-bar">
+      <!-- View Switcher Tabs (Mixer & Layers, FX Master, Configurações ⚙️) -->
+      <div class="view-tabs-bar" style="display: flex; align-items: center; gap: 6px;">
         <button id="tabMixer" class="tab-btn active">🎛️ Mixer & Layers</button>
         <button id="tabFxRack" class="tab-btn">🏛️ Rack FX Master</button>
+        <button id="btnOpenSettings" class="tab-btn" title="Configurações de Áudio, Polifonia e Controladores MIDI" style="padding: 6px 12px; min-width: auto;">
+          ⚙️
+        </button>
       </div>
 
       <!-- Indicador de Teclado MIDI Conectado & Status Audio -->
@@ -49,7 +52,7 @@
       </div>
     </div>
 
-    <!-- Linha Inferior (Barra de Ferramentas & Presets & Configurações - Limpa & Ultra-Organizada) -->
+    <!-- Linha Inferior (Barra de Ferramentas & Presets - Limpa & Ultra-Organizada) -->
     <div class="header-bottom-row">
       <div class="top-toolbar">
         <div class="preset-selector-group" style="display: flex; align-items: center; gap: 6px;">
@@ -70,10 +73,6 @@
           📂 Carregar
         </button>
         <input type="file" id="presetFileInput" accept=".json" style="display: none;">
-
-        <button id="btnOpenSettings" class="btn" title="Configurações de Áudio, Polifonia e Controladores MIDI">
-          ⚙️ Configurações
-        </button>
       </div>
     </div>
   </header>
@@ -162,6 +161,24 @@
           </div>
 
           <div id="trackFxBodyContainer" class="fx-rack-container">
+            <!-- Módulo Curva de Velocity por Pista (Com Gráfico 128 Barras e Seleção) -->
+            <div class="fx-module-card" style="align-items: center; flex: 1.2; min-width: 280px;">
+              <div class="fx-module-title" style="width: 100%;">
+                <span id="trackVelModuleTitle" style="color: var(--accent-cyan); font-weight: 800;">VELOCITY DA PISTA</span>
+                <span id="trackVelBadge" style="font-size: 9px; font-weight: 800; color: var(--text-muted); background: rgba(0,0,0,0.3); padding: 2px 6px; border-radius: 4px; border: 1px solid rgba(255,255,255,0.08);">🌐 GLOBAL</span>
+              </div>
+              <div style="display: flex; flex-direction: column; width: 100%; gap: 6px; margin-top: 4px;">
+                <select id="selectTrackVelMode" class="preset-select" style="width: 100%; font-size: 10px; padding: 3px;">
+                  <option value="global">🌐 Usar Padrão Global</option>
+                  <option value="normal">Standard (Normal)</option>
+                  <option value="soft">Soft (Sensível / Leve)</option>
+                  <option value="hard">Hard (Forte / Pesado)</option>
+                  <option value="compressed">Comprimido (Dyn Compress)</option>
+                  <option value="fixed">Fixo (Velocidade 120)</option>
+                </select>
+                <canvas id="trackVelCanvas" width="280" height="54" style="width: 100%; height: 54px; border-radius: 4px; border: 1px solid rgba(0, 242, 254, 0.25); background: #0a0d14;"></canvas>
+              </div>
+            </div>
             <!-- Módulo Envelope ADSR por Pista -->
             <div class="fx-module-card" style="align-items: center;">
               <div class="fx-module-title" style="width: 100%;">
