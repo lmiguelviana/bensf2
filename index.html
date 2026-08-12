@@ -333,79 +333,102 @@
     </div>
   </footer>
 
-  <!-- Modal de Configurações de Áudio e Mapeamento MIDI -->
+  <!-- Modal de Configurações de Áudio e Mapeamento MIDI (Ampliado & Organizado em Subcards Glassmorphic) -->
   <div id="settingsModal" class="modal-backdrop" style="display: none;">
     <div class="modal-card">
+      
+      <!-- Cabeçalho do Modal com Título e Fechar -->
       <div class="modal-header">
-        <div style="font-family: var(--font-heading); font-size: 16px; font-weight: 800; color: var(--text-main);">
-          ⚙️ Configurações de Áudio & Controladores MIDI
+        <div style="display: flex; align-items: center; gap: 10px;">
+          <div style="width: 28px; height: 28px; border-radius: 6px; background: rgba(0, 242, 254, 0.15); border: 1px solid rgba(0, 242, 254, 0.4); display: flex; align-items: center; justify-content: center; color: var(--accent-cyan); font-weight: 800;">⚙️</div>
+          <div>
+            <div style="font-family: var(--font-heading); font-size: 16px; font-weight: 800; color: var(--text-main);">
+              Configurações do Workstation
+            </div>
+            <div style="font-size: 10px; color: var(--text-muted);">Dispositivos de Áudio, Desempenho e Roteamento MIDI</div>
+          </div>
         </div>
         <button id="btnCloseSettings" class="btn-close-modal">✕</button>
       </div>
 
+      <!-- Corpo do Modal Organizado em Sub-Cards -->
       <div class="modal-body">
         
-        <!-- Seção 1: Áudio Engine & Buffer -->
-        <div class="settings-section">
-          <div class="settings-section-title">🔊 Motor de Áudio & Dispositivo de Saída</div>
-          
-          <div class="settings-row">
-            <label class="settings-label">Dispositivo de Saída de Áudio:</label>
-            <select id="audioOutputSelect" class="preset-select settings-input">
-              <option value="default">Alto-falantes Padrão do Sistema</option>
-            </select>
+        <!-- Card 1: Motor de Áudio & Latência (2 Colunas) -->
+        <div class="settings-subcard">
+          <div class="settings-subcard-header">
+            <span>🔊 DISPOSITIVO DE ÁUDIO & LATÊNCIA</span>
+            <span class="settings-badge">SAÍDA & SAMPLING</span>
           </div>
 
-          <div class="settings-row">
-            <label class="settings-label">Taxa de Amostragem (Sample Rate):</label>
-            <select id="sampleRateSelect" class="preset-select settings-input">
-              <option value="44100" selected>44.1 kHz (CD Quality)</option>
-              <option value="48000">48.0 kHz (Estúdio Pro)</option>
-              <option value="96000">96.0 kHz (Hi-Res Audio)</option>
-            </select>
-          </div>
+          <div class="settings-grid-2col">
+            <div class="settings-field-group" style="grid-column: 1 / -1;">
+              <label class="settings-field-label">Dispositivo de Saída de Áudio:</label>
+              <select id="audioOutputSelect" class="preset-select settings-styled-select">
+                <option value="default">Alto-falantes Padrão do Sistema</option>
+              </select>
+            </div>
 
-          <div class="settings-row">
-            <label class="settings-label">Buffer de Áudio / Latência:</label>
-            <select id="bufferSizeSelect" class="preset-select settings-input">
-              <option value="128">Ultra-baixa Latência (128 amostras / ~2.9ms)</option>
-              <option value="256" selected>Baixa Latência (256 amostras / ~5.8ms - Recomendado)</option>
-              <option value="512">Latência Padrão (512 amostras / ~11.6ms)</option>
-              <option value="1024">Estabilidade Máxima (1024 amostras / ~23.2ms)</option>
-            </select>
-          </div>
-        </div>
+            <div class="settings-field-group">
+              <label class="settings-field-label">Taxa de Amostragem (Sample Rate):</label>
+              <select id="sampleRateSelect" class="preset-select settings-styled-select">
+                <option value="44100" selected>44.1 kHz (CD Quality)</option>
+                <option value="48000">48.0 kHz (Estúdio Pro)</option>
+                <option value="96000">96.0 kHz (Hi-Res Audio)</option>
+              </select>
+            </div>
 
-        <!-- Seção 2: Desempenho & Sensibilidade de Toque (Polifonia e Velocity) -->
-        <div class="settings-section" style="margin-top: 16px;">
-          <div class="settings-section-title">⚡ Desempenho & Sensibilidade de Toque (Velocity)</div>
-          
-          <div class="settings-row">
-            <label class="settings-label">Polifonia Máxima (Vozes Simultâneas):</label>
-            <select id="modalPolyphonySelect" class="preset-select settings-input">
-              <option value="auto" selected>Auto (Recomendado)</option>
-              <option value="16">16 Vozes</option>
-              <option value="32">32 Vozes</option>
-              <option value="64">64 Vozes</option>
-              <option value="128">128 Vozes</option>
-            </select>
-          </div>
-
-          <div class="settings-row">
-            <label class="settings-label">Curva de Sensibilidade de Toque (Velocity):</label>
-            <select id="modalVelocityCurveSelect" class="preset-select settings-input">
-              <option value="soft">Suave (Soft)</option>
-              <option value="normal" selected>Normal (Standard)</option>
-              <option value="hard">Dura (Hard)</option>
-            </select>
+            <div class="settings-field-group">
+              <label class="settings-field-label">Buffer de Áudio / Latência:</label>
+              <select id="bufferSizeSelect" class="preset-select settings-styled-select">
+                <option value="128">Ultra-baixa (128 amostras / ~2.9ms)</option>
+                <option value="256" selected>Baixa Latência (256 amostras / ~5.8ms)</option>
+                <option value="512">Padrão (512 amostras / ~11.6ms)</option>
+                <option value="1024">Estabilidade (1024 amostras / ~23.2ms)</option>
+              </select>
+            </div>
           </div>
         </div>
 
-        <!-- Seção 3: Roteamento de Múltiplos Controladores MIDI Físicos -->
-        <div class="settings-section" style="margin-top: 16px;">
-          <div class="settings-section-title">🎹 Teclados Controladores MIDI Conectados</div>
-          <div style="font-size: 11px; color: var(--text-muted); margin-bottom: 10px;">
-            Atribua cada controlador físico a uma pista MIDI diferente (ex: Controlador 1 no Canal 1, Controlador 2 no Canal 2):
+        <!-- Card 2: Desempenho & Sensibilidade de Toque (2 Colunas) -->
+        <div class="settings-subcard">
+          <div class="settings-subcard-header">
+            <span>⚡ DESEMPENHO & RESPOSTA DE TOQUE</span>
+            <span class="settings-badge" style="background: rgba(127, 0, 255, 0.15); color: var(--accent-purple); border-color: rgba(127, 0, 255, 0.4);">POLIFONIA & VELOCITY</span>
+          </div>
+
+          <div class="settings-grid-2col">
+            <div class="settings-field-group">
+              <label class="settings-field-label">Polifonia Máxima (Vozes Simultâneas):</label>
+              <select id="modalPolyphonySelect" class="preset-select settings-styled-select">
+                <option value="auto" selected>Auto (Recomendado)</option>
+                <option value="16">16 Vozes</option>
+                <option value="32">32 Vozes</option>
+                <option value="64">64 Vozes</option>
+                <option value="128">128 Vozes</option>
+              </select>
+            </div>
+
+            <div class="settings-field-group">
+              <label class="settings-field-label">Curva de Sensibilidade (Velocity):</label>
+              <select id="modalVelocityCurveSelect" class="preset-select settings-styled-select">
+                <option value="soft">Suave (Soft Touch)</option>
+                <option value="normal" selected>Normal (Standard Touch)</option>
+                <option value="hard">Dura (Hard Touch)</option>
+              </select>
+            </div>
+          </div>
+        </div>
+
+        <!-- Card 3: Controladores MIDI Conectados (Expansível) -->
+        <div class="settings-subcard">
+          <div class="settings-subcard-header">
+            <span>🎹 CONTROLADORES MIDI FÍSICOS CONECTADOS</span>
+            <span class="settings-badge" style="background: rgba(0, 230, 118, 0.15); color: var(--accent-emerald); border-color: rgba(0, 230, 118, 0.4);">ROTEAMENTO POR CANAL</span>
+          </div>
+          
+          <div style="font-size: 11px; color: var(--text-muted); margin-bottom: 12px;">
+            Atribua cada controlador físico a uma pista MIDI diferente (ex: Teclado 1 no Canal 1, Teclado 2 no Canal 2):
           </div>
 
           <div id="midiDevicesListContainer">
@@ -415,9 +438,10 @@
 
       </div>
 
+      <!-- Rodapé com Botão Salvar -->
       <div class="modal-footer">
-        <button id="btnSaveSettings" class="btn btn-primary" style="padding: 8px 18px; font-size: 12px;">
-          💾 Salvar e Aplicar
+        <button id="btnSaveSettings" class="btn btn-primary" style="padding: 8px 24px; font-size: 13px; font-weight: 800; border-radius: var(--radius-md);">
+          💾 Salvar e Aplicar Configurações
         </button>
       </div>
     </div>
