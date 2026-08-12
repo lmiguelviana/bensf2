@@ -714,6 +714,52 @@
   <script src="js/knob-component.js"></script>
   <script src="js/settings-modal.js"></script>
   <script src="js/velocity-visualizer.js"></script>
+  <!-- Botão Flutuante de Reabrir a Biblioteca Lateral (Aparece quando a sidebar está recolhida) -->
+  <button id="btnExpandSidebarFloat" title="Exibir Painel da Biblioteca SoundFont" style="
+    display: none;
+    position: fixed;
+    left: 0;
+    top: 50%;
+    transform: translateY(-50%);
+    z-index: 999;
+    padding: 12px 6px;
+    background: rgba(14, 18, 28, 0.95);
+    border: 1px solid var(--accent-cyan);
+    border-left: none;
+    border-radius: 0 8px 8px 0;
+    color: var(--accent-cyan);
+    font-weight: 800;
+    font-size: 11px;
+    cursor: pointer;
+    box-shadow: 0 0 20px rgba(0, 242, 254, 0.4);
+    writing-mode: vertical-rl;
+    letter-spacing: 1px;
+  ">
+    📁 BIBLIOTECA ▶
+  </button>
+
+  <!-- Botão Flutuante de Reabrir o Teclado (Aparece quando o teclado está recolhido) -->
+  <button id="btnExpandKeyboardFloat" title="Exibir Teclado Piano Virtual" style="
+    display: none;
+    position: fixed;
+    bottom: 0;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 999;
+    padding: 4px 18px;
+    background: rgba(14, 18, 28, 0.95);
+    border: 1px solid var(--accent-purple);
+    border-bottom: none;
+    border-radius: 8px 8px 0 0;
+    color: var(--accent-purple);
+    font-weight: 800;
+    font-size: 11px;
+    cursor: pointer;
+    box-shadow: 0 0 20px rgba(127, 0, 255, 0.4);
+  ">
+    🎹 EXIBIR TECLADO PIANO ▲
+  </button>
+
   <script src="js/app.js"></script>
 </body>
 </html>

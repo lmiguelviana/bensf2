@@ -182,6 +182,7 @@ document.addEventListener('DOMContentLoaded', () => {
   const sidebarPanel = document.querySelector('.sidebar-panel');
   const btnToggleSidebar = document.getElementById('btnToggleSidebar');
   const btnCollapseSidebarDirect = document.getElementById('btnCollapseSidebarDirect');
+  const btnExpandSidebarFloat = document.getElementById('btnExpandSidebarFloat');
   let isSidebarCollapsed = false;
 
   function toggleSidebar() {
@@ -190,20 +191,27 @@ document.addEventListener('DOMContentLoaded', () => {
       sidebarPanel.style.display = isSidebarCollapsed ? 'none' : 'flex';
     }
     if (btnToggleSidebar) {
-      btnToggleSidebar.textContent = isSidebarCollapsed ? '📁 Painel ▶' : '📁 Painel ◀';
+      btnToggleSidebar.textContent = isSidebarCollapsed ? '📁 EXIBIR PAINEL ▶' : '📁 Painel ◀';
       btnToggleSidebar.classList.toggle('active', isSidebarCollapsed);
+      btnToggleSidebar.style.background = isSidebarCollapsed ? 'var(--accent-cyan)' : '';
+      btnToggleSidebar.style.color = isSidebarCollapsed ? '#000' : '';
     }
     if (btnCollapseSidebarDirect) {
       btnCollapseSidebarDirect.textContent = isSidebarCollapsed ? '▶ Expandir' : '◀ Recolher';
     }
-    showToastNotification('Painel Lateral', isSidebarCollapsed ? 'Painel lateral recolhido para maximizar a tela do mixer.' : 'Painel lateral expandido.', 'info');
+    if (btnExpandSidebarFloat) {
+      btnExpandSidebarFloat.style.display = isSidebarCollapsed ? 'block' : 'none';
+    }
+    showToastNotification('Painel Lateral', isSidebarCollapsed ? 'Painel lateral recolhido. Clique em 📁 BIBLIOTECA ▶ para reexibir.' : 'Painel lateral expandido.', 'info');
   }
 
   if (btnToggleSidebar) btnToggleSidebar.addEventListener('click', toggleSidebar);
   if (btnCollapseSidebarDirect) btnCollapseSidebarDirect.addEventListener('click', toggleSidebar);
+  if (btnExpandSidebarFloat) btnExpandSidebarFloat.addEventListener('click', toggleSidebar);
 
   const btnToggleKeyboard = document.getElementById('btnToggleKeyboard');
   const btnCollapseKeyboardDirect = document.getElementById('btnCollapseKeyboardDirect');
+  const btnExpandKeyboardFloat = document.getElementById('btnExpandKeyboardFloat');
   let isKeyboardCollapsed = false;
 
   function toggleKeyboard() {
@@ -212,17 +220,23 @@ document.addEventListener('DOMContentLoaded', () => {
       sectionMidiKeyboard.style.display = isKeyboardCollapsed ? 'none' : 'flex';
     }
     if (btnToggleKeyboard) {
-      btnToggleKeyboard.textContent = isKeyboardCollapsed ? '🎹 Teclado ▲' : '🎹 Teclado ▼';
+      btnToggleKeyboard.textContent = isKeyboardCollapsed ? '🎹 EXIBIR TECLADO ▲' : '🎹 Teclado ▼';
       btnToggleKeyboard.classList.toggle('active', isKeyboardCollapsed);
+      btnToggleKeyboard.style.background = isKeyboardCollapsed ? 'var(--accent-purple)' : '';
+      btnToggleKeyboard.style.color = isKeyboardCollapsed ? '#fff' : '';
     }
     if (btnCollapseKeyboardDirect) {
       btnCollapseKeyboardDirect.textContent = isKeyboardCollapsed ? '▲ Expandir Teclado' : '▼ Recolher Teclado';
     }
-    showToastNotification('Teclado Piano', isKeyboardCollapsed ? 'Teclado virtual recolhido.' : 'Teclado virtual expandido.', 'info');
+    if (btnExpandKeyboardFloat) {
+      btnExpandKeyboardFloat.style.display = isKeyboardCollapsed ? 'block' : 'none';
+    }
+    showToastNotification('Teclado Piano', isKeyboardCollapsed ? 'Teclado virtual recolhido. Clique em 🎹 EXIBIR TECLADO ▲ para reexibir.' : 'Teclado virtual expandido.', 'info');
   }
 
   if (btnToggleKeyboard) btnToggleKeyboard.addEventListener('click', toggleKeyboard);
   if (btnCollapseKeyboardDirect) btnCollapseKeyboardDirect.addEventListener('click', toggleKeyboard);
+  if (btnExpandKeyboardFloat) btnExpandKeyboardFloat.addEventListener('click', toggleKeyboard);
 
   // Tab View Switcher (Mixer & Layers, Rack FX Master, Setlist Live Mode)
   function switchView(activeTab, showMixer, showFx, showSetlist) {
