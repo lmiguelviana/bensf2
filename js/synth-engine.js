@@ -1,6 +1,6 @@
 /**
  * POLYPHONIC WAVETABLE SYNTHESIZER ENGINE (MULTITIMBRIC)
- * Processador de síntese polifônica para reprodução de áudio SF2 multitimbrico por pista/canal com sanitização de sampleRate.
+ * Processador de síntese polifônica para reprodução de áudio SF2 multitimbrico por pista/canal com mapeamento exato de timbres por preset.
  */
 
 class SynthEngine {
@@ -98,7 +98,6 @@ class SynthEngine {
         if (sh.end > sh.start && sh.end <= sf2ParsedObj.sampleData.length) {
           const sampleLength = sh.end - sh.start;
 
-          // Sanitizar sampleRate para o intervalo aceito pela Web Audio API [3000 Hz a 768000 Hz]
           let validSampleRate = sh.sampleRate;
           if (!validSampleRate || validSampleRate < 3000 || validSampleRate > 768000 || isNaN(validSampleRate)) {
             validSampleRate = ctx.sampleRate || 44100;
@@ -133,7 +132,7 @@ class SynthEngine {
       }
     }
 
-    console.log(`[SynthEngine] Banco SF2 carregado com ${sf2ParsedObj.presets ? sf2ParsedObj.presets.length : 0} timbres atribuíveis às pistas.`);
+    console.log(`[SynthEngine] Banco SF2 carregado com ${sf2ParsedObj.presets ? sf2ParsedObj.presets.length : 0} timbres atribuíveis.`);
   }
 
   setChannelPreset(channel, presetIndex) {
@@ -197,10 +196,36 @@ class SynthEngine {
       gainNode.gain.linearRampToValueAtTime(velGain, attackEnd);
       gainNode.gain.linearRampToValueAtTime(sustainLevel, decayEnd);
 
-      const sampleIndices = Array.from(this.decodedAudioBuffers.keys());
-      const presetOffset = chConfig.assignedPresetIndex || 0;
-      const matchedIdx = sampleIndices[(actualNote + presetOffset) % sampleIndices.length];
-      const sampleObj = this.decodedAudioBuffers.get(matchedIdx);
+      // Mapeamento Exato de Amostra por Timbre Preset
+      let assignedSampleIndices = [];
+      if (this.parsedSf2Data && this.parsedSf2Data.presets && this.parsedSf2Data.presets[chConfig.assignedPresetIndex]) {
+        const presetObj = this.parsedSf2Data.presets[chConfig.assignedPresetIndex];
+        if (presetObj.sampleIndices && presetObj.sampleIndices.length > 0) {
+          assignedSampleIndices = presetObj.sampleIndices;
+        }
+      }
+
+      if (assignedSampleIndices.length === 0) {
+        assignedSampleIndices = Array.from(this.decodedAudioBuffers.keys());
+      }
+
+      // Encontrar a amostra no banco do preset com tom mais próximo da nota tocada
+      let bestMatchedIdx = assignedSampleIndices[0];
+      let minPitchDiff = 999;
+
+      assignedSampleIndices.forEach((sIdx) => {
+        const sObj = this.decodedAudioBuffers.get(sIdx);
+        if (sObj) {
+          const diff = Math.abs(actualNote - sObj.originalPitch);
+          if (diff < minPitchDiff) {
+            minPitchDiff = diff;
+            bestMatchedIdx = sIdx;
+          }
+        }
+      });
+
+      const sampleObj = this.decodedAudioBuffers.get(bestMatchedIdx);
+      if (!sampleObj) continue;
 
       const sourceNode = ctx.createBufferSource();
       sourceNode.buffer = sampleObj.audioBuffer;

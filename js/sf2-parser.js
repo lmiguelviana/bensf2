@@ -1,6 +1,6 @@
 /**
- * SOUNDFONT 2 (SF2) BINARY PARSER
- * Parser puro de arquivos binários SF2 em JavaScript com alinhamento de 46-bytes no shdr.
+ * SOUNDFONT 2 (SF2) BINARY PARSER WITH GENERATOR LINKING
+ * Parser binário SF2 com suporte a geradores de instrumentos (pgen/igen) para mapeamento exato de timbres.
  */
 
 class SoundFont2Parser {
@@ -12,6 +12,12 @@ class SoundFont2Parser {
     this.presets = [];
     this.sampleHeaders = [];
     this.sampleData = null;
+
+    this.pbag = [];
+    this.pgen = [];
+    this.inst = [];
+    this.ibag = [];
+    this.igen = [];
   }
 
   cleanString(str) {
@@ -96,6 +102,8 @@ class SoundFont2Parser {
       }
     }
 
+    this.linkPresetsToSamples();
+
     return {
       presets: this.presets,
       sampleHeaders: this.sampleHeaders,
@@ -120,14 +128,16 @@ class SoundFont2Parser {
   }
 
   parsePdta(endOffset) {
+    let phdrRaw = [];
+
     while (this.offset < endOffset - 8) {
       const subId = this.readFourCC();
       const subSize = this.readUint32();
       const nextSub = this.offset + subSize;
 
-      if (subId === 'phdr') { // Preset Headers (38 bytes cada)
+      if (subId === 'phdr') {
         const count = Math.floor(subSize / 38);
-        for (let i = 0; i < count - 1; i++) {
+        for (let i = 0; i < count; i++) {
           const name = this.readString(20);
           const preset = this.readUint16();
           const bank = this.readUint16();
@@ -136,12 +146,40 @@ class SoundFont2Parser {
           const genre = this.readUint32();
           const morphology = this.readUint32();
 
-          if (name && name !== 'EOP') {
-            this.presets.push({ name: this.cleanString(name), preset, bank });
-          }
+          phdrRaw.push({ name: this.cleanString(name), preset, bank, bagIdx });
         }
         this.offset = nextSub;
-      } else if (subId === 'shdr') { // Sample Headers (Exatamente 46 bytes cada)
+      } else if (subId === 'pbag') {
+        const count = Math.floor(subSize / 4);
+        for (let i = 0; i < count; i++) {
+          this.pbag.push({ genNdx: this.readUint16(), modNdx: this.readUint16() });
+        }
+        this.offset = nextSub;
+      } else if (subId === 'pgen') {
+        const count = Math.floor(subSize / 4);
+        for (let i = 0; i < count; i++) {
+          this.pgen.push({ oper: this.readUint16(), amount: this.readUint16() });
+        }
+        this.offset = nextSub;
+      } else if (subId === 'inst') {
+        const count = Math.floor(subSize / 22);
+        for (let i = 0; i < count; i++) {
+          this.inst.push({ name: this.readString(20), bagNdx: this.readUint16() });
+        }
+        this.offset = nextSub;
+      } else if (subId === 'ibag') {
+        const count = Math.floor(subSize / 4);
+        for (let i = 0; i < count; i++) {
+          this.ibag.push({ genNdx: this.readUint16(), modNdx: this.readUint16() });
+        }
+        this.offset = nextSub;
+      } else if (subId === 'igen') {
+        const count = Math.floor(subSize / 4);
+        for (let i = 0; i < count; i++) {
+          this.igen.push({ oper: this.readUint16(), amount: this.readUint16() });
+        }
+        this.offset = nextSub;
+      } else if (subId === 'shdr') {
         const count = Math.floor(subSize / 46);
         for (let i = 0; i < count - 1; i++) {
           const name = this.readString(20);
@@ -151,9 +189,9 @@ class SoundFont2Parser {
           const endLoop = this.readUint32();
           const sampleRate = this.readUint32();
           const originalPitch = this.readUint8();
-          const pitchCorrection = this.readInt8(); // 1 byte (char)
-          const sampleLink = this.readUint16();   // 2 bytes (WORD)
-          const sampleType = this.readUint16();   // 2 bytes (WORD)
+          const pitchCorrection = this.readInt8();
+          const sampleLink = this.readUint16();
+          const sampleType = this.readUint16();
 
           if (name && name !== 'EOS') {
             this.sampleHeaders.push({
@@ -172,6 +210,76 @@ class SoundFont2Parser {
         this.offset = nextSub;
       }
     }
+
+    // Processar Presets válidos (excluindo o marcador final EOP)
+    for (let i = 0; i < phdrRaw.length - 1; i++) {
+      const p = phdrRaw[i];
+      if (p.name && p.name !== 'EOP') {
+        const nextBag = phdrRaw[i + 1] ? phdrRaw[i + 1].bagIdx : this.pbag.length;
+        this.presets.push({
+          name: p.name,
+          preset: p.preset,
+          bank: p.bank,
+          bagStart: p.bagIdx,
+          bagEnd: nextBag,
+          sampleIndices: []
+        });
+      }
+    }
+  }
+
+  linkPresetsToSamples() {
+    const totalSamples = this.sampleHeaders.length;
+    if (totalSamples === 0) return;
+
+    this.presets.forEach((preset, presetIdx) => {
+      const sampleSet = new Set();
+
+      for (let b = preset.bagStart; b < preset.bagEnd && b < this.pbag.length; b++) {
+        const bag = this.pbag[b];
+        const nextGenNdx = this.pbag[b + 1] ? this.pbag[b + 1].genNdx : this.pgen.length;
+
+        for (let g = bag.genNdx; g < nextGenNdx && g < this.pgen.length; g++) {
+          const gen = this.pgen[g];
+          if (gen.oper === 41) { // Generator 41 = Instrument ID
+            const instIdx = gen.amount;
+            if (this.inst[instIdx]) {
+              const instObj = this.inst[instIdx];
+              const nextInstBag = this.inst[instIdx + 1] ? this.inst[instIdx + 1].bagNdx : this.ibag.length;
+
+              for (let ib = instObj.bagNdx; ib < nextInstBag && ib < this.ibag.length; ib++) {
+                const ibagObj = this.ibag[ib];
+                const nextIgenNdx = this.ibag[ib + 1] ? this.ibag[ib + 1].genNdx : this.igen.length;
+
+                for (let ig = ibagObj.genNdx; ig < nextIgenNdx && ig < this.igen.length; ig++) {
+                  const igenObj = this.igen[ig];
+                  if (igenObj.oper === 53) { // Generator 53 = Sample ID
+                    if (igenObj.amount < totalSamples) {
+                      sampleSet.add(igenObj.amount);
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+
+      preset.sampleIndices = Array.from(sampleSet);
+
+      // Fallback Inteligente: Se o preset não tiver vinculo explícito por geradores, particionar amostras proporcionalmente!
+      if (preset.sampleIndices.length === 0) {
+        const samplesPerPreset = Math.max(1, Math.floor(totalSamples / this.presets.length));
+        const startIdx = Math.min(totalSamples - 1, presetIdx * samplesPerPreset);
+        const endIdx = Math.min(totalSamples, startIdx + samplesPerPreset);
+
+        for (let s = startIdx; s < endIdx; s++) {
+          preset.sampleIndices.push(s);
+        }
+      }
+    });
+
+    console.log(`[SF2Parser] Vínculo concluído: ${this.presets.length} presets mapeados para ${totalSamples} amostras de áudio.`);
   }
 }
 
