@@ -1,12 +1,12 @@
-# SoundFont SF2 Live Sampler Workstation (Desktop & Mobile)
+# SoundFont SF2 Live Sampler Workstation (Desktop & Mobile - Google Play Ready)
 
 ## What This Is
 
-Um **Sintetizador Sampler de SF2 e Rack de Performance ao Vivo Cross-Platform** com **Console de Mixer Multitimbrico** e **Gerenciador de Presets** que roda como aplicativo nativo no **Desktop (Electron.js)** e no **Mobile (Android PWA / Web)**. O foco exclusivo é conectar um **Teclado Controlador MIDI Real (USB/Bluetooth)** ou tocar no teclado virtual em tempo real. Inspirado no Native Instruments Kontakt e StudioLogic Numa Player.
+Um **Sintetizador Sampler de SF2 e Rack de Performance ao Vivo Cross-Platform** com **Console de Mixer Multitimbrico** e **Gerenciador de Presets** preparado para distribuição na **Google Play Store (Android)** e executável nativo no **Desktop (Electron.js)**. O foco exclusivo é conectar um **Teclado Controlador MIDI Físico (USB/Bluetooth)** ou tocar no teclado virtual em tempo real. Inspirado no Native Instruments Kontakt e StudioLogic Numa Player.
 
 ## Core Value
 
-Conectar um **teclado controlador MIDI físico** (via cabo USB-OTG ou Bluetooth), carregar múltiplos bancos de som SF2, manipular canais MIDI em tempo real, controlar volume, panorama (PAN), Mute/Solo, aplicar efeitos (Reverb, Delay, EQ, Limiter) e **Salvar e Carregar Presets personalizados** instantaneamente em apresentações ao vivo ou ensaios.
+Conectar um **teclado controlador MIDI físico** (via cabo USB-OTG ou Bluetooth), carregar múltiplos bancos de som SF2, manipular canais MIDI em tempo real, controlar volume, panorama (PAN), Mute/Solo, aplicar efeitos (Reverb, Delay, EQ, Limiter) e **Salvar e Carregar Presets personalizados** instantaneamente em apresentações ao vivo ou ensaios, disponível diretamente para download nas lojas de aplicativos (Google Play Store).
 
 ## Requirements
 
@@ -22,7 +22,7 @@ Conectar um **teclado controlador MIDI físico** (via cabo USB-OTG ou Bluetooth)
 - [ ] **Rack de Efeitos (FX Rack)**: Processadores de Reverb Estéreo, Delay, Equalizador de 3 Bandas (Low/Mid/High) e Limiter Master para prevenção de distorção.
 - [ ] **Teclado Virtual Auxiliar Multi-touch / QWERTY**: Teclado na tela sensível ao toque no Mobile e atalhos no teclado do PC para tocar sem controlador.
 - [ ] **Gerenciador de Presets (Preset System)**: Salvar e carregar o estado completo de instrumentos, mixer e efeitos em presets personalizados locais ou exportáveis em JSON (com suporte a atalhos `Ctrl+S` no Electron).
-- [ ] **Suporte Cross-Platform (Electron & Mobile PWA)**: Executável no Windows/macOS via Electron e responsivo para Android via PWA.
+- [ ] **Distribuição em Loja (Google Play Store & Electron Desktop)**: Preparação de build para Google Play Store via **Capacitor / TWA (Android App Bundle .aab)** e executável Windows/Mac via Electron.
 
 ### Out of Scope
 
@@ -34,7 +34,8 @@ Conectar um **teclado controlador MIDI físico** (via cabo USB-OTG ou Bluetooth)
 
 | Decision | Rationale | Outcome |
 |----------|-----------|---------|
-| WebMIDI API Nativas | Suporte direto para teclados controladores MIDI USB e Bluetooth no Chrome Mobile/Android e Electron sem drivers extra | Aprovado |
+| Google Play Store Build via Capacitor / TWA | Permite publicar o app como aplicativo nativo na Google Play Store (.aab / .apk) mantendo performance máxima de áudio | Aprovado |
+| WebMIDI API Nativas | Suporte direto para teclados controladores MIDI USB e Bluetooth no Chrome Mobile/Android e Electron | Aprovado |
 | Web Audio API + JS SF2 Engine | Latência ultrabaixa imediata para resposta tátil no teclado | Aprovado |
 | Preset System via JSON & LocalStorage / Electron Store | Permite salvamento instantâneo e alternância de timbres durante apresentações | Aprovado |
 
@@ -43,4 +44,4 @@ Conectar um **teclado controlador MIDI físico** (via cabo USB-OTG ou Bluetooth)
 This document evolves at phase transitions and milestone boundaries.
 
 ---
-*Last updated: 2026-08-12 (Ajustado para foco exclusivo em Teclado MIDI em tempo real)*
+*Last updated: 2026-08-12 (Ajustado para publicação na Google Play Store)*
