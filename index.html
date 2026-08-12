@@ -174,7 +174,7 @@
           <!-- Renderizado dinamicamente via MixerConsoleManager -->
         </div>
 
-        <!-- Painel de Efeitos INDIVIDUAL por Pista (Com Interruptores ON/OFF) -->
+        <!-- Painel de Efeitos INDIVIDUAL por Pista (Com Valhalla Reverb Modes & Toggles ON/OFF) -->
         <div class="track-fx-subcard" style="background: rgba(12, 16, 25, 0.7); border-radius: var(--radius-md); padding: 10px; border: 1px solid rgba(0, 242, 254, 0.2);">
           <div class="card-title" style="margin-bottom: 8px;">
             <span id="fxRackTitleText" style="color: var(--accent-cyan); font-weight: 800;">EFEITOS DA PISTA - CH 01: LAYER 1</span>
@@ -205,11 +205,28 @@
               </div>
             </div>
 
+            <!-- Reverb por Pista com Algoritmos Valhalla -->
             <div class="fx-module-card" style="align-items: center;">
               <div class="fx-module-title" style="width: 100%;">
                 <span>REVERB POR PISTA</span>
                 <button id="btnTrackReverbToggle" class="btn btn-sm btn-fx-toggle active">ON</button>
               </div>
+
+              <!-- Seletor de Modo Valhalla -->
+              <div class="preset-selector-group" style="width: 100%; margin-top: 4px;">
+                <span class="preset-label">ALGORITMO:</span>
+                <select id="selectTrackReverbMode" class="preset-select" style="width: 100%; font-size: 10px;">
+                  <option value="concert_hall" selected>🏛️ Concert Hall</option>
+                  <option value="bright_hall">🌟 Bright Hall</option>
+                  <option value="plate">🛡️ Vintage Plate</option>
+                  <option value="room">🏠 Acoustic Room</option>
+                  <option value="chamber">🎙️ Studio Chamber</option>
+                  <option value="cathedral">⛪ Holy Cathedral</option>
+                  <option value="sanctuary">🌌 Sanctuary Space</option>
+                  <option value="synth_space">🪐 Synth Space</option>
+                </select>
+              </div>
+
               <div style="display: flex; gap: 16px; justify-content: center; width: 100%; margin-top: 4px;">
                 <div id="knobTrackReverbSize"></div>
                 <div id="knobTrackReverbMix"></div>
@@ -219,7 +236,7 @@
         </div>
       </section>
 
-      <!-- Section: Rack de Processamento de Efeitos MASTER GLOBAL (Com Interruptores ON/OFF) -->
+      <!-- Section: Rack de Processamento de Efeitos MASTER GLOBAL (Com Valhalla Reverb Modes) -->
       <section id="sectionFxRack" class="glass-card" style="display: none;">
         <div class="card-title">
           <span style="color: var(--accent-purple); font-weight: 800; font-size: 14px;">RACK DE EFEITOS MASTER GLOBAL (SAÍDA GERAL)</span>
@@ -255,13 +272,28 @@
             </div>
           </div>
 
-          <!-- Módulo Master Reverb Estéreo com Chave ON/OFF -->
+          <!-- Módulo Master Reverb com Algoritmos Valhalla -->
           <div class="fx-module-card" style="align-items: center;">
             <div class="fx-module-title" style="width: 100%;">
               <span>Reverb Estéreo Master</span>
               <button id="btnMasterReverbToggle" class="btn btn-sm btn-fx-toggle active">ON</button>
             </div>
             
+            <!-- Seletor de Modo Valhalla Master -->
+            <div class="preset-selector-group" style="width: 100%; margin-top: 4px;">
+              <span class="preset-label">ALGORITMO:</span>
+              <select id="selectMasterReverbMode" class="preset-select" style="width: 100%; font-size: 10px;">
+                <option value="concert_hall" selected>🏛️ Concert Hall</option>
+                <option value="bright_hall">🌟 Bright Hall</option>
+                <option value="plate">🛡️ Vintage Plate</option>
+                <option value="room">🏠 Acoustic Room</option>
+                <option value="chamber">🎙️ Studio Chamber</option>
+                <option value="cathedral">⛪ Holy Cathedral</option>
+                <option value="sanctuary">🌌 Sanctuary Space</option>
+                <option value="synth_space">🪐 Synth Space</option>
+              </select>
+            </div>
+
             <div style="display: flex; gap: 20px; justify-content: center; width: 100%; margin-top: 8px;">
               <div id="knobMasterReverbSize"></div>
               <div id="knobMasterReverbMix"></div>

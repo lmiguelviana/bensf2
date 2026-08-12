@@ -1,6 +1,6 @@
 /**
  * MASTER APPLICATION CONTROLLER
- * Liga a interface UI ao motor de síntese SF2, Mixer Console, Master FX, FX por Pista (com botões ON/OFF), renomeação de faixas e Modal de Configurações completo.
+ * Liga a interface UI ao motor de síntese SF2, Mixer Console, Master FX, FX por Pista com Algoritmos de Reverb Valhalla DSP e Modal de Configurações.
  */
 
 document.addEventListener('DOMContentLoaded', () => {
@@ -47,7 +47,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   });
 
-  // Instanciar Gerenciador de Configurações (com suporte a Polifonia e Velocity)
+  // Instanciar Gerenciador de Configurações
   const settingsModal = new SettingsModalManager(window.audioEngine, webMidi, synth);
   settingsModal.init();
   window.settingsModal = settingsModal;
@@ -175,7 +175,7 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
-  // 1. MASTER FX CONTROLS (Aba Dedicada com Interruptores ON/OFF)
+  // 1. MASTER FX CONTROLS & ALGORITMOS VALHALLA
   const btnMasterEqToggle = document.getElementById('btnMasterEqToggle');
   if (btnMasterEqToggle) {
     btnMasterEqToggle.addEventListener('click', () => {
@@ -200,6 +200,13 @@ document.addEventListener('DOMContentLoaded', () => {
       const isAct = btnMasterReverbToggle.classList.toggle('active');
       btnMasterReverbToggle.textContent = isAct ? 'ON' : 'OFF';
       fxRack.toggleMasterReverb(isAct);
+    });
+  }
+
+  const selectMasterReverbMode = document.getElementById('selectMasterReverbMode');
+  if (selectMasterReverbMode) {
+    selectMasterReverbMode.addEventListener('change', (e) => {
+      fxRack.setMasterReverbMode(e.target.value);
     });
   }
 
@@ -255,7 +262,7 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
-  // 2. PER-TRACK FX CONTROLS (Com Interruptores ON/OFF por Pista)
+  // 2. PER-TRACK FX CONTROLS & ALGORITMOS VALHALLA
   const btnTrackEqToggle = document.getElementById('btnTrackEqToggle');
   if (btnTrackEqToggle) {
     btnTrackEqToggle.addEventListener('click', () => {
@@ -280,6 +287,13 @@ document.addEventListener('DOMContentLoaded', () => {
       const isAct = btnTrackReverbToggle.classList.toggle('active');
       btnTrackReverbToggle.textContent = isAct ? 'ON' : 'OFF';
       fxRack.toggleTrackReverb(isAct);
+    });
+  }
+
+  const selectTrackReverbMode = document.getElementById('selectTrackReverbMode');
+  if (selectTrackReverbMode) {
+    selectTrackReverbMode.addEventListener('change', (e) => {
+      fxRack.setTrackReverbMode(e.target.value);
     });
   }
 
@@ -356,7 +370,7 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
-  // Atualizar Knobs e Toggles da pista individual ao trocar de canal no Mixer!
+  // Atualizar Knobs, Toggles e Modo Reverb da pista individual ao trocar de canal no Mixer!
   fxRack.onSelectionChange((ch, params) => {
     const chName = synth.channels[ch] ? synth.channels[ch].name : `CH ${ch < 10 ? '0' + ch : ch}`;
     if (fxRackTitleEl) {
@@ -374,6 +388,10 @@ document.addEventListener('DOMContentLoaded', () => {
     if (btnTrackReverbToggle) {
       btnTrackReverbToggle.classList.toggle('active', params.reverbEnabled !== false);
       btnTrackReverbToggle.textContent = params.reverbEnabled !== false ? 'ON' : 'OFF';
+    }
+
+    if (selectTrackReverbMode) {
+      selectTrackReverbMode.value = params.reverbMode || 'concert_hall';
     }
 
     if (knobTrackEqLow) knobTrackEqLow.setValue(params.eqLow);

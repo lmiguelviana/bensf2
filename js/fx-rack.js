@@ -1,11 +1,23 @@
 /**
- * MASTER & PER-TRACK FX RACK ENGINE
- * Módulo de processamento de efeitos com Master FX Global e FX por pista individual com interruptores ON/OFF.
+ * MASTER & PER-TRACK FX RACK ENGINE (COM ALGORITMOS DE REVERB ESTILO VALHALLA)
+ * Módulo de processamento de efeitos com Master FX Global e FX por pista individual com Modos de Reverb Valhalla.
  */
 
 class FxRackManager {
   constructor(audioEngineContext) {
     this.audioCtx = audioEngineContext;
+
+    // Modos de Reverb inspirados nos Algoritmos clássicos da Valhalla DSP
+    this.reverbModes = {
+      'concert_hall': { name: '🏛️ Concert Hall', duration: 3.5, decay: 2.2, damping: 6000, preDelay: 0.03 },
+      'bright_hall':  { name: '🌟 Bright Hall',  duration: 3.0, decay: 1.8, damping: 12000, preDelay: 0.02 },
+      'plate':        { name: '🛡️ Vintage Plate', duration: 2.0, decay: 2.8, damping: 14000, preDelay: 0.01 },
+      'room':         { name: '🏠 Acoustic Room', duration: 0.9, decay: 3.5, damping: 4500, preDelay: 0.005 },
+      'chamber':      { name: '🎙️ Studio Chamber', duration: 1.6, decay: 2.5, damping: 8000, preDelay: 0.015 },
+      'cathedral':    { name: '⛪ Holy Cathedral', duration: 5.5, decay: 1.5, damping: 5000, preDelay: 0.04 },
+      'sanctuary':    { name: '🌌 Sanctuary Space', duration: 4.2, decay: 1.8, damping: 7000, preDelay: 0.025 },
+      'synth_space':  { name: '🪐 Synth Space',   duration: 4.8, decay: 1.6, damping: 10000, preDelay: 0.035 }
+    };
 
     // Master FX Nodes (Saída Geral)
     this.masterEqLow = null;
@@ -23,7 +35,8 @@ class FxRackManager {
     this.masterParams = {
       eqLow: 0, eqMid: 0, eqHigh: 0,
       delayTime: 300, delayMix: 20,
-      reverbSize: 40, reverbMix: 25
+      reverbSize: 40, reverbMix: 25,
+      reverbMode: 'concert_hall'
     };
 
     // Per-Channel FX Nodes & State (Ch 1 a 16)
@@ -64,7 +77,7 @@ class FxRackManager {
     this.masterDelayNode.connect(this.masterDelayGain);
 
     this.masterReverbNode = ctx.createConvolver();
-    this.masterReverbNode.buffer = this.createSyntheticImpulse(ctx, 2.0, 2.0);
+    this.masterReverbNode.buffer = this.createSyntheticImpulse(ctx, this.reverbModes['concert_hall']);
     this.masterReverbGain = ctx.createGain();
     this.masterReverbGain.gain.value = 0.25;
     this.masterReverbNode.connect(this.masterReverbGain);
@@ -116,7 +129,7 @@ class FxRackManager {
       delayNode.connect(delayGain);
 
       const reverbNode = ctx.createConvolver();
-      reverbNode.buffer = this.createSyntheticImpulse(ctx, 2.0, 2.0);
+      reverbNode.buffer = this.createSyntheticImpulse(ctx, this.reverbModes['concert_hall']);
 
       const reverbGain = ctx.createGain();
       reverbGain.gain.value = 0.25;
@@ -144,26 +157,56 @@ class FxRackManager {
           delayTime: 300,
           delayMix: 20,
           reverbSize: 40,
-          reverbMix: 25
+          reverbMix: 25,
+          reverbMode: 'concert_hall'
         }
       });
     }
 
-    console.log('[FxRack] Motor de Efeitos Master e por Pista inicializados.');
+    console.log('[FxRack] Motor de Efeitos Master e por Pista com Algoritmos Valhalla inicializados.');
   }
 
-  createSyntheticImpulse(ctx, durationSec, decaySec) {
+  // Gerador de Resposta de Impulso Sintético estilo Valhalla DSP (com amortecimento de frequências agudas)
+  createSyntheticImpulse(ctx, modeConfig) {
+    const duration = modeConfig.duration || 3.0;
+    const decay = modeConfig.decay || 2.0;
+    const damping = modeConfig.damping || 8000;
+    const preDelay = modeConfig.preDelay || 0.02;
+
     const sampleRate = ctx.sampleRate;
-    const length = sampleRate * durationSec;
+    const length = Math.floor(sampleRate * duration);
+    const preDelaySamples = Math.floor(sampleRate * preDelay);
     const impulse = ctx.createBuffer(2, length, sampleRate);
     const left = impulse.getChannelData(0);
     const right = impulse.getChannelData(1);
 
+    // Filtro de amortecimento IIR de primeira ordem (Valhalla High-Damping Filter)
+    const dt = 1.0 / sampleRate;
+    const RC = 1.0 / (2 * Math.PI * damping);
+    const alpha = dt / (RC + dt);
+
+    let lastLeft = 0;
+    let lastRight = 0;
+
     for (let i = 0; i < length; i++) {
-      const n = i / length;
-      const env = Math.pow(1 - n, decaySec);
-      left[i] = (Math.random() * 2 - 1) * env;
-      right[i] = (Math.random() * 2 - 1) * env;
+      if (i < preDelaySamples) {
+        left[i] = 0;
+        right[i] = 0;
+        continue;
+      }
+
+      const n = (i - preDelaySamples) / (length - preDelaySamples);
+      const env = Math.pow(1 - n, decay);
+      
+      const rawLeft = (Math.random() * 2 - 1) * env;
+      const rawRight = (Math.random() * 2 - 1) * env;
+
+      // Amortecimento passa-baixas dinâmico no rabo do reverb
+      lastLeft = lastLeft + alpha * (rawLeft - lastLeft);
+      lastRight = lastRight + alpha * (rawRight - lastRight);
+
+      left[i] = lastLeft;
+      right[i] = lastRight;
     }
     return impulse;
   }
@@ -192,7 +235,7 @@ class FxRackManager {
     this.masterReverbGain.gain.setTargetAtTime(targetGain, this.audioCtx.getCurrentTime(), 0.01);
   }
 
-  // Master Params Setter
+  // Master Params Setters
   setMasterEqLowGain(gainDb) {
     this.masterParams.eqLow = gainDb;
     if (this.masterEqEnabled) {
@@ -226,11 +269,21 @@ class FxRackManager {
     }
   }
 
+  setMasterReverbMode(modeKey) {
+    if (this.reverbModes[modeKey]) {
+      this.masterParams.reverbMode = modeKey;
+      const ctx = this.audioCtx.init();
+      this.masterReverbNode.buffer = this.createSyntheticImpulse(ctx, this.reverbModes[modeKey]);
+      console.log(`[FxRack] Modo de Reverb Master alterado para: ${this.reverbModes[modeKey].name}`);
+    }
+  }
+
   setMasterReverbSize(sizeNorm) {
     this.masterParams.reverbSize = Math.round(sizeNorm * 100);
-    const duration = 0.5 + (sizeNorm * 4.0);
+    const modeConfig = { ...this.reverbModes[this.masterParams.reverbMode || 'concert_hall'] };
+    modeConfig.duration = (modeConfig.duration * 0.5) + (sizeNorm * 3.5);
     const ctx = this.audioCtx.init();
-    this.masterReverbNode.buffer = this.createSyntheticImpulse(ctx, duration, 2.0);
+    this.masterReverbNode.buffer = this.createSyntheticImpulse(ctx, modeConfig);
   }
 
   setMasterReverbMix(mixNorm) {
@@ -289,7 +342,7 @@ class FxRackManager {
     }
   }
 
-  // Métodos de alteração de parâmetros do canal selecionado (Efeitos por Pista)
+  // Métodos de alteração de parâmetros da pista selecionada
   setEqLowGain(gainDb, channel = this.selectedChannel) {
     const fx = this.channelFx.get(channel);
     if (fx) {
@@ -338,13 +391,24 @@ class FxRackManager {
     }
   }
 
+  setTrackReverbMode(modeKey, channel = this.selectedChannel) {
+    const fx = this.channelFx.get(channel);
+    if (fx && this.reverbModes[modeKey]) {
+      fx.params.reverbMode = modeKey;
+      const ctx = this.audioCtx.init();
+      fx.reverbNode.buffer = this.createSyntheticImpulse(ctx, this.reverbModes[modeKey]);
+      console.log(`[FxRack] Modo de Reverb Pista ${channel} alterado para: ${this.reverbModes[modeKey].name}`);
+    }
+  }
+
   setReverbSize(sizeNorm, channel = this.selectedChannel) {
     const fx = this.channelFx.get(channel);
     if (fx) {
       fx.params.reverbSize = Math.round(sizeNorm * 100);
-      const duration = 0.5 + (sizeNorm * 4.0);
+      const modeConfig = { ...this.reverbModes[fx.params.reverbMode || 'concert_hall'] };
+      modeConfig.duration = (modeConfig.duration * 0.5) + (sizeNorm * 3.5);
       const ctx = this.audioCtx.init();
-      fx.reverbNode.buffer = this.createSyntheticImpulse(ctx, duration, 2.0);
+      fx.reverbNode.buffer = this.createSyntheticImpulse(ctx, modeConfig);
     }
   }
 
