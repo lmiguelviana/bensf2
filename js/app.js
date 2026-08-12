@@ -178,6 +178,52 @@ document.addEventListener('DOMContentLoaded', () => {
 
   const fxRackTitleEl = document.getElementById('fxRackTitleText');
 
+  // Lógica de Recolher / Expandir Painel Lateral (Sidebar) & Teclado Virtual
+  const sidebarPanel = document.querySelector('.sidebar-panel');
+  const btnToggleSidebar = document.getElementById('btnToggleSidebar');
+  const btnCollapseSidebarDirect = document.getElementById('btnCollapseSidebarDirect');
+  let isSidebarCollapsed = false;
+
+  function toggleSidebar() {
+    isSidebarCollapsed = !isSidebarCollapsed;
+    if (sidebarPanel) {
+      sidebarPanel.style.display = isSidebarCollapsed ? 'none' : 'flex';
+    }
+    if (btnToggleSidebar) {
+      btnToggleSidebar.textContent = isSidebarCollapsed ? '📁 Painel ▶' : '📁 Painel ◀';
+      btnToggleSidebar.classList.toggle('active', isSidebarCollapsed);
+    }
+    if (btnCollapseSidebarDirect) {
+      btnCollapseSidebarDirect.textContent = isSidebarCollapsed ? '▶ Expandir' : '◀ Recolher';
+    }
+    showToastNotification('Painel Lateral', isSidebarCollapsed ? 'Painel lateral recolhido para maximizar a tela do mixer.' : 'Painel lateral expandido.', 'info');
+  }
+
+  if (btnToggleSidebar) btnToggleSidebar.addEventListener('click', toggleSidebar);
+  if (btnCollapseSidebarDirect) btnCollapseSidebarDirect.addEventListener('click', toggleSidebar);
+
+  const btnToggleKeyboard = document.getElementById('btnToggleKeyboard');
+  const btnCollapseKeyboardDirect = document.getElementById('btnCollapseKeyboardDirect');
+  let isKeyboardCollapsed = false;
+
+  function toggleKeyboard() {
+    isKeyboardCollapsed = !isKeyboardCollapsed;
+    if (sectionMidiKeyboard) {
+      sectionMidiKeyboard.style.display = isKeyboardCollapsed ? 'none' : 'flex';
+    }
+    if (btnToggleKeyboard) {
+      btnToggleKeyboard.textContent = isKeyboardCollapsed ? '🎹 Teclado ▲' : '🎹 Teclado ▼';
+      btnToggleKeyboard.classList.toggle('active', isKeyboardCollapsed);
+    }
+    if (btnCollapseKeyboardDirect) {
+      btnCollapseKeyboardDirect.textContent = isKeyboardCollapsed ? '▲ Expandir Teclado' : '▼ Recolher Teclado';
+    }
+    showToastNotification('Teclado Piano', isKeyboardCollapsed ? 'Teclado virtual recolhido.' : 'Teclado virtual expandido.', 'info');
+  }
+
+  if (btnToggleKeyboard) btnToggleKeyboard.addEventListener('click', toggleKeyboard);
+  if (btnCollapseKeyboardDirect) btnCollapseKeyboardDirect.addEventListener('click', toggleKeyboard);
+
   // Tab View Switcher (Mixer & Layers, Rack FX Master, Setlist Live Mode)
   function switchView(activeTab, showMixer, showFx, showSetlist) {
     [tabMixer, tabFxRack, tabSetlist].forEach(t => t && t.classList.remove('active'));
@@ -186,7 +232,7 @@ document.addEventListener('DOMContentLoaded', () => {
     if (sectionMixer) sectionMixer.style.display = showMixer ? 'flex' : 'none';
     if (sectionFxRack) sectionFxRack.style.display = showFx ? 'block' : 'none';
     if (sectionSetlist) sectionSetlist.style.display = showSetlist ? 'block' : 'none';
-    if (sectionMidiKeyboard) sectionMidiKeyboard.style.display = 'flex'; // Teclado sempre visível abaixo
+    if (sectionMidiKeyboard && !isKeyboardCollapsed) sectionMidiKeyboard.style.display = 'flex';
   }
 
   if (tabMixer) tabMixer.addEventListener('click', () => switchView(tabMixer, true, false, false));
