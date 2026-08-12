@@ -5,7 +5,9 @@
   "main": "main.js",
   "scripts": {
     "start": "electron .",
-    "web": "npx http-server -p 8080 ."
+    "web": "npx http-server -p 8080 .",
+    "pack:dir": "electron-builder --dir",
+    "dist": "electron-builder"
   },
   "keywords": [
     "bensf2",
@@ -21,6 +23,28 @@
   "author": "Developer",
   "license": "MIT",
   "devDependencies": {
-    "electron": "^28.0.0"
+    "electron": "^28.0.0",
+    "electron-builder": "^24.9.0"
+  },
+  "build": {
+    "appId": "com.bensf2.app",
+    "productName": "BenSF2 Workstation",
+    "directories": {
+      "output": "dist"
+    },
+    "files": [
+      "assets/**/*",
+      "css/**/*",
+      "js/**/*",
+      "index.html",
+      "main.js",
+      "preload.js",
+      "manifest.json",
+      "sw.js"
+    ],
+    "win": {
+      "target": "portable",
+      "icon": "assets/icon-512.png"
+    }
   }
 }

@@ -1,19 +1,30 @@
-const CACHE_NAME = 'sf2-workstation-v1';
+const CACHE_NAME = 'bensf2-workstation-v1';
 const ASSETS_TO_CACHE = [
   './',
   './index.html',
   './css/main.css',
+  './css/mixer.css',
+  './css/synth-rack.css',
+  './css/knob.css',
   './js/audio-context.js',
   './js/sf2-parser.js',
   './js/synth-engine.js',
+  './js/fx-rack.js',
+  './js/vu-meter.js',
+  './js/mixer.js',
+  './js/web-midi.js',
+  './js/preset-manager.js',
+  './js/knob-component.js',
+  './js/settings-modal.js',
   './js/app.js',
-  './manifest.json'
+  './manifest.json',
+  './twa-manifest.json'
 ];
 
 self.addEventListener('install', (evt) => {
   evt.waitUntil(
     caches.open(CACHE_NAME).then((cache) => {
-      console.log('[ServiceWorker] Caching app shell assets');
+      console.log('[ServiceWorker] Caching BenSF2 app shell assets');
       return cache.addAll(ASSETS_TO_CACHE);
     })
   );
