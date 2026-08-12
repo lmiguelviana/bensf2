@@ -1,0 +1,21 @@
+{
+  "short_name": "SF2 Workstation",
+  "name": "SF2 Live Sampler Workstation",
+  "icons": [
+    {
+      "src": "assets/icon-192.png",
+      "type": "image/png",
+      "sizes": "192x192"
+    },
+    {
+      "src": "assets/icon-512.png",
+      "type": "image/png",
+      "sizes": "512x512"
+    }
+  ],
+  "start_url": "./index.html",
+  "background_color": "#07090e",
+  "theme_color": "#07090e",
+  "display": "standalone",
+  "orientation": "any"
+}

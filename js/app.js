@@ -9,6 +9,13 @@ document.addEventListener('DOMContentLoaded', () => {
 
   let baseOctave = 3; // Oitava base (C3 = nota 48)
 
+  // Registrar Service Worker para PWA (Instalação no Android + Suporte Offline)
+  if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.register('./sw.js').then(() => {
+      console.log('[PWA] Service Worker registrado com sucesso!');
+    }).catch(err => console.log('[PWA] Falha ao registrar Service Worker:', err));
+  }
+
   // Elementos do DOM
   const audioStatusDot = document.getElementById('audioStatusDot');
   const audioStatusText = document.getElementById('audioStatusText');
@@ -123,7 +130,6 @@ document.addEventListener('DOMContentLoaded', () => {
     if (e.repeat || e.target.tagName === 'INPUT' || e.target.tagName === 'SELECT') return;
     const key = e.key.toLowerCase();
 
-    // Atalhos de Oitava Z / X
     if (key === 'z') {
       if (baseOctave > 1) {
         baseOctave--;
@@ -139,7 +145,6 @@ document.addEventListener('DOMContentLoaded', () => {
       return;
     }
 
-    // Atalho Barra de Espaço = Mute / Unmute Geral
     if (e.code === 'Space') {
       e.preventDefault();
       isMasterMuted = !isMasterMuted;
@@ -214,7 +219,6 @@ document.addEventListener('DOMContentLoaded', () => {
         synth.loadSoundFont(parsedData);
         updatePresetListUI(parsedData.presets);
 
-        // Ocultar banner de aviso
         if (sf2PromptBanner) {
           sf2PromptBanner.style.display = 'none';
         }
@@ -285,7 +289,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
   setInterval(() => {
     if (voiceCountDisplay) {
-      voiceCountDisplay.textContent = `${synth.getActiveVoicesCount()} / ${synth.maxPolyphony}`;
+      voiceCountDisplay.textContent = `${synth.getActiveVoicesCount()} / ${synth.isAutoPolyphony ? 'Auto (' + synth.maxPolyphony + ')' : synth.maxPolyphony}`;
     }
   }, 200);
 
