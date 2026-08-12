@@ -1,0 +1,467 @@
+/* SF2 LIVE SAMPLER WORKSTATION - DESIGN SYSTEM & STYLES */
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap');
+
+:root {
+  --bg-dark: #07090e;
+  --bg-card: rgba(16, 21, 33, 0.75);
+  --bg-card-border: rgba(255, 255, 255, 0.08);
+  --bg-card-hover: rgba(25, 33, 50, 0.85);
+
+  --accent-cyan: #00f2fe;
+  --accent-blue: #4facfe;
+  --accent-purple: #7f00ff;
+  --accent-pink: #e100ff;
+  --accent-emerald: #00e676;
+  --accent-warning: #ffab00;
+  --accent-danger: #ff1744;
+
+  --text-main: #f0f4f8;
+  --text-muted: #8a99ad;
+  --text-dim: #546375;
+
+  --font-heading: 'Outfit', sans-serif;
+  --font-body: 'Inter', sans-serif;
+  --font-mono: 'JetBrains Mono', monospace;
+
+  --radius-sm: 6px;
+  --radius-md: 10px;
+  --radius-lg: 16px;
+  --radius-xl: 24px;
+
+  --shadow-glow: 0 0 20px rgba(0, 242, 254, 0.15);
+  --shadow-card: 0 10px 30px rgba(0, 0, 0, 0.5);
+}
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+body {
+  background: var(--bg-dark);
+  background-image: 
+    radial-gradient(circle at 15% 15%, rgba(0, 242, 254, 0.05) 0%, transparent 40%),
+    radial-gradient(circle at 85% 85%, rgba(127, 0, 255, 0.05) 0%, transparent 40%);
+  color: var(--text-main);
+  font-family: var(--font-body);
+  height: 100vh;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+/* App Header & Top Navigation Bar */
+.app-header {
+  height: 60px;
+  background: rgba(10, 13, 20, 0.85);
+  backdrop-filter: blur(16px);
+  border-bottom: 1px solid var(--bg-card-border);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 20px;
+  z-index: 100;
+}
+
+.app-brand {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.app-logo-icon {
+  width: 34px;
+  height: 34px;
+  background: linear-gradient(135deg, var(--accent-cyan), var(--accent-purple));
+  border-radius: var(--radius-sm);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #fff;
+  font-weight: 800;
+  font-size: 18px;
+  box-shadow: 0 0 12px rgba(0, 242, 254, 0.4);
+}
+
+.app-title {
+  font-family: var(--font-heading);
+  font-size: 18px;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+  background: linear-gradient(90deg, #ffffff, #8a99ad);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+.badge-tag {
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  padding: 2px 8px;
+  border-radius: 12px;
+  background: rgba(0, 242, 254, 0.1);
+  color: var(--accent-cyan);
+  border: 1px solid rgba(0, 242, 254, 0.3);
+}
+
+/* Top Toolbar & Presets Bar */
+.top-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.preset-selector-group {
+  display: flex;
+  align-items: center;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid var(--bg-card-border);
+  border-radius: var(--radius-md);
+  padding: 4px 8px;
+  gap: 8px;
+}
+
+.preset-label {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.preset-select {
+  background: transparent;
+  border: none;
+  color: var(--accent-cyan);
+  font-family: var(--font-heading);
+  font-weight: 600;
+  font-size: 14px;
+  outline: none;
+  cursor: pointer;
+  padding-right: 12px;
+}
+
+.preset-select option {
+  background: #101521;
+  color: var(--text-main);
+}
+
+.btn {
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid var(--bg-card-border);
+  color: var(--text-main);
+  padding: 8px 14px;
+  border-radius: var(--radius-md);
+  font-family: var(--font-body);
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  transition: all 0.2s ease;
+}
+
+.btn:hover {
+  background: rgba(255, 255, 255, 0.12);
+  border-color: rgba(255, 255, 255, 0.2);
+  transform: translateY(-1px);
+}
+
+.btn-primary {
+  background: linear-gradient(135deg, var(--accent-cyan), var(--accent-blue));
+  color: #050b14;
+  border: none;
+  font-weight: 700;
+  box-shadow: 0 4px 15px rgba(0, 242, 254, 0.3);
+}
+
+.btn-primary:hover {
+  box-shadow: 0 6px 20px rgba(0, 242, 254, 0.5);
+  background: linear-gradient(135deg, #20f5ff, #62b5fe);
+}
+
+.btn-accent {
+  background: linear-gradient(135deg, var(--accent-purple), var(--accent-pink));
+  color: #fff;
+  border: none;
+  box-shadow: 0 4px 15px rgba(127, 0, 255, 0.3);
+}
+
+/* Audio Status Indicator */
+.audio-status {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-muted);
+}
+
+.status-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--accent-danger);
+  box-shadow: 0 0 8px var(--accent-danger);
+  transition: all 0.3s ease;
+}
+
+.status-dot.active {
+  background: var(--accent-emerald);
+  box-shadow: 0 0 10px var(--accent-emerald);
+}
+
+/* Main Content Workspace Layout */
+.app-workspace {
+  flex: 1;
+  display: flex;
+  overflow: hidden;
+  position: relative;
+}
+
+.sidebar-panel {
+  width: 320px;
+  background: rgba(12, 16, 25, 0.7);
+  backdrop-filter: blur(12px);
+  border-right: 1px solid var(--bg-card-border);
+  display: flex;
+  flex-direction: column;
+  padding: 16px;
+  gap: 16px;
+  overflow-y: auto;
+}
+
+.main-view-area {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  background: rgba(7, 9, 14, 0.4);
+  overflow-y: auto;
+  padding: 16px;
+  gap: 16px;
+}
+
+/* Glassmorphism Section Card */
+.glass-card {
+  background: var(--bg-card);
+  backdrop-filter: blur(16px);
+  border: 1px solid var(--bg-card-border);
+  border-radius: var(--radius-lg);
+  padding: 16px;
+  box-shadow: var(--shadow-card);
+  transition: border-color 0.2s ease;
+}
+
+.glass-card:hover {
+  border-color: rgba(255, 255, 255, 0.15);
+}
+
+.card-title {
+  font-family: var(--font-heading);
+  font-size: 14px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.8px;
+  color: var(--text-muted);
+  margin-bottom: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+/* SoundFont Library File Loader Area */
+.sf2-uploader-zone {
+  border: 2px dashed rgba(255, 255, 255, 0.15);
+  border-radius: var(--radius-md);
+  padding: 20px;
+  text-align: center;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  background: rgba(255, 255, 255, 0.02);
+}
+
+.sf2-uploader-zone:hover {
+  border-color: var(--accent-cyan);
+  background: rgba(0, 242, 254, 0.04);
+}
+
+.sf2-icon {
+  font-size: 32px;
+  margin-bottom: 8px;
+  display: block;
+}
+
+.sf2-uploader-text {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-main);
+}
+
+.sf2-uploader-sub {
+  font-size: 11px;
+  color: var(--text-muted);
+  margin-top: 4px;
+}
+
+/* SoundFont Preset List Item */
+.preset-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  max-height: 240px;
+  overflow-y: auto;
+}
+
+.preset-item {
+  padding: 8px 12px;
+  border-radius: var(--radius-sm);
+  background: rgba(255, 255, 255, 0.03);
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--text-main);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  transition: all 0.15s ease;
+}
+
+.preset-item:hover {
+  background: rgba(0, 242, 254, 0.1);
+  color: var(--accent-cyan);
+}
+
+.preset-item.active {
+  background: linear-gradient(90deg, rgba(0, 242, 254, 0.2), transparent);
+  border-left: 3px solid var(--accent-cyan);
+  color: var(--accent-cyan);
+  font-weight: 700;
+}
+
+/* Virtual Piano Keyboard Footer */
+.keyboard-container {
+  height: 180px;
+  background: rgba(10, 13, 20, 0.95);
+  border-top: 1px solid var(--bg-card-border);
+  padding: 12px 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  z-index: 90;
+}
+
+.keyboard-controls {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.octave-controls {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.octave-display {
+  font-family: var(--font-mono);
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--accent-cyan);
+  min-width: 60px;
+  text-align: center;
+}
+
+.piano-keys-wrapper {
+  flex: 1;
+  display: flex;
+  position: relative;
+  overflow-x: auto;
+  padding-bottom: 4px;
+}
+
+.piano-key {
+  position: relative;
+  cursor: pointer;
+  border-radius: 0 0 6px 6px;
+  transition: background 0.05s ease, transform 0.05s ease;
+}
+
+.piano-key.white {
+  width: 44px;
+  height: 100%;
+  background: linear-gradient(180deg, #e6ecf2 0%, #ffffff 100%);
+  border: 1px solid #b0bec5;
+  margin-right: 2px;
+  z-index: 1;
+}
+
+.piano-key.white.active, .piano-key.white:active {
+  background: linear-gradient(180deg, var(--accent-cyan) 0%, #00b0ff 100%);
+  transform: translateY(2px);
+}
+
+.piano-key.black {
+  width: 28px;
+  height: 60%;
+  background: linear-gradient(180deg, #263238 0%, #0d1317 100%);
+  border: 1px solid #000;
+  margin-left: -15px;
+  margin-right: -15px;
+  z-index: 2;
+  box-shadow: 0 4px 8px rgba(0,0,0,0.5);
+}
+
+.piano-key.black.active, .piano-key.black:active {
+  background: linear-gradient(180deg, var(--accent-purple) 0%, var(--accent-pink) 100%);
+  transform: translateY(2px);
+}
+
+.key-label {
+  position: absolute;
+  bottom: 6px;
+  left: 50%;
+  transform: translateX(-50%);
+  font-size: 10px;
+  font-weight: 600;
+  color: #78909c;
+  pointer-events: none;
+}
+
+/* Custom Scrollbars */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: rgba(0, 0, 0, 0.2);
+}
+::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.15);
+  border-radius: 3px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.3);
+}
+
+/* Mobile Responsiveness */
+@media (max-width: 768px) {
+  .app-workspace {
+    flex-direction: column;
+  }
+  .sidebar-panel {
+    width: 100%;
+    height: 240px;
+  }
+  .piano-key.white {
+    width: 36px;
+  }
+  .piano-key.black {
+    width: 22px;
+    margin-left: -12px;
+    margin-right: -12px;
+  }
+}

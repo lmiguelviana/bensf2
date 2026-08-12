@@ -1,0 +1,236 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>SF2 Live Sampler Workstation</title>
+
+  <!-- PWA Manifest & Meta Tags -->
+  <link rel="manifest" href="manifest.json">
+  <meta name="theme-color" content="#07090e">
+  <meta name="description" content="Sintetizador Sampler de SF2 e Rack para Teclado MIDI Físico (Desktop & Mobile)">
+
+  <!-- App Stylesheet -->
+  <link rel="stylesheet" href="css/main.css">
+</head>
+<body>
+
+  <!-- App Header & Top Navigation Bar -->
+  <header class="app-header">
+    <div class="app-brand">
+      <div class="app-logo-icon">S</div>
+      <div>
+        <h1 class="app-title">SF2 SAMPLER WORKSTATION</h1>
+      </div>
+      <span class="badge-tag">LIVE RIG</span>
+    </div>
+
+    <!-- Presets Toolbar (Salvar & Carregar Presets) -->
+    <div class="top-toolbar">
+      <div class="preset-selector-group">
+        <span class="preset-label">Preset:</span>
+        <select id="presetSelect" class="preset-select">
+          <option value="factory_1">01 - Grand Piano + Soft Strings</option>
+          <option value="factory_2">02 - EPiano Stage + Stereo Reverb</option>
+          <option value="factory_3">03 - Lead Synth + Brass Layer</option>
+        </select>
+      </div>
+
+      <!-- Configurações de Polifonia (Auto + Manual) e Velocidade -->
+      <div class="preset-selector-group">
+        <span class="preset-label">Polifonia:</span>
+        <select id="polyphonySelect" class="preset-select">
+          <option value="auto" selected>Auto (Recomendado)</option>
+          <option value="16">16 Vozes</option>
+          <option value="32">32 Vozes</option>
+          <option value="64">64 Vozes</option>
+          <option value="128">128 Vozes</option>
+        </select>
+      </div>
+
+      <div class="preset-selector-group">
+        <span class="preset-label">Toque:</span>
+        <select id="velocityCurveSelect" class="preset-select">
+          <option value="soft">Suave (Soft)</option>
+          <option value="normal" selected>Normal</option>
+          <option value="hard">Dura (Hard)</option>
+        </select>
+      </div>
+
+      <button id="btnSavePreset" class="btn btn-accent" title="Salvar Preset Atual (Ctrl+S)">
+        💾 Salvar Preset
+      </button>
+
+      <button id="btnLoadPreset" class="btn" title="Importar arquivo de Preset (.json)">
+        📂 Carregar Preset
+      </button>
+
+      <div class="audio-status">
+        <div id="audioStatusDot" class="status-dot"></div>
+        <span id="audioStatusText">Áudio: Inativo</span>
+      </div>
+    </div>
+  </header>
+
+  <!-- Main Workspace Area -->
+  <main class="app-workspace">
+
+    <!-- Left Sidebar: SF2 Loader & Instrument Browser -->
+    <aside class="sidebar-panel">
+      <!-- SF2 Uploader Card -->
+      <section class="glass-card">
+        <div class="card-title">
+          <span>Biblioteca SF2</span>
+          <span>📁</span>
+        </div>
+        <div class="sf2-uploader-zone" id="sf2DropZone">
+          <span class="sf2-icon">🎹</span>
+          <div class="sf2-uploader-text">Carregar Arquivo .SF2</div>
+          <div class="sf2-uploader-sub">Arraste ou clique para selecionar</div>
+          <input type="file" id="sf2FileInput" accept=".sf2" style="display: none;">
+        </div>
+      </section>
+
+      <!-- Preset Browser Card -->
+      <section class="glass-card" style="flex: 1; display: flex; flex-direction: column;">
+        <div class="card-title">
+          <span>Timbres do Banco</span>
+          <span id="sf2PresetCount">0 Timbres</span>
+        </div>
+        <div class="preset-list" id="presetList">
+          <div style="padding: 12px; text-align: center; color: var(--accent-warning); font-size: 12px; font-weight: 600;">
+            ⚠️ Nenhum banco SF2 carregado.<br>Por favor, carregue um arquivo .sf2 para tocar!
+          </div>
+        </div>
+      </section>
+
+      <!-- Status Card -->
+      <section class="glass-card">
+        <div class="card-title">
+          <span>Performance</span>
+          <span>⚡</span>
+        </div>
+        <div style="display: flex; justify-content: space-between; font-size: 12px; color: var(--text-muted);">
+          <span>Vozes Ativas:</span>
+          <span id="voiceCountDisplay" style="color: var(--accent-cyan); font-weight: 700;">0 / Auto</span>
+        </div>
+      </section>
+    </aside>
+
+    <!-- Main View: Multitimbric Layer Mixer Console -->
+    <section class="main-view-area">
+
+      <!-- Status Banner -->
+      <div id="sf2PromptBanner" style="background: rgba(255, 171, 0, 0.12); border: 1px solid var(--accent-warning); border-radius: var(--radius-md); padding: 12px 16px; color: var(--accent-warning); font-size: 13px; font-weight: 600; display: flex; align-items: center; justify-content: space-between;">
+        <span>ℹ️ <b>Aviso:</b> O som permanecerá silencioso até que você selecione e carregue um arquivo <b>.sf2</b> no painel à esquerda.</span>
+      </div>
+
+      <section class="glass-card">
+        <div class="card-title">
+          <span>Mixer de Camadas (Layers & Channels)</span>
+          <button id="btnAddChannel" class="btn btn-primary" style="padding: 4px 10px; font-size: 11px;">+ Nova Pista</button>
+        </div>
+
+        <!-- Mixer Channel Strips Container -->
+        <div id="mixerContainer" style="display: flex; gap: 16px; overflow-x: auto; padding: 10px 0;">
+          
+          <!-- Channel 1 Strip -->
+          <div class="glass-card" style="width: 140px; text-align: center; padding: 12px; background: rgba(0,0,0,0.3);">
+            <div style="font-weight: 700; font-size: 13px; color: var(--accent-cyan); margin-bottom: 8px;">CH 01: SF2 LAYER</div>
+            
+            <!-- Volume Fader -->
+            <div style="height: 120px; display: flex; align-items: center; justify-content: center; margin: 10px 0;">
+              <input type="range" class="ch-volume" data-channel="1" min="0" max="1" step="0.01" value="0.8" orient="vertical" style="height: 100%; width: 24px; accent-color: var(--accent-cyan);">
+            </div>
+            
+            <div style="font-size: 11px; color: var(--text-muted); margin-bottom: 8px;">Volume</div>
+
+            <!-- Pan Control -->
+            <div style="margin-bottom: 10px;">
+              <div style="font-size: 10px; color: var(--text-muted);">PAN</div>
+              <input type="range" class="ch-pan" data-channel="1" min="-1" max="1" step="0.05" value="0" style="width: 80%; accent-color: var(--accent-purple);">
+            </div>
+
+            <!-- Mute & Solo -->
+            <div style="display: flex; gap: 6px; justify-content: center;">
+              <button class="btn ch-mute" data-channel="1" style="padding: 4px 8px; font-size: 10px;">M</button>
+              <button class="btn ch-solo" data-channel="1" style="padding: 4px 8px; font-size: 10px;">S</button>
+            </div>
+          </div>
+
+          <!-- Channel 2 Strip -->
+          <div class="glass-card" style="width: 140px; text-align: center; padding: 12px; background: rgba(0,0,0,0.3);">
+            <div style="font-weight: 700; font-size: 13px; color: var(--accent-purple); margin-bottom: 8px;">CH 02: SF2 LAYER</div>
+            
+            <div style="height: 120px; display: flex; align-items: center; justify-content: center; margin: 10px 0;">
+              <input type="range" class="ch-volume" data-channel="2" min="0" max="1" step="0.01" value="0.6" orient="vertical" style="height: 100%; width: 24px; accent-color: var(--accent-purple);">
+            </div>
+            
+            <div style="font-size: 11px; color: var(--text-muted); margin-bottom: 8px;">Volume</div>
+
+            <div style="margin-bottom: 10px;">
+              <div style="font-size: 10px; color: var(--text-muted);">PAN</div>
+              <input type="range" class="ch-pan" data-channel="2" min="-1" max="1" step="0.05" value="0" style="width: 80%; accent-color: var(--accent-purple);">
+            </div>
+
+            <div style="display: flex; gap: 6px; justify-content: center;">
+              <button class="btn ch-mute" data-channel="2" style="padding: 4px 8px; font-size: 10px;">M</button>
+              <button class="btn ch-solo" data-channel="2" style="padding: 4px 8px; font-size: 10px;">S</button>
+            </div>
+          </div>
+
+        </div>
+      </section>
+
+      <!-- Master FX Rack -->
+      <section class="glass-card">
+        <div class="card-title">
+          <span>Rack de Efeitos Master (FX)</span>
+          <span>🎛️</span>
+        </div>
+        <div style="display: flex; gap: 24px; flex-wrap: wrap;">
+          <div>
+            <div style="font-size: 12px; font-weight: 600; color: var(--text-muted); margin-bottom: 4px;">Reverb Room Size</div>
+            <input type="range" id="fxReverbSize" min="0" max="1" step="0.01" value="0.4" style="accent-color: var(--accent-cyan);">
+          </div>
+          <div>
+            <div style="font-size: 12px; font-weight: 600; color: var(--text-muted); margin-bottom: 4px;">Reverb Wet/Dry</div>
+            <input type="range" id="fxReverbMix" min="0" max="1" step="0.01" value="0.25" style="accent-color: var(--accent-cyan);">
+          </div>
+          <div>
+            <div style="font-size: 12px; font-weight: 600; color: var(--text-muted); margin-bottom: 4px;">Master Limiter</div>
+            <div style="color: var(--accent-emerald); font-weight: 700; font-size: 12px; margin-top: 4px;">● Ativo (-1.0 dB)</div>
+          </div>
+        </div>
+      </section>
+
+    </section>
+  </main>
+
+  <!-- Virtual Piano Keyboard Footer -->
+  <footer class="keyboard-container">
+    <div class="keyboard-controls">
+      <div class="octave-controls">
+        <button id="btnOctaveDown" class="btn" style="padding: 4px 10px;">- Oitava (Z)</button>
+        <span id="octaveDisplay" class="octave-display">Oitava: C3-C5</span>
+        <button id="btnOctaveUp" class="btn" style="padding: 4px 10px;">+ Oitava (X)</button>
+      </div>
+
+      <div style="font-size: 12px; color: var(--text-muted);">
+        💡 Teclas QWERTY: <b>A-S-D-F</b> (Brancas), <b>W-E-T-Y</b> (Pretas), <b>Z / X</b> (Oitavas), <b>Espaço</b> (Mute)
+      </div>
+    </div>
+
+    <!-- Interactive Keys Container -->
+    <div id="pianoKeys" class="piano-keys-wrapper">
+      <!-- Teclas renderizadas dinamicamente via JS -->
+    </div>
+  </footer>
+
+  <!-- Scripts JavaScript -->
+  <script src="js/audio-context.js"></script>
+  <script src="js/sf2-parser.js"></script>
+  <script src="js/synth-engine.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>
