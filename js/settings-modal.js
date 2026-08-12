@@ -317,11 +317,7 @@ class SettingsModalManager {
     const selectedDeviceId = this.audioOutputSelect ? this.audioOutputSelect.value : 'default';
     localStorage.setItem('bensf2_audioOutput', selectedDeviceId);
 
-    if (this.audioEngine && this.audioEngine.ctx && typeof this.audioEngine.ctx.setSinkId === 'function') {
-      this.audioEngine.ctx.setSinkId(selectedDeviceId)
-        .then(() => console.log(`[SettingsModal] Saída de áudio trocada para: ${selectedDeviceId}`))
-        .catch(e => console.warn('[SettingsModal] setSinkId falhou:', e));
-    }
+    this._switchAudioOutput(selectedDeviceId);
 
     if (this.modalPolyphonySelect && this.synth) {
       this.synth.setMaxPolyphony(this.modalPolyphonySelect.value);
@@ -334,6 +330,37 @@ class SettingsModalManager {
     console.log('[SettingsModal] Configurações salvas e aplicadas com sucesso!');
     this.closeModal();
     alert('✅ Configurações de Áudio, Polifonia e Controladores MIDI salvas!');
+  }
+
+  /**
+   * Troca a saída de áudio sem quebrar o AudioContext nem parar o MIDI.
+   * setSinkId() pode suspender o contexto — por isso fazemos resume() logo depois.
+   */
+  async _switchAudioOutput(deviceId) {
+    const ctx = this.audioEngine && this.audioEngine.ctx;
+    if (!ctx) return;
+
+    // setSinkId está disponível no Chrome/Electron mais recentes
+    if (typeof ctx.setSinkId === 'function') {
+      try {
+        await ctx.setSinkId(deviceId);
+        console.log(`[SettingsModal] Saída de áudio trocada para: ${deviceId}`);
+      } catch (e) {
+        console.warn('[SettingsModal] setSinkId falhou (dispositivo pode não suportar):', e);
+      }
+    } else {
+      console.warn('[SettingsModal] setSinkId não disponível nesta versão do Electron/Chrome.');
+    }
+
+    // CRÍTICO: setSinkId pode suspender o AudioContext — sempre fazer resume depois
+    if (ctx.state === 'suspended') {
+      try {
+        await ctx.resume();
+        console.log('[SettingsModal] AudioContext retomado após troca de dispositivo.');
+      } catch (e) {
+        console.warn('[SettingsModal] Falha ao retomar AudioContext:', e);
+      }
+    }
   }
 }
 

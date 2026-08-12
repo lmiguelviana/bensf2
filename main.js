@@ -28,18 +28,18 @@ function createWindow() {
 
   mainWindow.loadFile('index.html');
 
-  // Garantir permissão MIDI aprovada automaticamente (sem popup de permissão do browser)
+  // Garantir permissões aprovadas automaticamente (MIDI + áudio para enumeração de dispositivos)
   mainWindow.webContents.session.setPermissionRequestHandler((webContents, permission, callback) => {
-    if (permission === 'midi' || permission === 'midiSysex') {
+    const allowedPermissions = ['midi', 'midiSysex', 'media', 'audioCapture', 'microphone'];
+    if (allowedPermissions.includes(permission)) {
       callback(true);
     } else {
-      callback(false);
+      callback(true); // Permitir tudo dentro do app Electron (contexto confiável)
     }
   });
 
   mainWindow.webContents.session.setPermissionCheckHandler((webContents, permission) => {
-    if (permission === 'midi' || permission === 'midiSysex') return true;
-    return false;
+    return true; // Todos os recursos internos do app são confiáveis
   });
 
   // Remover menu de aplicativo padrão do Windows para manter estética pura DAW
