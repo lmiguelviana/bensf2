@@ -20,12 +20,27 @@ function createWindow() {
       preload: path.join(__dirname, 'preload.js'),
       nodeIntegration: false,
       contextIsolation: true,
-      webSecurity: true
+      webSecurity: true,
+      webMidi: true // ← FIX: habilita WebMIDI API no Electron (sem isso, navigator.requestMIDIAccess falha silenciosamente)
     },
     icon: path.join(__dirname, 'assets/icon-512.png')
   });
 
   mainWindow.loadFile('index.html');
+
+  // Garantir permissão MIDI aprovada automaticamente (sem popup de permissão do browser)
+  mainWindow.webContents.session.setPermissionRequestHandler((webContents, permission, callback) => {
+    if (permission === 'midi' || permission === 'midiSysex') {
+      callback(true);
+    } else {
+      callback(false);
+    }
+  });
+
+  mainWindow.webContents.session.setPermissionCheckHandler((webContents, permission) => {
+    if (permission === 'midi' || permission === 'midiSysex') return true;
+    return false;
+  });
 
   // Remover menu de aplicativo padrão do Windows para manter estética pura DAW
   mainWindow.setMenuBarVisibility(false);

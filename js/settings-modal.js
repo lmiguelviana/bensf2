@@ -28,6 +28,9 @@ class SettingsModalManager {
     this.sampleRateSelect = document.getElementById('sampleRateSelect');
     this.bufferSizeSelect = document.getElementById('bufferSizeSelect');
     this.modalThemeSelect = document.getElementById('modalThemeSelect');
+    this.modalPolyphonySelect = document.getElementById('modalPolyphonySelect');
+    this.modalVelocityCurveSelect = document.getElementById('modalVelocityCurveSelect');
+    this.midiDevicesListContainer = document.getElementById('midiDevicesListContainer'); // ← FIX: estava faltando, impedia a lista de controladores MIDI de renderizar
 
     // Carregar tema salvo no localStorage (padrão: Nord Stage Red)
     const savedTheme = localStorage.getItem('bensf2_theme') || 'nord_red';
