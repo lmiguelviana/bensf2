@@ -1,12 +1,13 @@
 /**
  * SETTINGS MODAL MANAGER
- * Gerencia o painel de configurações de áudio (Saída, Sample Rate, Buffer) e mapeamento de múltiplos controladores MIDI.
+ * Gerencia o painel de configurações de áudio, polifonia, sensibilidade de toque e mapeamento de múltiplos controladores MIDI.
  */
 
 class SettingsModalManager {
-  constructor(audioEngine, webMidiManager) {
+  constructor(audioEngine, webMidiManager, synthEngine) {
     this.audioEngine = audioEngine;
     this.webMidi = webMidiManager;
+    this.synth = synthEngine;
 
     this.modalBackdrop = null;
     this.btnClose = null;
@@ -14,6 +15,8 @@ class SettingsModalManager {
     this.audioOutputSelect = null;
     this.sampleRateSelect = null;
     this.bufferSizeSelect = null;
+    this.modalPolyphonySelect = null;
+    this.modalVelocityCurveSelect = null;
     this.midiDevicesListContainer = null;
   }
 
@@ -24,6 +27,8 @@ class SettingsModalManager {
     this.audioOutputSelect = document.getElementById('audioOutputSelect');
     this.sampleRateSelect = document.getElementById('sampleRateSelect');
     this.bufferSizeSelect = document.getElementById('bufferSizeSelect');
+    this.modalPolyphonySelect = document.getElementById('modalPolyphonySelect');
+    this.modalVelocityCurveSelect = document.getElementById('modalVelocityCurveSelect');
     this.midiDevicesListContainer = document.getElementById('midiDevicesListContainer');
 
     const btnOpen = document.getElementById('btnOpenSettings');
@@ -45,11 +50,46 @@ class SettingsModalManager {
       this.btnSave.addEventListener('click', () => this.applySettings());
     }
 
+    // Sincronizar escolhas de polifonia e velocity com o topo
+    const topPolySelect = document.getElementById('polyphonySelect');
+    const topVelSelect = document.getElementById('velocityCurveSelect');
+
+    if (this.modalPolyphonySelect && topPolySelect) {
+      this.modalPolyphonySelect.addEventListener('change', (e) => {
+        topPolySelect.value = e.target.value;
+        if (this.synth) this.synth.setMaxPolyphony(e.target.value);
+      });
+      topPolySelect.addEventListener('change', (e) => {
+        this.modalPolyphonySelect.value = e.target.value;
+      });
+    }
+
+    if (this.modalVelocityCurveSelect && topVelSelect) {
+      this.modalVelocityCurveSelect.addEventListener('change', (e) => {
+        topVelSelect.value = e.target.value;
+        if (this.synth) this.synth.setVelocityCurve(e.target.value);
+      });
+      topVelSelect.addEventListener('change', (e) => {
+        this.modalVelocityCurveSelect.value = e.target.value;
+      });
+    }
+
     this.populateAudioOutputDevices();
   }
 
   openModal() {
     if (!this.modalBackdrop) return;
+
+    // Atualizar seletores do modal com o estado atual do synth
+    const topPolySelect = document.getElementById('polyphonySelect');
+    const topVelSelect = document.getElementById('velocityCurveSelect');
+    if (this.modalPolyphonySelect && topPolySelect) {
+      this.modalPolyphonySelect.value = topPolySelect.value;
+    }
+    if (this.modalVelocityCurveSelect && topVelSelect) {
+      this.modalVelocityCurveSelect.value = topVelSelect.value;
+    }
+
     this.populateAudioOutputDevices();
     this.populateMidiDevicesList();
     this.modalBackdrop.style.display = 'flex';
@@ -116,7 +156,6 @@ class SettingsModalManager {
       `;
     }).join('');
 
-    // Bind mudanças de canal para cada dispositivo
     const selects = this.midiDevicesListContainer.querySelectorAll('.device-channel-select');
     selects.forEach(sel => {
       sel.addEventListener('change', (e) => {
@@ -138,9 +177,17 @@ class SettingsModalManager {
       }
     }
 
+    if (this.modalPolyphonySelect && this.synth) {
+      this.synth.setMaxPolyphony(this.modalPolyphonySelect.value);
+    }
+
+    if (this.modalVelocityCurveSelect && this.synth) {
+      this.synth.setVelocityCurve(this.modalVelocityCurveSelect.value);
+    }
+
     console.log('[SettingsModal] Configurações salvas e aplicadas com sucesso!');
     this.closeModal();
-    alert('Configurações de Áudio e Mapeamento de Controladores MIDI salvos!');
+    alert('Configurações de Áudio, Polifonia e Controladores MIDI salvas!');
   }
 }
 

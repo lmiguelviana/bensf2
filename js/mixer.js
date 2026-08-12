@@ -1,6 +1,6 @@
 /**
- * MULTITIMBRIC MIXER CONSOLE MANAGER (16 MIDI CHANNELS WITH PER-TRACK SELECTION & MIDI LEARN)
- * Gerenciador dinâmico de 16 pistas de canais MIDI com seleção de canal para edição de FX individual e MIDI Learn.
+ * MULTITIMBRIC MIXER CONSOLE MANAGER (WITH TRACK RENAMING & MIDI LEARN)
+ * Gerenciador dinâmico de 16 pistas de canais MIDI com opção de renomear nome das faixas, FX por pista e MIDI Learn.
  */
 
 class MixerConsoleManager {
@@ -71,6 +71,7 @@ class MixerConsoleManager {
     strip.dataset.channel = ch;
 
     const chConfig = this.synth.channels[ch] || { 
+      name: `CH ${ch < 10 ? '0' + ch : ch}: LAYER ${ch}`,
       volume: 0.8, 
       pan: 0, 
       muted: false, 
@@ -96,8 +97,11 @@ class MixerConsoleManager {
     }
 
     strip.innerHTML = `
-      <div class="channel-header">
-        <span>CH ${ch < 10 ? '0' + ch : ch}: LAYER ${ch}</span>
+      <div class="channel-header" title="Clique duas vezes ou aperte ✏️ para renomear esta faixa">
+        <div style="display: flex; align-items: center; justify-content: center; gap: 4px; width: 100%;">
+          <span class="ch-name-text">${chConfig.name}</span>
+          <span class="btn-rename-icon" style="font-size: 9px; opacity: 0.6; cursor: pointer;">✏️</span>
+        </div>
         <span class="selected-badge" style="font-size: 8px; color: var(--accent-cyan); display: none;">● FX SELECIONADO</span>
       </div>
 
@@ -146,8 +150,35 @@ class MixerConsoleManager {
       </div>
     `;
 
+    // Função de Renomear a Faixa
+    const renameTrack = () => {
+      const currentName = this.synth.channels[ch] ? this.synth.channels[ch].name : `CH ${ch}: LAYER ${ch}`;
+      const newName = prompt(`Digite o novo nome para a Pista CH ${ch < 10 ? '0' + ch : ch}:`, currentName);
+      if (newName !== null && newName.trim() !== '') {
+        this.synth.setChannelName(ch, newName);
+        const nameTextEl = strip.querySelector('.ch-name-text');
+        if (nameTextEl) nameTextEl.textContent = newName.trim();
+
+        if (this.selectedChannel === ch && this.fxRack) {
+          this.fxRack.notifySelectionChange();
+        }
+      }
+    };
+
+    const headerEl = strip.querySelector('.channel-header');
+    headerEl.addEventListener('dblclick', (e) => {
+      e.stopPropagation();
+      renameTrack();
+    });
+
+    const renameBtn = strip.querySelector('.btn-rename-icon');
+    renameBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      renameTrack();
+    });
+
     // Selecionar pista ao clicar no strip
-    strip.addEventListener('click', (e) => {
+    strip.addEventListener('click', () => {
       this.selectChannel(ch);
     });
 
@@ -181,13 +212,13 @@ class MixerConsoleManager {
 
     // Anexar MIDI Learn por botão direito!
     if (this.midiLearn) {
-      this.midiLearn.attach(volInput, `Volume Pista CH ${ch}`, (normVal) => {
+      this.midiLearn.attach(volInput, `Volume Pista ${chConfig.name}`, (normVal) => {
         this.synth.setChannelVolume(ch, normVal);
         volInput.value = normVal;
         volDisplay.textContent = `${Math.round(normVal * 100)}%`;
       });
 
-      this.midiLearn.attach(panInput, `PAN Pista CH ${ch}`, (normVal) => {
+      this.midiLearn.attach(panInput, `PAN Pista ${chConfig.name}`, (normVal) => {
         const panVal = (normVal * 2.0) - 1.0;
         this.synth.setChannelPan(ch, panVal);
         panInput.value = panVal;

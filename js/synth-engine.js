@@ -1,6 +1,6 @@
 /**
- * POLYPHONIC WAVETABLE SYNTHESIZER ENGINE (MULTITIMBRIC WITH PER-TRACK FX ROUTING)
- * Processador de síntese polifônica para reprodução de áudio SF2 multitimbrico por pista/canal com roteamento de FX individual.
+ * POLYPHONIC WAVETABLE SYNTHESIZER ENGINE (MULTITIMBRIC WITH PER-TRACK FX & CUSTOM NAMES)
+ * Processador de síntese polifônica com suporte a renomeação de faixas e preset persistence.
  */
 
 class SynthEngine {
@@ -48,6 +48,7 @@ class SynthEngine {
       }
 
       this.channels[ch] = {
+        name: `CH ${ch < 10 ? '0' + ch : ch}: LAYER ${ch}`,
         gainNode: channelGain,
         pannerNode: panner,
         volume: 1.0,
@@ -60,6 +61,12 @@ class SynthEngine {
       };
 
       this.pitchBendSemi.set(ch, 0);
+    }
+  }
+
+  setChannelName(channel, name) {
+    if (this.channels[channel]) {
+      this.channels[channel].name = name.trim() || `CH ${channel < 10 ? '0' + channel : channel}`;
     }
   }
 
@@ -205,7 +212,6 @@ class SynthEngine {
       gainNode.gain.linearRampToValueAtTime(velGain, attackEnd);
       gainNode.gain.linearRampToValueAtTime(sustainLevel, decayEnd);
 
-      // Mapeamento Exato de Amostra por Timbre Preset
       let assignedSampleIndices = [];
       if (this.parsedSf2Data && this.parsedSf2Data.presets && this.parsedSf2Data.presets[chConfig.assignedPresetIndex]) {
         const presetObj = this.parsedSf2Data.presets[chConfig.assignedPresetIndex];
@@ -218,7 +224,6 @@ class SynthEngine {
         assignedSampleIndices = Array.from(this.decodedAudioBuffers.keys());
       }
 
-      // Encontrar a amostra no banco do preset com tom mais próximo da nota tocada
       let bestMatchedIdx = assignedSampleIndices[0];
       let minPitchDiff = 999;
 

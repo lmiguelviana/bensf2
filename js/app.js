@@ -1,6 +1,6 @@
 /**
  * MASTER APPLICATION CONTROLLER
- * Liga a interface UI ao motor de síntese SF2, Mixer Console, Master FX com ON/OFF toggles e FX por pista individual.
+ * Liga a interface UI ao motor de síntese SF2, Mixer Console, Master FX, FX por Pista (com botões ON/OFF), renomeação de faixas e Modal de Configurações completo.
  */
 
 document.addEventListener('DOMContentLoaded', () => {
@@ -47,8 +47,8 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   });
 
-  // Instanciar Gerenciador de Configurações
-  const settingsModal = new SettingsModalManager(window.audioEngine, webMidi);
+  // Instanciar Gerenciador de Configurações (com suporte a Polifonia e Velocity)
+  const settingsModal = new SettingsModalManager(window.audioEngine, webMidi, synth);
   settingsModal.init();
   window.settingsModal = settingsModal;
 
@@ -175,7 +175,7 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
-  // 1. INSTANCIAR RACK DE EFEITOS MASTER GLOBAL (Com Interruptores ON/OFF)
+  // 1. MASTER FX CONTROLS (Aba Dedicada com Interruptores ON/OFF)
   const btnMasterEqToggle = document.getElementById('btnMasterEqToggle');
   if (btnMasterEqToggle) {
     btnMasterEqToggle.addEventListener('click', () => {
@@ -255,7 +255,34 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
-  // 2. INSTANCIAR RACK DE EFEITOS POR PISTA (No Painel do Mixer)
+  // 2. PER-TRACK FX CONTROLS (Com Interruptores ON/OFF por Pista)
+  const btnTrackEqToggle = document.getElementById('btnTrackEqToggle');
+  if (btnTrackEqToggle) {
+    btnTrackEqToggle.addEventListener('click', () => {
+      const isAct = btnTrackEqToggle.classList.toggle('active');
+      btnTrackEqToggle.textContent = isAct ? 'ON' : 'OFF';
+      fxRack.toggleTrackEq(isAct);
+    });
+  }
+
+  const btnTrackDelayToggle = document.getElementById('btnTrackDelayToggle');
+  if (btnTrackDelayToggle) {
+    btnTrackDelayToggle.addEventListener('click', () => {
+      const isAct = btnTrackDelayToggle.classList.toggle('active');
+      btnTrackDelayToggle.textContent = isAct ? 'ON' : 'OFF';
+      fxRack.toggleTrackDelay(isAct);
+    });
+  }
+
+  const btnTrackReverbToggle = document.getElementById('btnTrackReverbToggle');
+  if (btnTrackReverbToggle) {
+    btnTrackReverbToggle.addEventListener('click', () => {
+      const isAct = btnTrackReverbToggle.classList.toggle('active');
+      btnTrackReverbToggle.textContent = isAct ? 'ON' : 'OFF';
+      fxRack.toggleTrackReverb(isAct);
+    });
+  }
+
   let knobTrackEqLow, knobTrackEqMid, knobTrackEqHigh, knobTrackDelayTime, knobTrackDelayMix, knobTrackReverbSize, knobTrackReverbMix;
 
   const knobTrackLowEl = document.getElementById('knobTrackEqLow');
@@ -329,10 +356,24 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
-  // Atualizar Knobs da pista individual ao trocar de canal no Mixer!
+  // Atualizar Knobs e Toggles da pista individual ao trocar de canal no Mixer!
   fxRack.onSelectionChange((ch, params) => {
+    const chName = synth.channels[ch] ? synth.channels[ch].name : `CH ${ch < 10 ? '0' + ch : ch}`;
     if (fxRackTitleEl) {
-      fxRackTitleEl.textContent = `EFEITOS DA PISTA - CH ${ch < 10 ? '0' + ch : ch}: LAYER ${ch}`;
+      fxRackTitleEl.textContent = `EFEITOS DA PISTA - ${chName.toUpperCase()}`;
+    }
+
+    if (btnTrackEqToggle) {
+      btnTrackEqToggle.classList.toggle('active', params.eqEnabled !== false);
+      btnTrackEqToggle.textContent = params.eqEnabled !== false ? 'ON' : 'OFF';
+    }
+    if (btnTrackDelayToggle) {
+      btnTrackDelayToggle.classList.toggle('active', params.delayEnabled !== false);
+      btnTrackDelayToggle.textContent = params.delayEnabled !== false ? 'ON' : 'OFF';
+    }
+    if (btnTrackReverbToggle) {
+      btnTrackReverbToggle.classList.toggle('active', params.reverbEnabled !== false);
+      btnTrackReverbToggle.textContent = params.reverbEnabled !== false ? 'ON' : 'OFF';
     }
 
     if (knobTrackEqLow) knobTrackEqLow.setValue(params.eqLow);
@@ -420,7 +461,6 @@ document.addEventListener('DOMContentLoaded', () => {
         keyEl.style.marginLeft = `-${blackMarginPct}%`;
         keyEl.style.marginRight = `-${blackMarginPct}%`;
       } else {
-        // Exibir rótulo discreto APENAS nas teclas C (1, 2, 3, 4, 5, 6, 7, 8)
         if (noteName === 'C') {
           const label = document.createElement('span');
           label.className = 'key-label';

@@ -1,6 +1,6 @@
 /**
  * PRESET MANAGEMENT SYSTEM
- * Gerenciador de Presets: Salvar, Carregar, Importar/Exportar JSON e Persistência LocalStorage.
+ * Gerenciador de Presets: Salvar, Carregar, Importar/Exportar JSON e Persistência LocalStorage (com nomes de pistas customizados).
  */
 
 class PresetManager {
@@ -22,8 +22,8 @@ class PresetManager {
       polyphony: 'auto',
       velocityCurve: 'normal',
       channels: {
-        1: { volume: 0.85, pan: 0, muted: false, solo: false, transpose: 0 },
-        2: { volume: 0.45, pan: 0.2, muted: false, solo: false, transpose: 0 }
+        1: { name: 'Grand Piano', volume: 0.85, pan: 0, muted: false, solo: false, transpose: 0 },
+        2: { name: 'Soft Strings', volume: 0.45, pan: 0.2, muted: false, solo: false, transpose: 0 }
       },
       fx: {
         eqLow: 2.0, eqMid: 0, eqHigh: 1.5,
@@ -37,8 +37,8 @@ class PresetManager {
       polyphony: 'auto',
       velocityCurve: 'soft',
       channels: {
-        1: { volume: 0.9, pan: -0.1, muted: false, solo: false, transpose: 0 },
-        2: { volume: 0, pan: 0, muted: true, solo: false, transpose: 0 }
+        1: { name: 'EPiano Stage', volume: 0.9, pan: -0.1, muted: false, solo: false, transpose: 0 },
+        2: { name: 'Pad Layer', volume: 0, pan: 0, muted: true, solo: false, transpose: 0 }
       },
       fx: {
         eqLow: 1.0, eqMid: 1.5, eqHigh: 3.0,
@@ -52,8 +52,8 @@ class PresetManager {
       polyphony: 'auto',
       velocityCurve: 'hard',
       channels: {
-        1: { volume: 0.95, pan: -0.25, muted: false, solo: false, transpose: 0 },
-        2: { volume: 0.75, pan: 0.25, muted: false, solo: false, transpose: 1 }
+        1: { name: 'Lead Synth', volume: 0.95, pan: -0.25, muted: false, solo: false, transpose: 0 },
+        2: { name: 'Brass Solo', volume: 0.75, pan: 0.25, muted: false, solo: false, transpose: 1 }
       },
       fx: {
         eqLow: 3.0, eqMid: 2.0, eqHigh: 2.0,
@@ -69,11 +69,14 @@ class PresetManager {
       const chData = this.synth.channels[ch];
       if (chData) {
         channelsState[ch] = {
+          name: chData.name || `CH ${ch < 10 ? '0' + ch : ch}: LAYER ${ch}`,
           volume: chData.volume,
           pan: chData.pan,
           muted: chData.muted,
           solo: chData.solo,
-          transpose: chData.transpose
+          transpose: chData.transpose,
+          assignedPresetIndex: chData.assignedPresetIndex,
+          assignedMidiChannel: chData.assignedMidiChannel
         };
       }
     }
@@ -84,14 +87,14 @@ class PresetManager {
       polyphony: this.synth.isAutoPolyphony ? 'auto' : this.synth.maxPolyphony,
       velocityCurve: this.synth.velocityCurve,
       channels: channelsState,
-      fx: {
-        eqLow: this.fxRack.eqLow ? this.fxRack.eqLow.gain.value : 0,
-        eqMid: this.fxRack.eqMid ? this.fxRack.eqMid.gain.value : 0,
-        eqHigh: this.fxRack.eqHigh ? this.fxRack.eqHigh.gain.value : 0,
-        delayTime: this.fxRack.delayTime,
-        delayMix: this.fxRack.delayMix,
-        reverbSize: this.fxRack.reverbSize,
-        reverbMix: this.fxRack.reverbMix
+      masterFx: {
+        eqLow: this.fxRack.masterParams ? this.fxRack.masterParams.eqLow : 0,
+        eqMid: this.fxRack.masterParams ? this.fxRack.masterParams.eqMid : 0,
+        eqHigh: this.fxRack.masterParams ? this.fxRack.masterParams.eqHigh : 0,
+        delayTime: this.fxRack.masterParams ? this.fxRack.masterParams.delayTime : 300,
+        delayMix: this.fxRack.masterParams ? this.fxRack.masterParams.delayMix : 20,
+        reverbSize: this.fxRack.masterParams ? this.fxRack.masterParams.reverbSize : 40,
+        reverbMix: this.fxRack.masterParams ? this.fxRack.masterParams.reverbMix : 25
       }
     };
   }
@@ -106,7 +109,6 @@ class PresetManager {
     this.userPresets.set(name.trim(), presetData);
     this.saveUserPresetsToStorage();
 
-    // Exportar também arquivo .json baixável
     this.exportPresetToJson(presetData);
     alert(`Preset "${name}" salvo com sucesso!`);
     return presetData;
@@ -117,7 +119,6 @@ class PresetManager {
 
     console.log(`[PresetManager] Carregando preset: ${presetData.name}`);
 
-    // Restaurar Polifonia e Velocidade
     if (presetData.polyphony) {
       this.synth.setMaxPolyphony(presetData.polyphony);
       const polySelect = document.getElementById('polyphonySelect');
@@ -130,57 +131,29 @@ class PresetManager {
       if (velSelect) velSelect.value = presetData.velocityCurve;
     }
 
-    // Restaurar Canais do Mixer
     if (presetData.channels) {
       Object.keys(presetData.channels).forEach((chKey) => {
         const ch = parseInt(chKey, 10);
         const chData = presetData.channels[chKey];
 
+        if (chData.name) {
+          this.synth.setChannelName(ch, chData.name);
+        }
         this.synth.setChannelVolume(ch, chData.volume);
         this.synth.setChannelPan(ch, chData.pan);
         this.synth.setChannelMute(ch, chData.muted);
         if (this.synth.channels[ch]) {
           this.synth.channels[ch].transpose = chData.transpose;
+          if (chData.assignedPresetIndex !== undefined) {
+            this.synth.setChannelPreset(ch, chData.assignedPresetIndex);
+          }
+          if (chData.assignedMidiChannel !== undefined) {
+            this.synth.channels[ch].assignedMidiChannel = chData.assignedMidiChannel;
+          }
         }
       });
-      this.mixer.renderMixer(); // Atualizar faders e knobs na UI
+      this.mixer.renderMixer();
     }
-
-    // Restaurar FX Rack
-    if (presetData.fx) {
-      const fx = presetData.fx;
-      this.fxRack.setEqLowGain(fx.eqLow || 0);
-      this.fxRack.setEqMidGain(fx.eqMid || 0);
-      this.fxRack.setEqHighGain(fx.eqHigh || 0);
-
-      this.fxRack.setDelayTime(fx.delayTime || 0.3);
-      this.fxRack.setDelayMix(fx.delayMix || 0.2);
-
-      this.fxRack.setReverbSize(fx.reverbSize || 0.4);
-      this.fxRack.setReverbMix(fx.reverbMix || 0.25);
-
-      // Atualizar Sliders de FX na UI
-      this.updateFxSlidersUI(fx);
-    }
-  }
-
-  updateFxSlidersUI(fx) {
-    const setVal = (id, valElId, val, unit = '') => {
-      const el = document.getElementById(id);
-      const txt = document.getElementById(valElId);
-      if (el) el.value = val;
-      if (txt) txt.textContent = `${val}${unit}`;
-    };
-
-    setVal('eqLowGain', 'eqLowVal', fx.eqLow || 0, ' dB');
-    setVal('eqMidGain', 'eqMidVal', fx.eqMid || 0, ' dB');
-    setVal('eqHighGain', 'eqHighVal', fx.eqHigh || 0, ' dB');
-
-    setVal('delayTime', 'delayTimeVal', fx.delayTime || 0.3, ' s');
-    setVal('delayMix', 'delayMixVal', Math.round((fx.delayMix || 0.2) * 100), '%');
-
-    setVal('fxReverbSize', 'reverbSizeVal', Math.round((fx.reverbSize || 0.4) * 100), '%');
-    setVal('fxReverbMix', 'reverbMixVal', Math.round((fx.reverbMix || 0.25) * 100), '%');
   }
 
   exportPresetToJson(presetData) {

@@ -1,6 +1,6 @@
 /**
  * MASTER & PER-TRACK FX RACK ENGINE
- * Módulo de processamento de efeitos com Master FX Global (com botões ON/OFF) e FX por pista individual.
+ * Módulo de processamento de efeitos com Master FX Global e FX por pista individual com interruptores ON/OFF.
  */
 
 class FxRackManager {
@@ -69,7 +69,6 @@ class FxRackManager {
     this.masterReverbGain.gain.value = 0.25;
     this.masterReverbNode.connect(this.masterReverbGain);
 
-    // Conectar saída do MasterGain do AudioEngine através do Master FX
     if (this.audioCtx.masterGain && this.audioCtx.limiterNode) {
       this.audioCtx.masterGain.disconnect();
       this.audioCtx.masterGain.connect(this.masterEqLow);
@@ -136,6 +135,9 @@ class FxRackManager {
         reverbNode,
         reverbGain,
         params: {
+          eqEnabled: true,
+          delayEnabled: true,
+          reverbEnabled: true,
           eqLow: 0,
           eqMid: 0,
           eqHigh: 0,
@@ -254,12 +256,47 @@ class FxRackManager {
     }
   }
 
+  // Toggles ON/OFF dos Efeitos por Pista Individual
+  toggleTrackEq(enabled, channel = this.selectedChannel) {
+    const fx = this.channelFx.get(channel);
+    if (fx) {
+      fx.params.eqEnabled = enabled;
+      const gainLow = enabled ? fx.params.eqLow : 0;
+      const gainMid = enabled ? fx.params.eqMid : 0;
+      const gainHigh = enabled ? fx.params.eqHigh : 0;
+
+      fx.eqLow.gain.setTargetAtTime(gainLow, this.audioCtx.getCurrentTime(), 0.01);
+      fx.eqMid.gain.setTargetAtTime(gainMid, this.audioCtx.getCurrentTime(), 0.01);
+      fx.eqHigh.gain.setTargetAtTime(gainHigh, this.audioCtx.getCurrentTime(), 0.01);
+    }
+  }
+
+  toggleTrackDelay(enabled, channel = this.selectedChannel) {
+    const fx = this.channelFx.get(channel);
+    if (fx) {
+      fx.params.delayEnabled = enabled;
+      const targetGain = enabled ? (fx.params.delayMix / 100.0) : 0;
+      fx.delayGain.gain.setTargetAtTime(targetGain, this.audioCtx.getCurrentTime(), 0.01);
+    }
+  }
+
+  toggleTrackReverb(enabled, channel = this.selectedChannel) {
+    const fx = this.channelFx.get(channel);
+    if (fx) {
+      fx.params.reverbEnabled = enabled;
+      const targetGain = enabled ? (fx.params.reverbMix / 100.0) : 0;
+      fx.reverbGain.gain.setTargetAtTime(targetGain, this.audioCtx.getCurrentTime(), 0.01);
+    }
+  }
+
   // Métodos de alteração de parâmetros do canal selecionado (Efeitos por Pista)
   setEqLowGain(gainDb, channel = this.selectedChannel) {
     const fx = this.channelFx.get(channel);
     if (fx) {
       fx.params.eqLow = gainDb;
-      fx.eqLow.gain.setTargetAtTime(gainDb, this.audioCtx.getCurrentTime(), 0.01);
+      if (fx.params.eqEnabled) {
+        fx.eqLow.gain.setTargetAtTime(gainDb, this.audioCtx.getCurrentTime(), 0.01);
+      }
     }
   }
 
@@ -267,7 +304,9 @@ class FxRackManager {
     const fx = this.channelFx.get(channel);
     if (fx) {
       fx.params.eqMid = gainDb;
-      fx.eqMid.gain.setTargetAtTime(gainDb, this.audioCtx.getCurrentTime(), 0.01);
+      if (fx.params.eqEnabled) {
+        fx.eqMid.gain.setTargetAtTime(gainDb, this.audioCtx.getCurrentTime(), 0.01);
+      }
     }
   }
 
@@ -275,7 +314,9 @@ class FxRackManager {
     const fx = this.channelFx.get(channel);
     if (fx) {
       fx.params.eqHigh = gainDb;
-      fx.eqHigh.gain.setTargetAtTime(gainDb, this.audioCtx.getCurrentTime(), 0.01);
+      if (fx.params.eqEnabled) {
+        fx.eqHigh.gain.setTargetAtTime(gainDb, this.audioCtx.getCurrentTime(), 0.01);
+      }
     }
   }
 
@@ -291,7 +332,9 @@ class FxRackManager {
     const fx = this.channelFx.get(channel);
     if (fx) {
       fx.params.delayMix = Math.round(mixNorm * 100);
-      fx.delayGain.gain.setTargetAtTime(mixNorm, this.audioCtx.getCurrentTime(), 0.01);
+      if (fx.params.delayEnabled) {
+        fx.delayGain.gain.setTargetAtTime(mixNorm, this.audioCtx.getCurrentTime(), 0.01);
+      }
     }
   }
 
@@ -309,7 +352,9 @@ class FxRackManager {
     const fx = this.channelFx.get(channel);
     if (fx) {
       fx.params.reverbMix = Math.round(mixNorm * 100);
-      fx.reverbGain.gain.setTargetAtTime(mixNorm, this.audioCtx.getCurrentTime(), 0.01);
+      if (fx.params.reverbEnabled) {
+        fx.reverbGain.gain.setTargetAtTime(mixNorm, this.audioCtx.getCurrentTime(), 0.01);
+      }
     }
   }
 
