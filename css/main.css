@@ -197,14 +197,23 @@ body {
 }
 
 .preset-select {
-  background: transparent;
-  border: none;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid var(--bg-card-border);
   color: var(--accent-cyan);
   font-family: var(--font-heading);
   font-weight: 700;
   font-size: 11px;
   outline: none;
   cursor: pointer;
+  width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  border-radius: var(--radius-sm);
+  padding: 3px 6px;
+  display: block;
 }
 
 .preset-select option {

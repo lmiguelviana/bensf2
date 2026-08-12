@@ -593,6 +593,7 @@ class MixerConsoleManager {
     }
 
     const muteBtn = strip.querySelector('.btn-mute');
+    muteBtn.title = "Mute (Silenciar) - Clique com o botão direito para MIDI Learn";
     muteBtn.addEventListener('click', (e) => {
       e.stopPropagation();
       const isMuted = !muteBtn.classList.contains('active');
@@ -601,12 +602,18 @@ class MixerConsoleManager {
     });
 
     const soloBtn = strip.querySelector('.btn-solo');
+    soloBtn.title = "Solo (Isolar Pista) - Clique com o botão direito para MIDI Learn";
     soloBtn.addEventListener('click', (e) => {
       e.stopPropagation();
       const isSolo = !soloBtn.classList.contains('active');
       soloBtn.classList.toggle('active', isSolo);
       this.handleSoloToggle(ch, isSolo);
     });
+
+    if (this.midiLearn) {
+      this.midiLearn.attach(muteBtn, `Mute Pista ${chConfig.name}`, () => {});
+      this.midiLearn.attach(soloBtn, `Solo Pista ${chConfig.name}`, () => {});
+    }
 
     return strip;
   }

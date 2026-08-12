@@ -142,7 +142,9 @@ class MidiLearnManager {
   completeLearning(ccNum) {
     if (!this.currentElement || !this.currentCallback) return;
 
-    const bindingKey = this.getElementKey(this.currentElement);
+    const targetElement = this.currentElement;
+    const targetCallback = this.currentCallback;
+    const bindingKey = this.getElementKey(targetElement);
 
     // Remover vínculo antigo se já existia
     this.webMidi.removeCcMapping(ccNum);
@@ -151,25 +153,31 @@ class MidiLearnManager {
     const binding = {
       ccNum,
       label: this.currentLabel,
-      callback: this.currentCallback,
-      element: this.currentElement
+      callback: targetCallback,
+      element: targetElement
     };
 
     this.activeBindings.set(bindingKey, binding);
     this.webMidi.addCcMapping(ccNum, (normVal) => {
-      // Atualizar valor no elemento UI
-      if (this.currentElement.tagName === 'INPUT') {
-        const min = parseFloat(this.currentElement.min) || 0;
-        const max = parseFloat(this.currentElement.max) || 1;
+      // Atualizar valor no elemento UI se for um INPUT (Fader / Slider)
+      if (targetElement.tagName === 'INPUT') {
+        const min = parseFloat(targetElement.min) || 0;
+        const max = parseFloat(targetElement.max) || 1;
         const calcVal = min + (normVal * (max - min));
-        this.currentElement.value = calcVal;
-        this.currentElement.dispatchEvent(new Event('input'));
+        targetElement.value = calcVal;
+        targetElement.dispatchEvent(new Event('input'));
+      } 
+      // Se for um BOTÃO (ex: ON/OFF toggle de Efeito, Mute, Solo)
+      else if (targetElement.tagName === 'BUTTON' || targetElement.classList.contains('btn')) {
+        if (normVal >= 0.5) {
+          targetElement.click();
+        }
       }
-      this.currentCallback(normVal);
+      targetCallback(normVal);
     });
 
-    this.currentElement.classList.remove('midi-learning-target');
-    this.currentElement.classList.add('midi-linked');
+    targetElement.classList.remove('midi-learning-target');
+    targetElement.classList.add('midi-linked');
     this.learningOverlayEl.style.display = 'none';
 
     console.log(`[MidiLearn] "${this.currentLabel}" vinculado com sucesso ao MIDI CC #${ccNum}`);

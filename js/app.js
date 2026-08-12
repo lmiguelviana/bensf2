@@ -259,38 +259,46 @@ document.addEventListener('DOMContentLoaded', () => {
   // 1. MASTER FX CONTROLS & ALGORITMOS VALHALLA & CHORUS ESTÉREO & MIDI LEARN MASTER
   const btnMasterEqToggle = document.getElementById('btnMasterEqToggle');
   if (btnMasterEqToggle) {
+    btnMasterEqToggle.title = 'Clique com o botão direito para MIDI Learn';
     btnMasterEqToggle.addEventListener('click', () => {
       const isAct = btnMasterEqToggle.classList.toggle('active');
       btnMasterEqToggle.textContent = isAct ? 'ON' : 'OFF';
       fxRack.toggleMasterEq(isAct);
     });
+    if (midiLearn) midiLearn.attach(btnMasterEqToggle, 'Master EQ ON/OFF', () => {});
   }
 
   const btnMasterChorusToggle = document.getElementById('btnMasterChorusToggle');
   if (btnMasterChorusToggle) {
+    btnMasterChorusToggle.title = 'Clique com o botão direito para MIDI Learn';
     btnMasterChorusToggle.addEventListener('click', () => {
       const isAct = btnMasterChorusToggle.classList.toggle('active');
       btnMasterChorusToggle.textContent = isAct ? 'ON' : 'OFF';
       fxRack.toggleMasterChorus(isAct);
     });
+    if (midiLearn) midiLearn.attach(btnMasterChorusToggle, 'Master Chorus ON/OFF', () => {});
   }
 
   const btnMasterDelayToggle = document.getElementById('btnMasterDelayToggle');
   if (btnMasterDelayToggle) {
+    btnMasterDelayToggle.title = 'Clique com o botão direito para MIDI Learn';
     btnMasterDelayToggle.addEventListener('click', () => {
       const isAct = btnMasterDelayToggle.classList.toggle('active');
       btnMasterDelayToggle.textContent = isAct ? 'ON' : 'OFF';
       fxRack.toggleMasterDelay(isAct);
     });
+    if (midiLearn) midiLearn.attach(btnMasterDelayToggle, 'Master Delay ON/OFF', () => {});
   }
 
   const btnMasterReverbToggle = document.getElementById('btnMasterReverbToggle');
   if (btnMasterReverbToggle) {
+    btnMasterReverbToggle.title = 'Clique com o botão direito para MIDI Learn';
     btnMasterReverbToggle.addEventListener('click', () => {
       const isAct = btnMasterReverbToggle.classList.toggle('active');
       btnMasterReverbToggle.textContent = isAct ? 'ON' : 'OFF';
       fxRack.toggleMasterReverb(isAct);
     });
+    if (midiLearn) midiLearn.attach(btnMasterReverbToggle, 'Master Reverb ON/OFF', () => {});
   }
 
   const selectMasterReverbMode = document.getElementById('selectMasterReverbMode');
@@ -562,47 +570,57 @@ document.addEventListener('DOMContentLoaded', () => {
 
   const btnTrackCutoffToggle = document.getElementById('btnTrackCutoffToggle');
   if (btnTrackCutoffToggle) {
+    btnTrackCutoffToggle.title = 'Clique com o botão direito para MIDI Learn';
     btnTrackCutoffToggle.addEventListener('click', () => {
       const isAct = btnTrackCutoffToggle.classList.toggle('active');
       btnTrackCutoffToggle.textContent = isAct ? 'ON' : 'OFF';
       fxRack.toggleTrackCutoff(isAct);
     });
+    if (midiLearn) midiLearn.attach(btnTrackCutoffToggle, 'Filtro Cutoff Pista ON/OFF', () => {});
   }
 
   const btnTrackEqToggle = document.getElementById('btnTrackEqToggle');
   if (btnTrackEqToggle) {
+    btnTrackEqToggle.title = 'Clique com o botão direito para MIDI Learn';
     btnTrackEqToggle.addEventListener('click', () => {
       const isAct = btnTrackEqToggle.classList.toggle('active');
       btnTrackEqToggle.textContent = isAct ? 'ON' : 'OFF';
       fxRack.toggleTrackEq(isAct);
     });
+    if (midiLearn) midiLearn.attach(btnTrackEqToggle, 'EQ Pista ON/OFF', () => {});
   }
 
   const btnTrackChorusToggle = document.getElementById('btnTrackChorusToggle');
   if (btnTrackChorusToggle) {
+    btnTrackChorusToggle.title = 'Clique com o botão direito para MIDI Learn';
     btnTrackChorusToggle.addEventListener('click', () => {
       const isAct = btnTrackChorusToggle.classList.toggle('active');
       btnTrackChorusToggle.textContent = isAct ? 'ON' : 'OFF';
       fxRack.toggleTrackChorus(isAct);
     });
+    if (midiLearn) midiLearn.attach(btnTrackChorusToggle, 'Chorus Pista ON/OFF', () => {});
   }
 
   const btnTrackDelayToggle = document.getElementById('btnTrackDelayToggle');
   if (btnTrackDelayToggle) {
+    btnTrackDelayToggle.title = 'Clique com o botão direito para MIDI Learn';
     btnTrackDelayToggle.addEventListener('click', () => {
       const isAct = btnTrackDelayToggle.classList.toggle('active');
       btnTrackDelayToggle.textContent = isAct ? 'ON' : 'OFF';
       fxRack.toggleTrackDelay(isAct);
     });
+    if (midiLearn) midiLearn.attach(btnTrackDelayToggle, 'Delay Pista ON/OFF', () => {});
   }
 
   const btnTrackReverbToggle = document.getElementById('btnTrackReverbToggle');
   if (btnTrackReverbToggle) {
+    btnTrackReverbToggle.title = 'Clique com o botão direito para MIDI Learn';
     btnTrackReverbToggle.addEventListener('click', () => {
       const isAct = btnTrackReverbToggle.classList.toggle('active');
       btnTrackReverbToggle.textContent = isAct ? 'ON' : 'OFF';
       fxRack.toggleTrackReverb(isAct);
     });
+    if (midiLearn) midiLearn.attach(btnTrackReverbToggle, 'Reverb Pista ON/OFF', () => {});
   }
 
   const selectTrackReverbMode = document.getElementById('selectTrackReverbMode');
@@ -1071,6 +1089,7 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   if (btnTrackVelToggle) {
+    btnTrackVelToggle.title = 'Clique com o botão direito para MIDI Learn';
     btnTrackVelToggle.addEventListener('click', () => {
       const activeCh = fxRack ? fxRack.selectedChannel : 1;
       const chObj = synth.channels[activeCh];
@@ -1096,6 +1115,7 @@ document.addEventListener('DOMContentLoaded', () => {
         'info'
       );
     });
+    if (midiLearn) midiLearn.attach(btnTrackVelToggle, 'Velocity Pista ON/OFF', () => {});
   }
 
   if (selectTrackVelMode) {
