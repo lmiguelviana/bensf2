@@ -1,6 +1,6 @@
 /**
- * POLYPHONIC WAVETABLE SYNTHESIZER ENGINE (MULTITIMBRIC)
- * Processador de síntese polifônica para reprodução de áudio SF2 multitimbrico por pista/canal com mapeamento exato de timbres por preset.
+ * POLYPHONIC WAVETABLE SYNTHESIZER ENGINE (MULTITIMBRIC WITH PER-TRACK FX ROUTING)
+ * Processador de síntese polifônica para reprodução de áudio SF2 multitimbrico por pista/canal com roteamento de FX individual.
  */
 
 class SynthEngine {
@@ -60,6 +60,15 @@ class SynthEngine {
       };
 
       this.pitchBendSemi.set(ch, 0);
+    }
+  }
+
+  attachFxRackToChannels(fxRack) {
+    for (let ch = 1; ch <= 16; ch++) {
+      const chConfig = this.channels[ch];
+      if (chConfig && chConfig.gainNode && chConfig.pannerNode) {
+        fxRack.connectChannelNode(ch, chConfig.gainNode, chConfig.pannerNode);
+      }
     }
   }
 

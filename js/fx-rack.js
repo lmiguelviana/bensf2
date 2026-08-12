@@ -1,186 +1,213 @@
 /**
- * MASTER FX RACK PROCESSOR
- * Módulo de Efeitos de Áudio: Reverb Convolver, Stereo Delay e Equalizador de 3 Bandas.
+ * MASTER & PER-TRACK FX RACK ENGINE
+ * Módulo de processamento de efeitos por pista (EQ 3-Band, Stereo Delay, Reverb Estéreo) com seleção dinâmica de canal.
  */
 
 class FxRackManager {
   constructor(audioEngineContext) {
     this.audioCtx = audioEngineContext;
-    this.ctx = null;
 
-    this.inputNode = null;
-    this.outputNode = null;
+    // Master FX Nodes
+    this.masterEqLow = null;
+    this.masterEqMid = null;
+    this.masterEqHigh = null;
+    this.masterDelayNode = null;
+    this.masterDelayGain = null;
+    this.masterReverbNode = null;
+    this.masterReverbGain = null;
 
-    // Nós de Equalizador (3-Band EQ)
-    this.eqLow = null;
-    this.eqMid = null;
-    this.eqHigh = null;
-
-    // Nós de Reverb
-    this.reverbConvolver = null;
-    this.reverbWetGain = null;
-    this.reverbDryGain = null;
-    this.reverbMix = 0.25;
-    this.reverbSize = 0.4;
-
-    // Nós de Delay
-    this.delayNode = null;
-    this.delayFeedbackGain = null;
-    this.delayWetGain = null;
-    this.delayDryGain = null;
-    this.delayMix = 0.2;
-    this.delayTime = 0.3; // 300ms
-
-    this.isInitialized = false;
+    // Per-Channel FX Nodes & State (Ch 1 a 16)
+    this.channelFx = new Map();
+    this.selectedChannel = 1;
+    this.onSelectionChangeCallbacks = [];
   }
 
   init() {
-    if (this.isInitialized) return;
-    this.ctx = this.audioCtx.init();
+    const ctx = this.audioCtx.init();
 
-    // Node de Entrada do FX Rack
-    this.inputNode = this.ctx.createGain();
+    // Inicializar Nódulos de Efeito para cada um dos 16 canais
+    for (let ch = 1; ch <= 16; ch++) {
+      const eqLow = ctx.createBiquadFilter();
+      eqLow.type = 'lowshelf';
+      eqLow.frequency.value = 100;
+      eqLow.gain.value = 0;
 
-    // 1. Configurar Equalizador 3-Bandas
-    this.eqLow = this.ctx.createBiquadFilter();
-    this.eqLow.type = 'lowshelf';
-    this.eqLow.frequency.value = 100;
-    this.eqLow.gain.value = 0;
+      const eqMid = ctx.createBiquadFilter();
+      eqMid.type = 'peaking';
+      eqMid.frequency.value = 1000;
+      eqMid.Q.value = 1.0;
+      eqMid.gain.value = 0;
 
-    this.eqMid = this.ctx.createBiquadFilter();
-    this.eqMid.type = 'peaking';
-    this.eqMid.frequency.value = 1000;
-    this.eqMid.Q.value = 1.0;
-    this.eqMid.gain.value = 0;
+      const eqHigh = ctx.createBiquadFilter();
+      eqHigh.type = 'highshelf';
+      eqHigh.frequency.value = 8000;
+      eqHigh.gain.value = 0;
 
-    this.eqHigh = this.ctx.createBiquadFilter();
-    this.eqHigh.type = 'highshelf';
-    this.eqHigh.frequency.value = 8000;
-    this.eqHigh.gain.value = 0;
+      // Encadeamento do EQ
+      eqLow.connect(eqMid);
+      eqMid.connect(eqHigh);
 
-    // Cadeia de EQ: Input -> EQLow -> EQMid -> EQHigh
-    this.inputNode.connect(this.eqLow);
-    this.eqLow.connect(this.eqMid);
-    this.eqMid.connect(this.eqHigh);
+      // Delay Node do Canal
+      const delayNode = ctx.createDelay();
+      delayNode.delayTime.value = 0.3;
 
-    // 2. Configurar Delay Stereo
-    this.delayNode = this.ctx.createDelay(2.0);
-    this.delayNode.delayTime.value = this.delayTime;
+      const delayFeedback = ctx.createGain();
+      delayFeedback.gain.value = 0.3;
 
-    this.delayFeedbackGain = this.ctx.createGain();
-    this.delayFeedbackGain.gain.value = 0.35; // 35% feedback
+      const delayGain = ctx.createGain();
+      delayGain.gain.value = 0.2;
 
-    this.delayWetGain = this.ctx.createGain();
-    this.delayWetGain.gain.value = this.delayMix;
+      delayNode.connect(delayFeedback);
+      delayFeedback.connect(delayNode);
+      delayNode.connect(delayGain);
 
-    this.delayDryGain = this.ctx.createGain();
-    this.delayDryGain.gain.value = 1.0 - this.delayMix;
+      // Reverb Node do Canal
+      const reverbNode = ctx.createConvolver();
+      reverbNode.buffer = this.createSyntheticImpulse(ctx, 2.0, 2.0);
 
-    // Feedback Loop do Delay: DelayNode -> DelayFeedback -> DelayNode
-    this.delayNode.connect(this.delayFeedbackGain);
-    this.delayFeedbackGain.connect(this.delayNode);
+      const reverbGain = ctx.createGain();
+      reverbGain.gain.value = 0.25;
 
-    // 3. Configurar Reverb Estéreo Sintético (Impulse Response)
-    this.reverbConvolver = this.ctx.createConvolver();
-    this.reverbConvolver.buffer = this.generateImpulseResponse(this.reverbSize);
+      reverbNode.connect(reverbGain);
 
-    this.reverbWetGain = this.ctx.createGain();
-    this.reverbWetGain.gain.value = this.reverbMix;
+      // Roteamento interno
+      eqHigh.connect(delayNode);
+      eqHigh.connect(reverbNode);
 
-    this.reverbDryGain = this.ctx.createGain();
-    this.reverbDryGain.gain.value = 1.0 - this.reverbMix;
+      this.channelFx.set(ch, {
+        eqLow,
+        eqMid,
+        eqHigh,
+        delayNode,
+        delayGain,
+        reverbNode,
+        reverbGain,
+        params: {
+          eqLow: 0,
+          eqMid: 0,
+          eqHigh: 0,
+          delayTime: 300,
+          delayMix: 20,
+          reverbSize: 40,
+          reverbMix: 25
+        }
+      });
+    }
 
-    // Conexões de Roteamento da Cadeia FX:
-    // EQHigh -> DelayDry + DelayNode
-    this.eqHigh.connect(this.delayDryGain);
-    this.eqHigh.connect(this.delayNode);
-    this.delayNode.connect(this.delayWetGain);
-
-    // Delay Output Mix -> ReverbDry + ReverbConvolver
-    const delayOutSum = this.ctx.createGain();
-    this.delayDryGain.connect(delayOutSum);
-    this.delayWetGain.connect(delayOutSum);
-
-    delayOutSum.connect(this.reverbDryGain);
-    delayOutSum.connect(this.reverbConvolver);
-    this.reverbConvolver.connect(this.reverbWetGain);
-
-    // Saída Master FX -> MasterGain -> MasterLimiter
-    const masterFxOutSum = this.ctx.createGain();
-    this.reverbDryGain.connect(masterFxOutSum);
-    this.reverbWetGain.connect(masterFxOutSum);
-
-    masterFxOutSum.connect(this.audioCtx.masterGain);
-
-    this.isInitialized = true;
-    console.log('[FxRackManager] Rack de Efeitos FX Inicializado (EQ 3-Bandas, Delay, Reverb)');
+    console.log('[FxRack] Motor de Efeitos por Pista (16 Canais) inicializado com sucesso.');
   }
 
-  generateImpulseResponse(roomSize) {
-    const ctx = this.ctx || this.audioCtx.init();
-    const rate = ctx.sampleRate;
-    const length = Math.max(1, Math.floor(rate * (0.5 + roomSize * 3.5))); // 0.5s a 4s
-    const impulse = ctx.createBuffer(2, length, rate);
+  createSyntheticImpulse(ctx, durationSec, decaySec) {
+    const sampleRate = ctx.sampleRate;
+    const length = sampleRate * durationSec;
+    const impulse = ctx.createBuffer(2, length, sampleRate);
     const left = impulse.getChannelData(0);
     const right = impulse.getChannelData(1);
 
-    const decay = 2.0 + (1.0 - roomSize) * 6.0;
-
     for (let i = 0; i < length; i++) {
-      const n = length - i;
-      const env = Math.pow(n / length, decay);
+      const n = i / length;
+      const env = Math.pow(1 - n, decaySec);
       left[i] = (Math.random() * 2 - 1) * env;
       right[i] = (Math.random() * 2 - 1) * env;
     }
-
     return impulse;
   }
 
-  setReverbMix(mix) {
-    this.reverbMix = Math.max(0, Math.min(1, mix));
-    if (this.reverbWetGain && this.ctx) {
-      this.reverbWetGain.gain.setTargetAtTime(this.reverbMix, this.ctx.currentTime, 0.01);
-      this.reverbDryGain.gain.setTargetAtTime(1.0 - (this.reverbMix * 0.5), this.ctx.currentTime, 0.01);
+  setSelectedChannel(ch) {
+    this.selectedChannel = parseInt(ch, 10) || 1;
+    this.notifySelectionChange();
+  }
+
+  onSelectionChange(callback) {
+    this.onSelectionChangeCallbacks.push(callback);
+  }
+
+  notifySelectionChange() {
+    const chData = this.channelFx.get(this.selectedChannel);
+    if (chData) {
+      this.onSelectionChangeCallbacks.forEach(cb => cb(this.selectedChannel, chData.params));
     }
   }
 
-  setReverbSize(size) {
-    this.reverbSize = Math.max(0.1, Math.min(1, size));
-    if (this.reverbConvolver && this.ctx) {
-      this.reverbConvolver.buffer = this.generateImpulseResponse(this.reverbSize);
+  getSelectedChannelParams() {
+    const chData = this.channelFx.get(this.selectedChannel);
+    return chData ? chData.params : null;
+  }
+
+  // Métodos de alteração de parâmetros do canal selecionado
+  setEqLowGain(gainDb, channel = this.selectedChannel) {
+    const fx = this.channelFx.get(channel);
+    if (fx) {
+      fx.params.eqLow = gainDb;
+      fx.eqLow.gain.setTargetAtTime(gainDb, this.audioCtx.getCurrentTime(), 0.01);
     }
   }
 
-  setDelayMix(mix) {
-    this.delayMix = Math.max(0, Math.min(1, mix));
-    if (this.delayWetGain && this.ctx) {
-      this.delayWetGain.gain.setTargetAtTime(this.delayMix, this.ctx.currentTime, 0.01);
+  setEqMidGain(gainDb, channel = this.selectedChannel) {
+    const fx = this.channelFx.get(channel);
+    if (fx) {
+      fx.params.eqMid = gainDb;
+      fx.eqMid.gain.setTargetAtTime(gainDb, this.audioCtx.getCurrentTime(), 0.01);
     }
   }
 
-  setDelayTime(timeInSec) {
-    this.delayTime = Math.max(0.05, Math.min(1.5, timeInSec));
-    if (this.delayNode && this.ctx) {
-      this.delayNode.delayTime.setTargetAtTime(this.delayTime, this.ctx.currentTime, 0.01);
+  setEqHighGain(gainDb, channel = this.selectedChannel) {
+    const fx = this.channelFx.get(channel);
+    if (fx) {
+      fx.params.eqHigh = gainDb;
+      fx.eqHigh.gain.setTargetAtTime(gainDb, this.audioCtx.getCurrentTime(), 0.01);
     }
   }
 
-  setEqLowGain(gainDb) {
-    if (this.eqLow && this.ctx) {
-      this.eqLow.gain.setTargetAtTime(gainDb, this.ctx.currentTime, 0.01);
+  setDelayTime(seconds, channel = this.selectedChannel) {
+    const fx = this.channelFx.get(channel);
+    if (fx) {
+      fx.params.delayTime = Math.round(seconds * 1000);
+      fx.delayNode.delayTime.setTargetAtTime(seconds, this.audioCtx.getCurrentTime(), 0.01);
     }
   }
 
-  setEqMidGain(gainDb) {
-    if (this.eqMid && this.ctx) {
-      this.eqMid.gain.setTargetAtTime(gainDb, this.ctx.currentTime, 0.01);
+  setDelayMix(mixNorm, channel = this.selectedChannel) {
+    const fx = this.channelFx.get(channel);
+    if (fx) {
+      fx.params.delayMix = Math.round(mixNorm * 100);
+      fx.delayGain.gain.setTargetAtTime(mixNorm, this.audioCtx.getCurrentTime(), 0.01);
     }
   }
 
-  setEqHighGain(gainDb) {
-    if (this.eqHigh && this.ctx) {
-      this.eqHigh.gain.setTargetAtTime(gainDb, this.ctx.currentTime, 0.01);
+  setReverbSize(sizeNorm, channel = this.selectedChannel) {
+    const fx = this.channelFx.get(channel);
+    if (fx) {
+      fx.params.reverbSize = Math.round(sizeNorm * 100);
+      const duration = 0.5 + (sizeNorm * 4.0);
+      const ctx = this.audioCtx.init();
+      fx.reverbNode.buffer = this.createSyntheticImpulse(ctx, duration, 2.0);
     }
+  }
+
+  setReverbMix(mixNorm, channel = this.selectedChannel) {
+    const fx = this.channelFx.get(channel);
+    if (fx) {
+      fx.params.reverbMix = Math.round(mixNorm * 100);
+      fx.reverbGain.gain.setTargetAtTime(mixNorm, this.audioCtx.getCurrentTime(), 0.01);
+    }
+  }
+
+  // Roteamento dos nós de áudio do canal através do seu FX individual
+  connectChannelNode(channel, sourceGainNode, targetPannerNode) {
+    const fx = this.channelFx.get(channel);
+    if (!fx) {
+      sourceGainNode.connect(targetPannerNode);
+      return;
+    }
+
+    sourceGainNode.disconnect();
+    sourceGainNode.connect(fx.eqLow);
+
+    // Conectar saída do EQ e dos efeitos paralelos ao Panner
+    fx.eqHigh.connect(targetPannerNode);
+    fx.delayGain.connect(targetPannerNode);
+    fx.reverbGain.connect(targetPannerNode);
   }
 }
 

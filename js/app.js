@@ -1,6 +1,6 @@
 /**
  * MASTER APPLICATION CONTROLLER
- * Liga a interface UI ao motor de síntese SF2, Mixer Console, FX Rack, WebMIDI, SettingsModal, PresetManager e MidiLearn.
+ * Liga a interface UI ao motor de síntese SF2, Mixer Console com FX Dinâmico por Pista, WebMIDI, SettingsModal, PresetManager e MidiLearn.
  */
 
 document.addEventListener('DOMContentLoaded', () => {
@@ -10,6 +10,8 @@ document.addEventListener('DOMContentLoaded', () => {
   const fxRack = new FxRackManager(window.audioEngine);
   fxRack.init();
   window.fxRack = fxRack;
+
+  synth.attachFxRackToChannels(fxRack);
 
   const vuMeter = new VuMeterManager(window.audioEngine);
   window.vuMeter = vuMeter;
@@ -24,6 +26,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
   const mixerConsole = new MixerConsoleManager(synth, vuMeter);
   mixerConsole.setMidiLearnManager(midiLearn);
+  mixerConsole.setFxRackManager(fxRack);
   mixerConsole.init(document.getElementById('mixerContainer'));
   window.mixerConsole = mixerConsole;
 
@@ -140,6 +143,8 @@ document.addEventListener('DOMContentLoaded', () => {
   const presetFileInput = document.getElementById('presetFileInput');
   const presetSelect = document.getElementById('presetSelect');
 
+  const fxRackTitleEl = document.getElementById('fxRackTitleText');
+
   // Tab View Switcher
   function switchView(activeTab, showMixer, showFx, showMidi) {
     [tabMixer, tabFxRack, tabMidi].forEach(t => t && t.classList.remove('active'));
@@ -170,10 +175,12 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
-  // Instanciar Knobs 3D VST para o FX Rack com Suporte a MIDI Learn (Botão Direito)
+  // Instanciar Knobs 3D VST para o FX Rack com Suporte a FX Por Pista e MIDI Learn
+  let knobEqLow, knobEqMid, knobEqHigh, knobDelayTime, knobDelayMix, knobReverbSize, knobReverbMix;
+
   const knobLowEl = document.getElementById('knobEqLow');
   if (knobLowEl) {
-    new RotaryKnob(knobLowEl, {
+    knobEqLow = new RotaryKnob(knobLowEl, {
       title: 'GRAVE (100Hz)',
       min: -12, max: 12, step: 0.5, value: 0, unit: 'dB',
       onChange: (val) => fxRack.setEqLowGain(val)
@@ -181,12 +188,13 @@ document.addEventListener('DOMContentLoaded', () => {
     midiLearn.attach(knobLowEl, 'EQ Grave (100Hz)', (normVal) => {
       const dbVal = (normVal * 24.0) - 12.0;
       fxRack.setEqLowGain(dbVal);
+      if (knobEqLow) knobEqLow.setValue(dbVal);
     });
   }
 
   const knobMidEl = document.getElementById('knobEqMid');
   if (knobMidEl) {
-    new RotaryKnob(knobMidEl, {
+    knobEqMid = new RotaryKnob(knobMidEl, {
       title: 'MÉDIO (1kHz)',
       min: -12, max: 12, step: 0.5, value: 0, unit: 'dB',
       onChange: (val) => fxRack.setEqMidGain(val)
@@ -194,12 +202,13 @@ document.addEventListener('DOMContentLoaded', () => {
     midiLearn.attach(knobMidEl, 'EQ Médio (1kHz)', (normVal) => {
       const dbVal = (normVal * 24.0) - 12.0;
       fxRack.setEqMidGain(dbVal);
+      if (knobEqMid) knobEqMid.setValue(dbVal);
     });
   }
 
   const knobHighEl = document.getElementById('knobEqHigh');
   if (knobHighEl) {
-    new RotaryKnob(knobHighEl, {
+    knobEqHigh = new RotaryKnob(knobHighEl, {
       title: 'AGUDO (8kHz)',
       min: -12, max: 12, step: 0.5, value: 0, unit: 'dB',
       onChange: (val) => fxRack.setEqHighGain(val)
@@ -207,12 +216,13 @@ document.addEventListener('DOMContentLoaded', () => {
     midiLearn.attach(knobHighEl, 'EQ Agudo (8kHz)', (normVal) => {
       const dbVal = (normVal * 24.0) - 12.0;
       fxRack.setEqHighGain(dbVal);
+      if (knobEqHigh) knobEqHigh.setValue(dbVal);
     });
   }
 
   const knobDelayTimeEl = document.getElementById('knobDelayTime');
   if (knobDelayTimeEl) {
-    new RotaryKnob(knobDelayTimeEl, {
+    knobDelayTime = new RotaryKnob(knobDelayTimeEl, {
       title: 'TEMPO DELAY',
       min: 50, max: 1000, step: 10, value: 300, unit: 'ms',
       onChange: (val) => fxRack.setDelayTime(val / 1000.0)
@@ -220,44 +230,63 @@ document.addEventListener('DOMContentLoaded', () => {
     midiLearn.attach(knobDelayTimeEl, 'Tempo Delay', (normVal) => {
       const secVal = 0.05 + (normVal * 0.95);
       fxRack.setDelayTime(secVal);
+      if (knobDelayTime) knobDelayTime.setValue(Math.round(secVal * 1000));
     });
   }
 
   const knobDelayMixEl = document.getElementById('knobDelayMix');
   if (knobDelayMixEl) {
-    new RotaryKnob(knobDelayMixEl, {
+    knobDelayMix = new RotaryKnob(knobDelayMixEl, {
       title: 'MISTURA DELAY',
       min: 0, max: 100, step: 1, value: 20, unit: '%',
       onChange: (val) => fxRack.setDelayMix(val / 100.0)
     });
     midiLearn.attach(knobDelayMixEl, 'Mistura Delay', (normVal) => {
       fxRack.setDelayMix(normVal);
+      if (knobDelayMix) knobDelayMix.setValue(Math.round(normVal * 100));
     });
   }
 
   const knobReverbSizeEl = document.getElementById('knobReverbSize');
   if (knobReverbSizeEl) {
-    new RotaryKnob(knobReverbSizeEl, {
+    knobReverbSize = new RotaryKnob(knobReverbSizeEl, {
       title: 'SALA REVERB',
       min: 10, max: 100, step: 1, value: 40, unit: '%',
       onChange: (val) => fxRack.setReverbSize(val / 100.0)
     });
     midiLearn.attach(knobReverbSizeEl, 'Tamanho Sala Reverb', (normVal) => {
       fxRack.setReverbSize(normVal);
+      if (knobReverbSize) knobReverbSize.setValue(Math.round(normVal * 100));
     });
   }
 
   const knobReverbMixEl = document.getElementById('knobReverbMix');
   if (knobReverbMixEl) {
-    new RotaryKnob(knobReverbMixEl, {
+    knobReverbMix = new RotaryKnob(knobReverbMixEl, {
       title: 'MISTURA REVERB',
       min: 0, max: 100, step: 1, value: 25, unit: '%',
       onChange: (val) => fxRack.setReverbMix(val / 100.0)
     });
     midiLearn.attach(knobReverbMixEl, 'Mistura Reverb', (normVal) => {
       fxRack.setReverbMix(normVal);
+      if (knobReverbMix) knobReverbMix.setValue(Math.round(normVal * 100));
     });
   }
+
+  // Atualizar valores dos Knobs quando a pista selecionada mudar!
+  fxRack.onSelectionChange((ch, params) => {
+    if (fxRackTitleEl) {
+      fxRackTitleEl.textContent = `RACK DE EFEITOS - PISTA CH ${ch < 10 ? '0' + ch : ch}: LAYER ${ch}`;
+    }
+
+    if (knobEqLow) knobEqLow.setValue(params.eqLow);
+    if (knobEqMid) knobEqMid.setValue(params.eqMid);
+    if (knobEqHigh) knobEqHigh.setValue(params.eqHigh);
+    if (knobDelayTime) knobDelayTime.setValue(params.delayTime);
+    if (knobDelayMix) knobDelayMix.setValue(params.delayMix);
+    if (knobReverbSize) knobReverbSize.setValue(params.reverbSize);
+    if (knobReverbMix) knobReverbMix.setValue(params.reverbMix);
+  });
 
   // Preset Manager Binds
   if (btnSavePreset) {

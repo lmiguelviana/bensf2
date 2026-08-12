@@ -21,10 +21,21 @@
   box-shadow: 0 4px 15px rgba(0, 0, 0, 0.4);
   transition: all 0.2s ease;
   position: relative;
+  cursor: pointer;
 }
 
 .mixer-channel-strip:hover {
-  border-color: rgba(255, 255, 255, 0.2);
+  border-color: rgba(255, 255, 255, 0.3);
+}
+
+.mixer-channel-strip.selected {
+  border: 2px solid var(--accent-cyan) !important;
+  box-shadow: 0 0 20px rgba(0, 242, 254, 0.35), 0 4px 15px rgba(0, 0, 0, 0.6) !important;
+  background: rgba(0, 242, 254, 0.06) !important;
+}
+
+.mixer-channel-strip.selected .selected-badge {
+  display: inline-block !important;
 }
 
 .channel-header {
@@ -39,6 +50,10 @@
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
 }
 
 .channel-fader-area {

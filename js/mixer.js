@@ -1,6 +1,6 @@
 /**
- * MULTITIMBRIC MIXER CONSOLE MANAGER (16 MIDI CHANNELS WITH MIDI LEARN)
- * Gerenciador dinâmico de 16 pistas de canais MIDI, roteamento por canal físico, seleção de timbres limpos, faders, pan, mute e solo com suporte a MIDI Learn.
+ * MULTITIMBRIC MIXER CONSOLE MANAGER (16 MIDI CHANNELS WITH PER-TRACK SELECTION & MIDI LEARN)
+ * Gerenciador dinâmico de 16 pistas de canais MIDI com seleção de canal para edição de FX individual e MIDI Learn.
  */
 
 class MixerConsoleManager {
@@ -10,6 +10,8 @@ class MixerConsoleManager {
     this.container = null;
     this.totalChannels = 4;
     this.midiLearn = null;
+    this.fxRack = null;
+    this.selectedChannel = 1;
   }
 
   init(containerElement) {
@@ -21,9 +23,27 @@ class MixerConsoleManager {
     this.midiLearn = midiLearnManager;
   }
 
+  setFxRackManager(fxRackManager) {
+    this.fxRack = fxRackManager;
+  }
+
   setVisibleChannelCount(count) {
     this.totalChannels = Math.max(1, Math.min(16, parseInt(count, 10) || 4));
     this.renderMixer();
+  }
+
+  selectChannel(ch) {
+    this.selectedChannel = parseInt(ch, 10) || 1;
+    if (this.container) {
+      this.container.querySelectorAll('.mixer-channel-strip').forEach(el => {
+        const c = parseInt(el.dataset.channel, 10);
+        el.classList.toggle('selected', c === this.selectedChannel);
+      });
+    }
+
+    if (this.fxRack) {
+      this.fxRack.setSelectedChannel(this.selectedChannel);
+    }
   }
 
   renderMixer() {
@@ -32,6 +52,9 @@ class MixerConsoleManager {
 
     for (let ch = 1; ch <= this.totalChannels; ch++) {
       const stripEl = this.createChannelStripElement(ch);
+      if (ch === this.selectedChannel) {
+        stripEl.classList.add('selected');
+      }
       this.container.appendChild(stripEl);
 
       const chConfig = this.synth.channels[ch];
@@ -73,7 +96,10 @@ class MixerConsoleManager {
     }
 
     strip.innerHTML = `
-      <div class="channel-header">CH ${ch < 10 ? '0' + ch : ch}: LAYER ${ch}</div>
+      <div class="channel-header">
+        <span>CH ${ch < 10 ? '0' + ch : ch}: LAYER ${ch}</span>
+        <span class="selected-badge" style="font-size: 8px; color: var(--accent-cyan); display: none;">● FX SELECIONADO</span>
+      </div>
 
       <div class="knob-group" style="width: 100%;">
         <div class="knob-label">CANAL MIDI ENTRADA</div>
@@ -119,6 +145,11 @@ class MixerConsoleManager {
         <button class="btn btn-solo ${chConfig.solo ? 'active' : ''}" data-channel="${ch}">S</button>
       </div>
     `;
+
+    // Selecionar pista ao clicar no strip
+    strip.addEventListener('click', (e) => {
+      this.selectChannel(ch);
+    });
 
     const midiSelect = strip.querySelector('.ch-midi-select');
     midiSelect.addEventListener('change', (e) => {
@@ -172,14 +203,16 @@ class MixerConsoleManager {
     });
 
     const muteBtn = strip.querySelector('.btn-mute');
-    muteBtn.addEventListener('click', () => {
+    muteBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
       const isMuted = !muteBtn.classList.contains('active');
       muteBtn.classList.toggle('active', isMuted);
       this.synth.setChannelMute(ch, isMuted);
     });
 
     const soloBtn = strip.querySelector('.btn-solo');
-    soloBtn.addEventListener('click', () => {
+    soloBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
       const isSolo = !soloBtn.classList.contains('active');
       soloBtn.classList.toggle('active', isSolo);
       this.handleSoloToggle(ch, isSolo);
