@@ -36,6 +36,37 @@ document.addEventListener('DOMContentLoaded', () => {
   let baseOctave = 1;
   let totalKeysToRender = 88; // Padrão 88 teclas estilo Piano Completo
 
+  // Sistema de Notificações Amigáveis (Toast Notifications)
+  function showToastNotification(title, message, type = 'success') {
+    let container = document.querySelector('.toast-notification-container');
+    if (!container) {
+      container = document.createElement('div');
+      container.className = 'toast-notification-container';
+      document.body.appendChild(container);
+    }
+
+    const toast = document.createElement('div');
+    toast.className = `toast-banner ${type}`;
+    const iconMap = { success: '🎉', warning: '⚠️', info: 'ℹ️' };
+    const icon = iconMap[type] || '✨';
+
+    toast.innerHTML = `
+      <div style="font-size: 20px;">${icon}</div>
+      <div>
+        <div style="font-family: var(--font-heading); font-size: 13px; font-weight: 800; color: var(--accent-cyan);">${title}</div>
+        <div style="font-size: 11px; color: var(--text-main); margin-top: 2px;">${message}</div>
+      </div>
+    `;
+
+    container.appendChild(toast);
+
+    setTimeout(() => {
+      toast.style.animation = 'toastFadeOut 0.35s ease forwards';
+      setTimeout(() => toast.remove(), 400);
+    }, 4500);
+  }
+  window.showToastNotification = showToastNotification;
+
   // WebMIDI Manager com iluminação de teclas em tempo real quando o controlador físico toca
   const midiDeviceStatusText = document.getElementById('midiDeviceStatusText');
   const pianoKeysEl = document.getElementById('pianoKeys');
@@ -335,7 +366,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
   const knobTrackMidEl = document.getElementById('knobTrackEqMid');
   if (knobTrackMidEl) {
-    knobTrackMid = new RotaryKnob(knobTrackMidEl, {
+    knobTrackEqMid = new RotaryKnob(knobTrackMidEl, {
       title: 'MÉDIO', min: -12, max: 12, step: 0.5, value: 0, unit: 'dB',
       onChange: (val) => fxRack.setEqMidGain(val)
     });
@@ -433,6 +464,7 @@ document.addEventListener('DOMContentLoaded', () => {
   if (btnSavePreset) {
     btnSavePreset.addEventListener('click', () => {
       presetManager.savePreset();
+      showToastNotification('Preset Salvo!', 'As configurações do banco foram salvas com sucesso.');
     });
   }
 
@@ -441,6 +473,7 @@ document.addEventListener('DOMContentLoaded', () => {
     presetFileInput.addEventListener('change', (e) => {
       if (e.target.files.length > 0) {
         presetManager.importPresetFromJsonFile(e.target.files[0]);
+        showToastNotification('Preset Carregado!', `Arquivo "${e.target.files[0].name}" importado.`);
       }
     });
   }
@@ -562,6 +595,7 @@ document.addEventListener('DOMContentLoaded', () => {
     if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 's') {
       e.preventDefault();
       presetManager.savePreset();
+      showToastNotification('Preset Salvo!', 'Configurações salvas (Ctrl+S)');
       return;
     }
 
@@ -637,7 +671,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
   function handleSf2File(file) {
     if (!file.name.toLowerCase().endsWith('.sf2')) {
-      alert('Por favor, selecione um arquivo válido com extensão .sf2');
+      showToastNotification('Arquivo Inválido', 'Por favor, selecione um arquivo válido com extensão .sf2', 'warning');
       return;
     }
 
@@ -653,10 +687,15 @@ document.addEventListener('DOMContentLoaded', () => {
 
         mixerConsole.renderMixer();
 
-        alert(`SoundFont "${file.name}" carregado com sucesso! Timbres prontos para atribuir às pistas.`);
+        const count = parsedData.presets ? parsedData.presets.length : 0;
+        showToastNotification(
+          'SoundFont Carregado!',
+          `Banco "${file.name}" carregado com sucesso (${count} timbres prontos nas pistas).`,
+          'success'
+        );
       } catch (err) {
         console.error('Erro ao ler arquivo SF2:', err);
-        alert('Erro ao processar o arquivo SF2: ' + err.message);
+        showToastNotification('Erro ao Carregar SF2', err.message, 'warning');
       }
     };
     reader.readAsArrayBuffer(file);

@@ -1,6 +1,6 @@
 /**
  * SOUNDFONT 2 (SF2) BINARY PARSER WITH GENERATOR LINKING
- * Parser binário SF2 com suporte a geradores de instrumentos (pgen/igen) para mapeamento exato de timbres.
+ * Parser binário SF2 com suporte a geradores de instrumentos (pgen/igen) para mapeamento exato de timbres e afinação.
  */
 
 class SoundFont2Parser {
@@ -188,10 +188,13 @@ class SoundFont2Parser {
           const startLoop = this.readUint32();
           const endLoop = this.readUint32();
           const sampleRate = this.readUint32();
-          const originalPitch = this.readUint8();
+          const rawPitch = this.readUint8();
           const pitchCorrection = this.readInt8();
           const sampleLink = this.readUint16();
           const sampleType = this.readUint16();
+
+          // Validação de Afinação Original (Original Pitch): Se estiver fora de 12..108, utilizar 60 (Dó Central - C4)
+          const validPitch = (rawPitch >= 12 && rawPitch <= 108) ? rawPitch : 60;
 
           if (name && name !== 'EOS') {
             this.sampleHeaders.push({
@@ -201,7 +204,7 @@ class SoundFont2Parser {
               startLoop, 
               endLoop, 
               sampleRate, 
-              originalPitch
+              originalPitch: validPitch
             });
           }
         }

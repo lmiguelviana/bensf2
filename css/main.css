@@ -538,6 +538,58 @@ body {
   box-shadow: 0 0 10px rgba(0, 242, 254, 0.2);
 }
 
+/* Toast Notification Banner System */
+.toast-notification-container {
+  position: fixed;
+  top: 70px;
+  right: 20px;
+  z-index: 5000;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  pointer-events: none;
+}
+
+.toast-banner {
+  background: rgba(14, 18, 28, 0.95);
+  backdrop-filter: blur(20px);
+  border: 1px solid var(--accent-cyan);
+  border-left: 4px solid var(--accent-cyan);
+  border-radius: var(--radius-md);
+  padding: 12px 18px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.8), var(--shadow-glow-cyan);
+  color: var(--text-main);
+  font-family: var(--font-body);
+  animation: toastSlideIn 0.35s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+  pointer-events: auto;
+  min-width: 300px;
+}
+
+.toast-banner.success {
+  border-color: var(--accent-emerald);
+  border-left-color: var(--accent-emerald);
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.8), 0 0 15px rgba(0, 230, 118, 0.3);
+}
+
+.toast-banner.warning {
+  border-color: var(--accent-warning);
+  border-left-color: var(--accent-warning);
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.8), 0 0 15px rgba(255, 171, 0, 0.3);
+}
+
+@keyframes toastSlideIn {
+  0% { opacity: 0; transform: translateX(50px) scale(0.9); }
+  100% { opacity: 1; transform: translateX(0) scale(1); }
+}
+
+@keyframes toastFadeOut {
+  0% { opacity: 1; transform: translateX(0); }
+  100% { opacity: 0; transform: translateX(50px); }
+}
+
 /* MIDI Learn Context Menu (Estilo Kontakt / DAW) */
 .midi-learn-menu {
   position: fixed;
