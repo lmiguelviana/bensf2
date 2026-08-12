@@ -1,0 +1,28 @@
+{
+  "packageId": "com.sf2workstation.app",
+  "host": "sf2workstation.app",
+  "name": "SF2 Live Sampler Workstation",
+  "launcherName": "SF2 Workstation",
+  "display": "standalone",
+  "themeColor": "#07090E",
+  "navigationColor": "#07090E",
+  "backgroundColor": "#07090E",
+  "enableNotifications": false,
+  "startUrl": "/",
+  "iconUrl": "assets/icon-512.png",
+  "maskableIconUrl": "assets/icon-512.png",
+  "appVersionName": "1.0.0",
+  "appVersionCode": 1,
+  "shortcuts": [],
+  "generatorApp": "bubblewrap-cli",
+  "webManifestUrl": "manifest.json",
+  "fallbackType": "customtabs",
+  "features": {
+    "locationOptions": {
+      "enable": false
+    }
+  },
+  "alphaDependencies": {
+    "enabled": false
+  }
+}

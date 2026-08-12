@@ -1,0 +1,25 @@
+{
+  "name": "sf2-live-sampler-workstation",
+  "version": "1.0.0",
+  "description": "Cross-Platform SF2 Sampler Workstation and Live MIDI Keyboard Synth (Electron & Mobile)",
+  "main": "main.js",
+  "scripts": {
+    "start": "electron .",
+    "web": "npx http-server -p 8080 ."
+  },
+  "keywords": [
+    "soundfont",
+    "sf2",
+    "midi",
+    "web-audio",
+    "electron",
+    "workstation",
+    "sampler",
+    "synth"
+  ],
+  "author": "Developer",
+  "license": "MIT",
+  "devDependencies": {
+    "electron": "^28.0.0"
+  }
+}

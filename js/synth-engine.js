@@ -1,6 +1,6 @@
 /**
- * POLYPHONIC WAVETABLE SYNTHESIZER ENGINE
- * Processador de síntese polifônica para reprodução de áudio SF2 e gerador de timbres em tempo real.
+ * POLYPHONIC WAVETABLE SYNTHESIZER ENGINE (OTIMIZADO COM GSD-SOUNDFONT-ENGINE)
+ * Processador de síntese polifônica para reprodução de áudio SF2, envelopes ADSR, pontos de loop e Pitch Bend.
  */
 
 class SynthEngine {
@@ -8,13 +8,14 @@ class SynthEngine {
     this.audioCtx = audioEngineContext;
     this.activeVoices = new Map(); // Key: `${channel}_${note}`, Value: voice object
     
-    // Polifonia: Auto por padrão + Sobrescrita manual pelo usuário
+    // Polifonia: Auto por padrão + Sobrescrita manual
     this.isAutoPolyphony = true;
     this.maxPolyphony = this.detectOptimalPolyphony(); 
     
     this.velocityCurve = 'normal'; // 'soft', 'normal', 'hard'
     this.parsedSf2Data = null;
-    this.decodedAudioBuffers = new Map(); // SampleIndex -> AudioBuffer
+    this.decodedAudioBuffers = new Map(); // SampleIndex -> { audioBuffer, loopStart, loopEnd, hasLoop }
+    this.pitchBendSemi = new Map(); // channel -> semitones (-2 a +2)
 
     // Configuração ADSR Padrão
     this.adsr = {
@@ -40,10 +41,9 @@ class SynthEngine {
       const channelGain = ctx.createGain();
       channelGain.gain.value = 1.0;
 
-      // Panning Node
       const panner = ctx.createStereoPanner ? ctx.createStereoPanner() : null;
       if (panner) {
-        panner.pan.value = 0.0; // Centro
+        panner.pan.value = 0.0;
         channelGain.connect(panner);
         panner.connect(this.audioCtx.masterGain);
       } else {
@@ -60,6 +60,8 @@ class SynthEngine {
         transpose: 0,
         selectedPreset: null
       };
+
+      this.pitchBendSemi.set(ch, 0);
     }
   }
 
@@ -76,7 +78,7 @@ class SynthEngine {
   }
 
   setVelocityCurve(curveType) {
-    this.velocityCurve = curveType; // 'soft', 'normal', 'hard'
+    this.velocityCurve = curveType;
     console.log(`[SynthEngine] Curva de velocidade ajustada para: ${this.velocityCurve}`);
   }
 
@@ -87,7 +89,7 @@ class SynthEngine {
     } else if (this.velocityCurve === 'hard') {
       return Math.pow(normVel, 2.8);
     }
-    return Math.pow(normVel, 2.0); // Normal
+    return Math.pow(normVel, 2.0);
   }
 
   loadSoundFont(sf2ParsedObj) {
@@ -108,12 +110,39 @@ class SynthEngine {
             channelData[i] = pcmData[sh.start + i] / 32768.0;
           }
 
-          this.decodedAudioBuffers.set(idx, audioBuf);
+          // Extrair pontos de Loop para sustentação infinita sem corte de áudio
+          const hasLoop = sh.endLoop > sh.startLoop && sh.startLoop > sh.start;
+          const loopStartSec = hasLoop ? (sh.startLoop - sh.start) / sh.sampleRate : 0;
+          const loopEndSec = hasLoop ? (sh.endLoop - sh.start) / sh.sampleRate : 0;
+
+          this.decodedAudioBuffers.set(idx, {
+            audioBuffer: audioBuf,
+            hasLoop,
+            loopStart: loopStartSec,
+            loopEnd: loopEndSec,
+            originalPitch: sh.originalPitch || 60
+          });
         }
       });
     }
 
-    console.log(`[SynthEngine] Banco SF2 carregado com ${this.decodedAudioBuffers.size} áudio buffers pré-renderizados.`);
+    console.log(`[SynthEngine] Banco SF2 carregado com ${this.decodedAudioBuffers.size} áudio buffers e suporte a Loop Points.`);
+  }
+
+  setPitchBend(channel, semitones) {
+    this.pitchBendSemi.set(channel, semitones);
+
+    // Atualizar vozes ativas deste canal em tempo real
+    this.activeVoices.forEach((voice) => {
+      if (voice.channel === channel && voice.sourceNode) {
+        const basePitch = voice.originalPitch || 60;
+        const totalNoteShift = (voice.note + semitones) - basePitch;
+        const pitchRatio = Math.pow(2, totalNoteShift / 12);
+        try {
+          voice.sourceNode.playbackRate.setValueAtTime(pitchRatio, this.audioCtx.getCurrentTime());
+        } catch (e) {}
+      }
+    });
   }
 
   noteOn(note, velocity = 100, channel = 1) {
@@ -134,7 +163,6 @@ class SynthEngine {
       this.noteOff(note, channel);
     }
 
-    // Limite de polifonia (Auto ou Manual)
     if (this.activeVoices.size >= this.maxPolyphony) {
       const oldestKey = this.activeVoices.keys().next().value;
       this.stopVoiceImmediate(oldestKey);
@@ -154,13 +182,23 @@ class SynthEngine {
 
     const sampleIndices = Array.from(this.decodedAudioBuffers.keys());
     const matchedIdx = sampleIndices[actualNote % sampleIndices.length];
-    const audioBuffer = this.decodedAudioBuffers.get(matchedIdx);
+    const sampleObj = this.decodedAudioBuffers.get(matchedIdx);
 
     const sourceNode = ctx.createBufferSource();
-    sourceNode.buffer = audioBuffer;
+    sourceNode.buffer = sampleObj.audioBuffer;
 
-    const basePitch = 60;
-    const pitchRatio = Math.pow(2, (actualNote - basePitch) / 12);
+    // Configurar Loop Points de Sustentação de Órgão/Strings se disponível no SF2
+    if (sampleObj.hasLoop) {
+      sourceNode.loop = true;
+      sourceNode.loopStart = sampleObj.loopStart;
+      sourceNode.loopEnd = sampleObj.loopEnd;
+    }
+
+    // Calcular afinação + Pitch Bend atual
+    const currentBend = this.pitchBendSemi.get(channel) || 0;
+    const basePitch = sampleObj.originalPitch || 60;
+    const totalNoteShift = (actualNote + currentBend) - basePitch;
+    const pitchRatio = Math.pow(2, totalNoteShift / 12);
     sourceNode.playbackRate.value = pitchRatio;
 
     sourceNode.connect(gainNode);
@@ -173,6 +211,7 @@ class SynthEngine {
       gainNode,
       note: actualNote,
       channel,
+      originalPitch: basePitch,
       startTime: now
     });
   }

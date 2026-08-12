@@ -1,5 +1,5 @@
 /**
- * WEBMIDI API INPUT MANAGER
+ * WEBMIDI API INPUT MANAGER (OTIMIZADO COM GSD-WEBMIDI-CONTROLLER)
  * Reconhecimento automático Plug-and-Play de Teclados Controladores MIDI USB (cabo OTG no Android) e Bluetooth MIDI.
  */
 
@@ -25,10 +25,8 @@ class WebMidiManager {
           this.midiAccess = midiAccess;
           console.log('[WebMIDI] Acesso à API WebMIDI concedido com sucesso!');
 
-          // Mapear dispositivos já conectados
           this.updateMidiInputs();
 
-          // Escutar evento de conexão/desconexão de dispositivos em tempo real
           this.midiAccess.onstatechange = (e) => {
             console.log(`[WebMIDI] Estado do dispositivo alterado: ${e.port.name} (${e.port.state})`);
             this.updateMidiInputs();
@@ -59,7 +57,6 @@ class WebMidiManager {
       this.connectedInputs.set(input.id, input);
       deviceNames.push(input.name);
 
-      // Vincular handler de mensagens MIDI
       input.onmidimessage = (e) => this.handleMidiMessage(e);
     }
 
@@ -88,12 +85,10 @@ class WebMidiManager {
       case 0x90: // Note On
         if (velocity > 0) {
           this.synth.noteOn(note, velocity, channel);
-          // Se o pedal de sustain estiver pressionado, rastrear a nota
           if (this.sustainPedalActive) {
             this.sustainedNotes.add(`${channel}_${note}`);
           }
         } else {
-          // Velocity = 0 equivale a Note Off
           this.handleNoteOffEvent(note, channel);
         }
         break;
@@ -102,11 +97,11 @@ class WebMidiManager {
         this.handleNoteOffEvent(note, channel);
         break;
 
-      case 0xE0: // Pitch Bend
-        // Converter valor 14-bit (0 a 16383, centro em 8192)
+      case 0xE0: // Pitch Bend (Roda de Afinação)
         const bendRaw = (data[2] << 7) | data[1];
         const bendNormalized = (bendRaw - 8192) / 8192.0; // -1.0 a +1.0
-        console.log(`[WebMIDI] Pitch Bend: ${bendNormalized.toFixed(2)} no Canal ${channel}`);
+        const bendSemitones = bendNormalized * 2.0; // +/- 2 semitones por padrão
+        this.synth.setPitchBend(channel, bendSemitones);
         break;
 
       case 0xB0: // Control Change (CC)
@@ -115,10 +110,7 @@ class WebMidiManager {
 
         if (ccNumber === 64) { // Pedal de Sustain (Damper)
           this.sustainPedalActive = ccValue >= 64;
-          console.log(`[WebMIDI] Pedal de Sustain: ${this.sustainPedalActive ? 'Pressionado' : 'Solto'}`);
-
           if (!this.sustainPedalActive) {
-            // Ao soltar o pedal, desligar as notas que estavam sustentadas
             this.sustainedNotes.forEach((key) => {
               const [ch, n] = key.split('_').map(Number);
               this.synth.noteOff(n, ch);
@@ -133,7 +125,7 @@ class WebMidiManager {
         }
         break;
 
-      case 0xC0: // Program Change (Troca de Timbre)
+      case 0xC0: // Program Change
         const programNum = data[1];
         console.log(`[WebMIDI] Program Change: ${programNum} no Canal ${channel}`);
         break;
@@ -143,7 +135,6 @@ class WebMidiManager {
   handleNoteOffEvent(note, channel) {
     const key = `${channel}_${note}`;
     if (this.sustainPedalActive) {
-      // Manter a nota soando enquanto o pedal de sustain estiver pressionado
       this.sustainedNotes.add(key);
     } else {
       this.synth.noteOff(note, channel);
