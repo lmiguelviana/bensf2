@@ -148,10 +148,11 @@ document.addEventListener('DOMContentLoaded', () => {
   // Elementos do DOM
   const tabMixer = document.getElementById('tabMixer');
   const tabFxRack = document.getElementById('tabFxRack');
-  const tabMidi = document.getElementById('tabMidi');
+  const tabSetlist = document.getElementById('tabSetlist');
 
   const sectionMixer = document.getElementById('sectionMixer');
   const sectionFxRack = document.getElementById('sectionFxRack');
+  const sectionSetlist = document.getElementById('sectionSetlist');
   const sectionMidiKeyboard = document.getElementById('sectionMidiKeyboard');
 
   const audioStatusDot = document.getElementById('audioStatusDot');
@@ -177,18 +178,23 @@ document.addEventListener('DOMContentLoaded', () => {
 
   const fxRackTitleEl = document.getElementById('fxRackTitleText');
 
-  // Tab View Switcher
-  function switchView(activeTab, showMixer, showFx) {
-    [tabMixer, tabFxRack].forEach(t => t && t.classList.remove('active'));
+  // Tab View Switcher (Mixer & Layers, Rack FX Master, Setlist Live Mode)
+  function switchView(activeTab, showMixer, showFx, showSetlist) {
+    [tabMixer, tabFxRack, tabSetlist].forEach(t => t && t.classList.remove('active'));
     if (activeTab) activeTab.classList.add('active');
 
     if (sectionMixer) sectionMixer.style.display = showMixer ? 'flex' : 'none';
     if (sectionFxRack) sectionFxRack.style.display = showFx ? 'block' : 'none';
+    if (sectionSetlist) sectionSetlist.style.display = showSetlist ? 'block' : 'none';
     if (sectionMidiKeyboard) sectionMidiKeyboard.style.display = 'flex'; // Teclado sempre visível abaixo
   }
 
-  if (tabMixer) tabMixer.addEventListener('click', () => switchView(tabMixer, true, false));
-  if (tabFxRack) tabFxRack.addEventListener('click', () => switchView(tabFxRack, false, true));
+  if (tabMixer) tabMixer.addEventListener('click', () => switchView(tabMixer, true, false, false));
+  if (tabFxRack) tabFxRack.addEventListener('click', () => switchView(tabFxRack, false, true, false));
+  if (tabSetlist) tabSetlist.addEventListener('click', () => {
+    switchView(tabSetlist, false, false, true);
+    if (setlistManager) setlistManager.renderSetlistPanel();
+  });
 
   // Seletor de Quantidade de Canais do Mixer (4, 8, 12, 16)
   if (mixerChannelCountSelect) {
@@ -1368,43 +1374,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   });
 
-  // Tab Switcher (Mixer, FX Master, Setlist Mode)
-  const tabMixer = document.getElementById('tabMixer');
-  const tabFxRack = document.getElementById('tabFxRack');
-  const tabSetlist = document.getElementById('tabSetlist');
-  const sectionMixer = document.getElementById('sectionMixer');
-  const sectionFxRack = document.getElementById('sectionFxRack');
-  const sectionSetlist = document.getElementById('sectionSetlist');
 
-  if (tabMixer && tabFxRack && tabSetlist) {
-    tabMixer.addEventListener('click', () => {
-      tabMixer.classList.add('active');
-      tabFxRack.classList.remove('active');
-      tabSetlist.classList.remove('active');
-      if (sectionMixer) sectionMixer.style.display = 'flex';
-      if (sectionFxRack) sectionFxRack.style.display = 'none';
-      if (sectionSetlist) sectionSetlist.style.display = 'none';
-    });
-
-    tabFxRack.addEventListener('click', () => {
-      tabFxRack.classList.add('active');
-      tabMixer.classList.remove('active');
-      tabSetlist.classList.remove('active');
-      if (sectionFxRack) sectionFxRack.style.display = 'block';
-      if (sectionMixer) sectionMixer.style.display = 'none';
-      if (sectionSetlist) sectionSetlist.style.display = 'none';
-    });
-
-    tabSetlist.addEventListener('click', () => {
-      tabSetlist.classList.add('active');
-      tabMixer.classList.remove('active');
-      tabFxRack.classList.remove('active');
-      if (sectionSetlist) sectionSetlist.style.display = 'block';
-      if (sectionMixer) sectionMixer.style.display = 'none';
-      if (sectionFxRack) sectionFxRack.style.display = 'none';
-      setlistManager.renderSetlistPanel();
-    });
-  }
 
   // Atalhos Globais de Palco (Troca de Músicas do Setlist via Teclado / Pedal)
   window.addEventListener('keydown', (e) => {
