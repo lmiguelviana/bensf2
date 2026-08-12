@@ -1,6 +1,6 @@
 /**
  * MASTER APPLICATION CONTROLLER
- * Liga a interface UI ao motor de síntese SF2, Mixer Console, Master FX, FX por Pista com Envelope ADSR, Algoritmos Valhalla, Chorus Estéreo, Cutoff, Botões Reset e Modal de Configurações.
+ * Liga a interface UI ao motor de síntese SF2, Mixer Console, Master FX, FX por Pista com MIDI Learn universal em TODOS os knobs/controles.
  */
 
 document.addEventListener('DOMContentLoaded', () => {
@@ -204,7 +204,7 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
-  // 1. MASTER FX CONTROLS & ALGORITMOS VALHALLA & CHORUS ESTÉREO & BOTÕES RESET
+  // 1. MASTER FX CONTROLS & ALGORITMOS VALHALLA & CHORUS ESTÉREO & MIDI LEARN MASTER
   const btnMasterEqToggle = document.getElementById('btnMasterEqToggle');
   if (btnMasterEqToggle) {
     btnMasterEqToggle.addEventListener('click', () => {
@@ -256,19 +256,36 @@ document.addEventListener('DOMContentLoaded', () => {
       title: 'GRAVE', min: -12, max: 12, step: 0.5, value: 0, unit: 'dB',
       onChange: (val) => fxRack.setMasterEqLowGain(val)
     });
+    midiLearn.attach(knobMasterLowEl, 'Master EQ Grave', (normVal) => {
+      const dbVal = (normVal * 24.0) - 12.0;
+      fxRack.setMasterEqLowGain(dbVal);
+      if (knobMasterLow) knobMasterLow.setValue(dbVal);
+    });
   }
+
   const knobMasterMidEl = document.getElementById('knobMasterEqMid');
   if (knobMasterMidEl) {
     knobMasterMid = new RotaryKnob(knobMasterMidEl, {
       title: 'MÉDIO', min: -12, max: 12, step: 0.5, value: 0, unit: 'dB',
       onChange: (val) => fxRack.setMasterEqMidGain(val)
     });
+    midiLearn.attach(knobMasterMidEl, 'Master EQ Médio', (normVal) => {
+      const dbVal = (normVal * 24.0) - 12.0;
+      fxRack.setMasterEqMidGain(dbVal);
+      if (knobMasterMid) knobMasterMid.setValue(dbVal);
+    });
   }
+
   const knobMasterHighEl = document.getElementById('knobMasterEqHigh');
   if (knobMasterHighEl) {
     knobMasterHigh = new RotaryKnob(knobMasterHighEl, {
       title: 'AGUDO', min: -12, max: 12, step: 0.5, value: 0, unit: 'dB',
       onChange: (val) => fxRack.setMasterEqHighGain(val)
+    });
+    midiLearn.attach(knobMasterHighEl, 'Master EQ Agudo', (normVal) => {
+      const dbVal = (normVal * 24.0) - 12.0;
+      fxRack.setMasterEqHighGain(dbVal);
+      if (knobMasterHigh) knobMasterHigh.setValue(dbVal);
     });
   }
 
@@ -278,6 +295,11 @@ document.addEventListener('DOMContentLoaded', () => {
       title: 'CHORUS', min: 0, max: 100, step: 1, value: 30, unit: '%',
       onChange: (val) => fxRack.setMasterChorusMix(val / 100.0)
     });
+    midiLearn.attach(knobMasterChorusMixEl, 'Master Chorus Mistura', (normVal) => {
+      const pctVal = Math.round(normVal * 100);
+      fxRack.setMasterChorusMix(normVal);
+      if (knobMasterChorusMix) knobMasterChorusMix.setValue(pctVal);
+    });
   }
 
   const knobMasterDelayTimeEl = document.getElementById('knobMasterDelayTime');
@@ -286,12 +308,23 @@ document.addEventListener('DOMContentLoaded', () => {
       title: 'TEMPO', min: 50, max: 1000, step: 10, value: 300, unit: 'ms',
       onChange: (val) => fxRack.setMasterDelayTime(val / 1000.0)
     });
+    midiLearn.attach(knobMasterDelayTimeEl, 'Master Delay Tempo', (normVal) => {
+      const msVal = Math.round(50 + (normVal * 950));
+      fxRack.setMasterDelayTime(msVal / 1000.0);
+      if (knobMasterDelayTime) knobMasterDelayTime.setValue(msVal);
+    });
   }
+
   const knobMasterDelayMixEl = document.getElementById('knobMasterDelayMix');
   if (knobMasterDelayMixEl) {
     knobMasterDelayMix = new RotaryKnob(knobMasterDelayMixEl, {
       title: 'MISTURA', min: 0, max: 100, step: 1, value: 20, unit: '%',
       onChange: (val) => fxRack.setMasterDelayMix(val / 100.0)
+    });
+    midiLearn.attach(knobMasterDelayMixEl, 'Master Delay Mistura', (normVal) => {
+      const pctVal = Math.round(normVal * 100);
+      fxRack.setMasterDelayMix(normVal);
+      if (knobMasterDelayMix) knobMasterDelayMix.setValue(pctVal);
     });
   }
 
@@ -301,12 +334,23 @@ document.addEventListener('DOMContentLoaded', () => {
       title: 'SALA', min: 10, max: 100, step: 1, value: 40, unit: '%',
       onChange: (val) => fxRack.setMasterReverbSize(val / 100.0)
     });
+    midiLearn.attach(knobMasterReverbSizeEl, 'Master Reverb Tamanho Sala', (normVal) => {
+      const pctVal = Math.round(10 + (normVal * 90));
+      fxRack.setMasterReverbSize(pctVal / 100.0);
+      if (knobMasterReverbSize) knobMasterReverbSize.setValue(pctVal);
+    });
   }
+
   const knobMasterReverbMixEl = document.getElementById('knobMasterReverbMix');
   if (knobMasterReverbMixEl) {
     knobMasterReverbMix = new RotaryKnob(knobMasterReverbMixEl, {
       title: 'MISTURA', min: 0, max: 100, step: 1, value: 25, unit: '%',
       onChange: (val) => fxRack.setMasterReverbMix(val / 100.0)
+    });
+    midiLearn.attach(knobMasterReverbMixEl, 'Master Reverb Mistura', (normVal) => {
+      const pctVal = Math.round(normVal * 100);
+      fxRack.setMasterReverbMix(normVal);
+      if (knobMasterReverbMix) knobMasterReverbMix.setValue(pctVal);
     });
   }
 
@@ -377,7 +421,7 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
-  // 2. PER-TRACK FX CONTROLS & ADSR & CUTOFF & CHORUS & VALHALLA REVERBS & BOTÕES RESET
+  // 2. PER-TRACK FX CONTROLS & ADSR & CUTOFF & CHORUS & VALHALLA REVERBS & UNIVERSAL MIDI LEARN
   let knobTrackAdsrAttack, knobTrackAdsrDecay, knobTrackAdsrSustain, knobTrackAdsrRelease;
 
   const knobAttackEl = document.getElementById('knobTrackAdsrAttack');
@@ -390,6 +434,14 @@ document.addEventListener('DOMContentLoaded', () => {
           synth.channels[ch].adsr.attack = val / 1000.0;
         }
       }
+    });
+    midiLearn.attach(knobAttackEl, 'Envelope ADSR Attack', (normVal) => {
+      const ch = fxRack.selectedChannel;
+      const msVal = Math.round(1 + (normVal * 1999));
+      if (synth.channels[ch] && synth.channels[ch].adsr) {
+        synth.channels[ch].adsr.attack = msVal / 1000.0;
+      }
+      if (knobTrackAdsrAttack) knobTrackAdsrAttack.setValue(msVal);
     });
   }
 
@@ -404,6 +456,14 @@ document.addEventListener('DOMContentLoaded', () => {
         }
       }
     });
+    midiLearn.attach(knobDecayEl, 'Envelope ADSR Decay', (normVal) => {
+      const ch = fxRack.selectedChannel;
+      const msVal = Math.round(10 + (normVal * 2990));
+      if (synth.channels[ch] && synth.channels[ch].adsr) {
+        synth.channels[ch].adsr.decay = msVal / 1000.0;
+      }
+      if (knobTrackAdsrDecay) knobTrackAdsrDecay.setValue(msVal);
+    });
   }
 
   const knobSustainEl = document.getElementById('knobTrackAdsrSustain');
@@ -417,6 +477,14 @@ document.addEventListener('DOMContentLoaded', () => {
         }
       }
     });
+    midiLearn.attach(knobSustainEl, 'Envelope ADSR Sustain', (normVal) => {
+      const ch = fxRack.selectedChannel;
+      const pctVal = Math.round(normVal * 100);
+      if (synth.channels[ch] && synth.channels[ch].adsr) {
+        synth.channels[ch].adsr.sustain = normVal;
+      }
+      if (knobTrackAdsrSustain) knobTrackAdsrSustain.setValue(pctVal);
+    });
   }
 
   const knobReleaseEl = document.getElementById('knobTrackAdsrRelease');
@@ -429,6 +497,14 @@ document.addEventListener('DOMContentLoaded', () => {
           synth.channels[ch].adsr.release = val / 1000.0;
         }
       }
+    });
+    midiLearn.attach(knobReleaseEl, 'Envelope ADSR Release', (normVal) => {
+      const ch = fxRack.selectedChannel;
+      const msVal = Math.round(10 + (normVal * 4990));
+      if (synth.channels[ch] && synth.channels[ch].adsr) {
+        synth.channels[ch].adsr.release = msVal / 1000.0;
+      }
+      if (knobTrackAdsrRelease) knobTrackAdsrRelease.setValue(msVal);
     });
   }
 
@@ -544,6 +620,11 @@ document.addEventListener('DOMContentLoaded', () => {
       title: 'CHORUS', min: 0, max: 100, step: 1, value: 30, unit: '%',
       onChange: (val) => fxRack.setChorusMix(val / 100.0)
     });
+    midiLearn.attach(knobTrackChorusMixEl, 'Chorus Pista Mistura', (normVal) => {
+      const pctVal = Math.round(normVal * 100);
+      fxRack.setChorusMix(normVal);
+      if (knobTrackChorusMix) knobTrackChorusMix.setValue(pctVal);
+    });
   }
 
   const knobTrackDelayTimeEl = document.getElementById('knobTrackDelayTime');
@@ -551,6 +632,11 @@ document.addEventListener('DOMContentLoaded', () => {
     knobTrackDelayTime = new RotaryKnob(knobTrackDelayTimeEl, {
       title: 'TEMPO', min: 50, max: 1000, step: 10, value: 300, unit: 'ms',
       onChange: (val) => fxRack.setDelayTime(val / 1000.0)
+    });
+    midiLearn.attach(knobTrackDelayTimeEl, 'Delay Pista Tempo', (normVal) => {
+      const msVal = Math.round(50 + (normVal * 950));
+      fxRack.setDelayTime(msVal / 1000.0);
+      if (knobTrackDelayTime) knobTrackDelayTime.setValue(msVal);
     });
   }
 
@@ -560,6 +646,11 @@ document.addEventListener('DOMContentLoaded', () => {
       title: 'MISTURA', min: 0, max: 100, step: 1, value: 20, unit: '%',
       onChange: (val) => fxRack.setDelayMix(val / 100.0)
     });
+    midiLearn.attach(knobTrackDelayMixEl, 'Delay Pista Mistura', (normVal) => {
+      const pctVal = Math.round(normVal * 100);
+      fxRack.setDelayMix(normVal);
+      if (knobTrackDelayMix) knobTrackDelayMix.setValue(pctVal);
+    });
   }
 
   const knobTrackReverbSizeEl = document.getElementById('knobTrackReverbSize');
@@ -568,6 +659,11 @@ document.addEventListener('DOMContentLoaded', () => {
       title: 'SALA', min: 10, max: 100, step: 1, value: 40, unit: '%',
       onChange: (val) => fxRack.setReverbSize(val / 100.0)
     });
+    midiLearn.attach(knobTrackReverbSizeEl, 'Reverb Pista Tamanho Sala', (normVal) => {
+      const pctVal = Math.round(10 + (normVal * 90));
+      fxRack.setReverbSize(pctVal / 100.0);
+      if (knobTrackReverbSize) knobTrackReverbSize.setValue(pctVal);
+    });
   }
 
   const knobTrackReverbMixEl = document.getElementById('knobTrackReverbMix');
@@ -575,6 +671,11 @@ document.addEventListener('DOMContentLoaded', () => {
     knobTrackReverbMix = new RotaryKnob(knobTrackReverbMixEl, {
       title: 'MISTURA', min: 0, max: 100, step: 1, value: 25, unit: '%',
       onChange: (val) => fxRack.setReverbMix(val / 100.0)
+    });
+    midiLearn.attach(knobTrackReverbMixEl, 'Reverb Pista Mistura', (normVal) => {
+      const pctVal = Math.round(normVal * 100);
+      fxRack.setReverbMix(normVal);
+      if (knobTrackReverbMix) knobTrackReverbMix.setValue(pctVal);
     });
   }
 
