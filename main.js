@@ -1,41 +1,47 @@
-const { app, BrowserWindow, Menu } = require('electron');
+const { app, BrowserWindow } = require('electron');
 const path = require('path');
 
-let mainWindow;
-
 function createWindow() {
-  mainWindow = new BrowserWindow({
-    title: 'BenSF2 - Live Sampler Workstation',
-    width: 1380,
+  const mainWindow = new BrowserWindow({
+    width: 1360,
     height: 860,
-    minWidth: 1024,
-    minHeight: 700,
-    backgroundColor: '#07090e',
+    minWidth: 1100,
+    minHeight: 740,
+    center: true,
+    title: 'BenSF2 - Live Sampler Workstation',
     titleBarStyle: 'hidden',
     titleBarOverlay: {
-      color: '#07090e',
-      symbolColor: '#8a99ad',
+      color: '#0a0d14',
+      symbolColor: '#f0f4f8',
       height: 38
     },
     webPreferences: {
       preload: path.join(__dirname, 'preload.js'),
+      nodeIntegration: false,
       contextIsolation: true,
-      nodeIntegration: false
-    }
+      webSecurity: true
+    },
+    icon: path.join(__dirname, 'assets/icon-512.png')
   });
 
   mainWindow.loadFile('index.html');
-  Menu.setApplicationMenu(null);
+
+  // Opcional: Remover menu de aplicativo padrão do Windows para manter estética pura DAW
+  mainWindow.setMenuBarVisibility(false);
 }
 
 app.whenReady().then(() => {
   createWindow();
 
   app.on('activate', () => {
-    if (BrowserWindow.getAllWindows().length === 0) createWindow();
+    if (BrowserWindow.getAllWindows().length === 0) {
+      createWindow();
+    }
   });
 });
 
 app.on('window-all-closed', () => {
-  if (process.platform !== 'darwin') app.quit();
+  if (process.platform !== 'darwin') {
+    app.quit();
+  }
 });
