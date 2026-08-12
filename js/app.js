@@ -1,6 +1,6 @@
 /**
  * MASTER APPLICATION CONTROLLER
- * Liga a interface UI ao motor de síntese SF2, Mixer Console, FX Rack, WebMIDI, PresetManager e Teclado de 5-7 Oitavas.
+ * Liga a interface UI ao motor de síntese SF2, Mixer Console, FX Rack, WebMIDI, PresetManager e Teclado 100% Responsivo.
  */
 
 document.addEventListener('DOMContentLoaded', () => {
@@ -96,7 +96,7 @@ document.addEventListener('DOMContentLoaded', () => {
   const presetFileInput = document.getElementById('presetFileInput');
   const presetSelect = document.getElementById('presetSelect');
 
-  // Tab View Switcher (Navegação Suave)
+  // Tab View Switcher
   function switchView(activeTab, showMixer, showFx, showMidi) {
     [tabMixer, tabFxRack, tabMidi].forEach(t => t && t.classList.remove('active'));
     if (activeTab) activeTab.classList.add('active');
@@ -234,11 +234,22 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
-  // Renderizar Teclado Virtual Piano
+  // Renderizar Teclado Virtual Piano 100% Responsivo e Adaptável
   function renderPianoKeyboard() {
     pianoKeysEl.innerHTML = '';
     const startNote = totalKeysToRender === 88 ? 21 : baseOctave * 12;
     const noteNames = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'];
+
+    // Contar total de teclas brancas para calcular o flex-growth 100% fluido
+    let whiteCount = 0;
+    for (let i = 0; i < totalKeysToRender; i++) {
+      const noteNum = startNote + i;
+      if (noteNum > 108) break;
+      if (!noteNames[noteNum % 12].includes('#')) whiteCount++;
+    }
+
+    const blackWidthPct = (100.0 / whiteCount) * 0.65;
+    const blackMarginPct = (100.0 / whiteCount) * 0.325;
 
     for (let i = 0; i < totalKeysToRender; i++) {
       const noteNum = startNote + i;
@@ -251,7 +262,11 @@ document.addEventListener('DOMContentLoaded', () => {
       keyEl.className = `piano-key ${isBlack ? 'black' : 'white'}`;
       keyEl.dataset.note = noteNum;
 
-      if (!isBlack) {
+      if (isBlack) {
+        keyEl.style.width = `${blackWidthPct}%`;
+        keyEl.style.marginLeft = `-${blackMarginPct}%`;
+        keyEl.style.marginRight = `-${blackMarginPct}%`;
+      } else {
         const label = document.createElement('span');
         label.className = 'key-label';
         label.textContent = `${noteName}${Math.floor(noteNum / 12) - 1}`;
