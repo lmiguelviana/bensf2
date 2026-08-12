@@ -132,10 +132,12 @@ class MixerConsoleManager {
       keyRangeHigh: 127
     };
 
-    let presetOptionsHtml = `<option value="0">Default Sound</option>`;
+    let presetOptionsHtml = `<option value="" disabled selected>(sem timbre)</option>`;
     if (this.synth.parsedSf2Data && this.synth.parsedSf2Data.presets && this.synth.parsedSf2Data.presets.length > 0) {
-      presetOptionsHtml = this.synth.parsedSf2Data.presets.map((p, idx) => {
-        const isSelected = idx === chConfig.assignedPresetIndex ? 'selected' : '';
+      const noTimbreSelected = chConfig.assignedPresetIndex === null || chConfig.assignedPresetIndex === undefined;
+      presetOptionsHtml = `<option value="" ${noTimbreSelected ? 'selected' : ''} disabled style="color:#888;">(sem timbre)</option>`;
+      presetOptionsHtml += this.synth.parsedSf2Data.presets.map((p, idx) => {
+        const isSelected = !noTimbreSelected && idx === chConfig.assignedPresetIndex ? 'selected' : '';
         const cleanName = (p.name || `Preset #${idx}`).replace(/[^\x20-\x7E]/g, '').trim() || `Preset ${p.bank}:${p.preset}`;
         return `<option value="${idx}" ${isSelected}>${cleanName} (${p.bank}:${p.preset})</option>`;
       }).join('');
@@ -347,6 +349,7 @@ class MixerConsoleManager {
 
     const presetSelect = strip.querySelector('.ch-preset-select');
     presetSelect.addEventListener('change', (e) => {
+      if (e.target.value === '' || e.target.value === null) return; // opção "(sem timbre)" ignorada
       const idx = parseInt(e.target.value, 10);
       this.synth.setChannelPreset(ch, idx);
     });
@@ -413,13 +416,26 @@ class MixerConsoleManager {
         }
       };
 
+      let isLearningLow = false;
+      const cancelLearnLow = () => {
+        if (isLearningLow) {
+          isLearningLow = false;
+          splitLowInput.value = midiToNoteName(this.synth.channels[ch].keyRangeLow);
+          splitLowInput.style.borderColor = '';
+          splitLowInput.style.boxShadow = '';
+          if (window.webMidi) window.webMidi.setNoteLearningCallback(null);
+        }
+      };
+
       const startLearnLow = () => {
+        isLearningLow = true;
         splitLowInput.value = 'TOCAR...';
         splitLowInput.style.borderColor = 'var(--accent-cyan)';
         splitLowInput.style.boxShadow = '0 0 10px var(--accent-cyan)';
 
         if (window.webMidi) {
           window.webMidi.setNoteLearningCallback((noteNum) => {
+            isLearningLow = false;
             splitLowInput.style.borderColor = '';
             splitLowInput.style.boxShadow = '';
             updateLowVal(noteNum);
@@ -432,7 +448,12 @@ class MixerConsoleManager {
         startLearnLow();
       });
 
+      splitLowInput.addEventListener('blur', () => {
+        cancelLearnLow();
+      });
+
       splitLowInput.addEventListener('change', (e) => {
+        isLearningLow = false;
         const parsed = noteNameToMidi(e.target.value);
         updateLowVal(parsed);
       });
@@ -440,8 +461,13 @@ class MixerConsoleManager {
       splitLowInput.addEventListener('keydown', (e) => {
         if (e.key === 'Enter') {
           e.preventDefault();
+          isLearningLow = false;
           const parsed = noteNameToMidi(e.target.value);
           updateLowVal(parsed);
+          splitLowInput.blur();
+        } else if (e.key === 'Escape') {
+          e.preventDefault();
+          cancelLearnLow();
           splitLowInput.blur();
         }
       });
@@ -462,13 +488,26 @@ class MixerConsoleManager {
         }
       };
 
+      let isLearningHigh = false;
+      const cancelLearnHigh = () => {
+        if (isLearningHigh) {
+          isLearningHigh = false;
+          splitHighInput.value = midiToNoteName(this.synth.channels[ch].keyRangeHigh);
+          splitHighInput.style.borderColor = '';
+          splitHighInput.style.boxShadow = '';
+          if (window.webMidi) window.webMidi.setNoteLearningCallback(null);
+        }
+      };
+
       const startLearnHigh = () => {
+        isLearningHigh = true;
         splitHighInput.value = 'TOCAR...';
         splitHighInput.style.borderColor = 'var(--accent-purple)';
         splitHighInput.style.boxShadow = '0 0 10px var(--accent-purple)';
 
         if (window.webMidi) {
           window.webMidi.setNoteLearningCallback((noteNum) => {
+            isLearningHigh = false;
             splitHighInput.style.borderColor = '';
             splitHighInput.style.boxShadow = '';
             updateHighVal(noteNum);
@@ -481,7 +520,12 @@ class MixerConsoleManager {
         startLearnHigh();
       });
 
+      splitHighInput.addEventListener('blur', () => {
+        cancelLearnHigh();
+      });
+
       splitHighInput.addEventListener('change', (e) => {
+        isLearningHigh = false;
         const parsed = noteNameToMidi(e.target.value);
         updateHighVal(parsed);
       });
@@ -489,8 +533,13 @@ class MixerConsoleManager {
       splitHighInput.addEventListener('keydown', (e) => {
         if (e.key === 'Enter') {
           e.preventDefault();
+          isLearningHigh = false;
           const parsed = noteNameToMidi(e.target.value);
           updateHighVal(parsed);
+          splitHighInput.blur();
+        } else if (e.key === 'Escape') {
+          e.preventDefault();
+          cancelLearnHigh();
           splitHighInput.blur();
         }
       });

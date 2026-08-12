@@ -147,9 +147,13 @@ class SynthEngine {
       });
     }
 
+    // NÃO atribuir timbre automaticamente a todas as pistas.
+    // O usuário deve selecionar a pista e clicar no timbre desejado no banco.
+    // Apenas o canal 1 (padrão) recebe o primeiro timbre como ponto de partida.
     if (sf2ParsedObj.presets && sf2ParsedObj.presets.length > 0) {
-      for (let ch = 1; ch <= 16; ch++) {
-        this.channels[ch].assignedPresetIndex = (ch - 1) % sf2ParsedObj.presets.length;
+      this.channels[1].assignedPresetIndex = 0;
+      for (let ch = 2; ch <= 16; ch++) {
+        this.channels[ch].assignedPresetIndex = null; // sem timbre até o usuário escolher
       }
     }
 
@@ -200,6 +204,9 @@ class SynthEngine {
 
       const isMatchingChannel = chConfig.assignedMidiChannel === 'all' || chConfig.assignedMidiChannel === channel || ch === channel;
       if (!isMatchingChannel) continue;
+
+      // Pular canal se não houver timbre atribuído (usuário ainda não selecionou do banco)
+      if (chConfig.assignedPresetIndex === null || chConfig.assignedPresetIndex === undefined) continue;
 
       // Filtragem por Zona de Teclado (Split Min/Max)
       const lowLimit = chConfig.keyRangeLow !== undefined ? chConfig.keyRangeLow : 0;
