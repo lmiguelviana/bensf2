@@ -228,6 +228,24 @@ class MixerConsoleManager {
         </div>
       </div>
 
+      <!-- CURVA DE VELOCITY DA PISTA (SOBREPOSIÇÃO INDIVIDUAL OU PADRÃO GLOBAL) -->
+      <div class="knob-group" style="width: 100%; margin-top: 3px;">
+        <div class="knob-label" style="display: flex; justify-content: space-between; align-items: center;">
+          <span>VELOCITY</span>
+          <span class="ch-vel-badge-${ch}" style="font-size: 8px; color: ${chConfig.velocitySettings && !chConfig.velocitySettings.useGlobal ? 'var(--accent-cyan)' : 'var(--text-muted)'}; font-weight: 800;">
+            ${chConfig.velocitySettings && !chConfig.velocitySettings.useGlobal ? '● PISTA' : '🌐 GLOBAL'}
+          </span>
+        </div>
+        <select class="ch-velocity-select preset-select" data-channel="${ch}" style="width: 100%; font-size: 10px; padding: 2px;">
+          <option value="global" ${!chConfig.velocitySettings || chConfig.velocitySettings.useGlobal ? 'selected' : ''}>🌐 Padrão Global</option>
+          <option value="normal" ${chConfig.velocitySettings && !chConfig.velocitySettings.useGlobal && chConfig.velocitySettings.mode === 'normal' ? 'selected' : ''}>Standard (Normal)</option>
+          <option value="soft" ${chConfig.velocitySettings && !chConfig.velocitySettings.useGlobal && chConfig.velocitySettings.mode === 'soft' ? 'selected' : ''}>Soft (Leve)</option>
+          <option value="hard" ${chConfig.velocitySettings && !chConfig.velocitySettings.useGlobal && chConfig.velocitySettings.mode === 'hard' ? 'selected' : ''}>Hard (Pesado)</option>
+          <option value="compressed" ${chConfig.velocitySettings && !chConfig.velocitySettings.useGlobal && chConfig.velocitySettings.mode === 'compressed' ? 'selected' : ''}>Comprimido (Dyn Compress)</option>
+          <option value="fixed" ${chConfig.velocitySettings && !chConfig.velocitySettings.useGlobal && chConfig.velocitySettings.mode === 'fixed' ? 'selected' : ''}>Fixo (Velocidade 120)</option>
+        </select>
+      </div>
+
       <div class="button-group-row" style="margin-top: 4px;">
         <button class="btn btn-mute ${chConfig.muted ? 'active' : ''}" data-channel="${ch}">M</button>
         <button class="btn btn-solo ${chConfig.solo ? 'active' : ''}" data-channel="${ch}">S</button>
@@ -354,6 +372,32 @@ class MixerConsoleManager {
       const idx = parseInt(e.target.value, 10);
       this.synth.setChannelPreset(ch, idx);
     });
+
+    const velSelect = strip.querySelector('.ch-velocity-select');
+    if (velSelect) {
+      velSelect.addEventListener('change', (e) => {
+        const val = e.target.value;
+        const badge = strip.querySelector(`.ch-vel-badge-${ch}`);
+        if (!this.synth.channels[ch].velocitySettings) {
+          this.synth.channels[ch].velocitySettings = { useGlobal: true, mode: 'normal', minVel: 1, maxVel: 127 };
+        }
+
+        if (val === 'global') {
+          this.synth.channels[ch].velocitySettings.useGlobal = true;
+          if (badge) {
+            badge.textContent = '🌐 GLOBAL';
+            badge.style.color = 'var(--text-muted)';
+          }
+        } else {
+          this.synth.channels[ch].velocitySettings.useGlobal = false;
+          this.synth.channels[ch].velocitySettings.mode = val;
+          if (badge) {
+            badge.textContent = '● PISTA';
+            badge.style.color = 'var(--accent-cyan)';
+          }
+        }
+      });
+    }
 
     const volInput = strip.querySelector('.ch-volume');
     const volDisplay = strip.querySelector(`#volVal_${ch}`);

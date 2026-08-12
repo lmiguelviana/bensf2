@@ -12,6 +12,15 @@ class SynthEngine {
     this.maxPolyphony = this.detectOptimalPolyphony(); 
     
     this.velocityCurve = 'normal';
+    this.globalVelocitySettings = {
+      mode: 'normal',
+      minVel: 1,
+      maxVel: 127,
+      curvePower: 2.0,
+      fixedVel: 120
+    };
+    this.onVelocityTrigger = null;
+
     this.parsedSf2Data = null;
     this.decodedAudioBuffers = new Map();
     this.pitchBendSemi = new Map();
@@ -62,7 +71,15 @@ class SynthEngine {
         assignedPresetIndex: ch === 1 ? 0 : null,
         assignedMidiChannel: 'all',
         keyRangeLow: 0,
-        keyRangeHigh: 127
+        keyRangeHigh: 127,
+        velocitySettings: {
+          useGlobal: true,
+          mode: 'normal',
+          minVel: 1,
+          maxVel: 127,
+          curvePower: 2.0,
+          fixedVel: 120
+        }
       };
 
       this.pitchBendSemi.set(ch, 0);
@@ -96,16 +113,46 @@ class SynthEngine {
 
   setVelocityCurve(curveType) {
     this.velocityCurve = curveType;
+    if (this.globalVelocitySettings) {
+      this.globalVelocitySettings.mode = curveType;
+    }
   }
 
-  calculateVelocityGain(velocity) {
-    const normVel = Math.max(0, Math.min(127, velocity)) / 127.0;
-    if (this.velocityCurve === 'soft') {
-      return Math.pow(normVel, 1.2);
-    } else if (this.velocityCurve === 'hard') {
-      return Math.pow(normVel, 2.8);
+  calculateVelocityGain(velocity, channel = 1) {
+    const chConfig = this.channels[channel];
+    const settings = (!chConfig || !chConfig.velocitySettings || chConfig.velocitySettings.useGlobal)
+      ? this.globalVelocitySettings
+      : chConfig.velocitySettings;
+
+    if (settings.mode === 'fixed') {
+      const fixedNorm = Math.max(1, Math.min(127, settings.fixedVel || 120)) / 127.0;
+      return Math.pow(fixedNorm, 2.0);
     }
-    return Math.pow(normVel, 2.0);
+
+    const minV = settings.minVel !== undefined ? settings.minVel : 1;
+    const maxV = settings.maxVel !== undefined ? settings.maxVel : 127;
+    const clampedVel = Math.max(minV, Math.min(maxV, velocity));
+    const normVel = clampedVel / 127.0;
+
+    let gain = 1.0;
+    if (settings.mode === 'soft') {
+      gain = Math.pow(normVel, 1.2);
+    } else if (settings.mode === 'hard') {
+      gain = Math.pow(normVel, 2.8);
+    } else if (settings.mode === 'compressed') {
+      gain = 0.3 + (0.7 * Math.pow(normVel, 1.5));
+    } else if (settings.mode === 'custom') {
+      const p = settings.curvePower !== undefined ? settings.curvePower : 2.0;
+      gain = Math.pow(normVel, p);
+    } else {
+      gain = Math.pow(normVel, 2.0); // Normal
+    }
+
+    if (this.onVelocityTrigger) {
+      this.onVelocityTrigger(channel, velocity, Math.round(gain * 127));
+    }
+
+    return gain;
   }
 
   loadSoundFont(sf2ParsedObj, fileName = 'SoundFont') {
@@ -254,7 +301,7 @@ class SynthEngine {
 
       const now = ctx.currentTime;
       const gainNode = ctx.createGain();
-      const velGain = this.calculateVelocityGain(velocity);
+      const velGain = this.calculateVelocityGain(velocity, ch);
 
       const adsr = chConfig.adsr || this.adsr;
       const attackEnd = now + Math.max(0.001, adsr.attack);

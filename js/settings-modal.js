@@ -31,6 +31,11 @@ class SettingsModalManager {
     this.modalVelocityCurveSelect = document.getElementById('modalVelocityCurveSelect');
     this.midiDevicesListContainer = document.getElementById('midiDevicesListContainer');
 
+    const canvasEl = document.getElementById('velocityCurveCanvas');
+    if (canvasEl && this.synth && window.VelocityVisualizerManager) {
+      this.velocityVisualizer = new VelocityVisualizerManager(canvasEl, this.synth);
+    }
+
     const btnOpen = document.getElementById('btnOpenSettings');
     if (btnOpen) {
       btnOpen.addEventListener('click', () => this.openModal());
