@@ -239,58 +239,149 @@ class SoundFont2Parser {
     }
   }
 
+  parseGens(genArray, startIdx, endIdx) {
+    const res = {};
+    for (let i = startIdx; i < endIdx && i < genArray.length; i++) {
+      const g = genArray[i];
+      const oper = g.oper;
+      const amount = g.amount;
+      const signedAmount = amount >= 0x8000 ? amount - 0x10000 : amount;
+
+      switch (oper) {
+        case 41: // instrumentID
+          res.instrumentID = amount;
+          break;
+        case 43: // keyRange
+          res.keyLow = amount & 0xff;
+          res.keyHigh = (amount >> 8) & 0xff;
+          break;
+        case 44: // velRange
+          res.velLow = amount & 0xff;
+          res.velHigh = (amount >> 8) & 0xff;
+          break;
+        case 48: // initialAttenuation (centibels)
+          res.attenuation = signedAmount;
+          break;
+        case 51: // coarseTune (semitones)
+          res.coarseTune = signedAmount;
+          break;
+        case 52: // fineTune (cents)
+          res.fineTune = signedAmount;
+          break;
+        case 53: // sampleID
+          res.sampleID = amount;
+          break;
+        case 54: // sampleModes
+          res.sampleModes = amount;
+          break;
+        case 58: // overridingRootKey
+          if (signedAmount >= 0 && signedAmount <= 127) {
+            res.overridingRootKey = signedAmount;
+          }
+          break;
+      }
+    }
+    return res;
+  }
+
   linkPresetsToSamples() {
     const totalSamples = this.sampleHeaders.length;
     if (totalSamples === 0) return;
 
     this.presets.forEach((preset, presetIdx) => {
       const sampleSet = new Set();
+      const zones = [];
 
       for (let b = preset.bagStart; b < preset.bagEnd && b < this.pbag.length; b++) {
-        const bag = this.pbag[b];
-        const nextGenNdx = this.pbag[b + 1] ? this.pbag[b + 1].genNdx : this.pgen.length;
+        const pbagObj = this.pbag[b];
+        const nextPgenNdx = this.pbag[b + 1] ? this.pbag[b + 1].genNdx : this.pgen.length;
+        const pGen = this.parseGens(this.pgen, pbagObj.genNdx, nextPgenNdx);
 
-        for (let g = bag.genNdx; g < nextGenNdx && g < this.pgen.length; g++) {
-          const gen = this.pgen[g];
-          if (gen.oper === 41) { // Generator 41 = Instrument ID
-            const instIdx = gen.amount;
-            if (this.inst[instIdx]) {
-              const instObj = this.inst[instIdx];
-              const nextInstBag = this.inst[instIdx + 1] ? this.inst[instIdx + 1].bagNdx : this.ibag.length;
+        if (pGen.instrumentID !== undefined && this.inst[pGen.instrumentID]) {
+          const instObj = this.inst[pGen.instrumentID];
+          const nextInstBagNdx = this.inst[pGen.instrumentID + 1] ? this.inst[pGen.instrumentID + 1].bagNdx : this.ibag.length;
 
-              for (let ib = instObj.bagNdx; ib < nextInstBag && ib < this.ibag.length; ib++) {
-                const ibagObj = this.ibag[ib];
-                const nextIgenNdx = this.ibag[ib + 1] ? this.ibag[ib + 1].genNdx : this.igen.length;
+          // Global Zone do Instrumento (primeira ibag sem sampleID)
+          let instGlobalGen = {};
+          if (instObj.bagNdx < nextInstBagNdx) {
+            const firstIbag = this.ibag[instObj.bagNdx];
+            const nextIgen = this.ibag[instObj.bagNdx + 1] ? this.ibag[instObj.bagNdx + 1].genNdx : this.igen.length;
+            const firstIGen = this.parseGens(this.igen, firstIbag.genNdx, nextIgen);
+            if (firstIGen.sampleID === undefined) {
+              instGlobalGen = firstIGen;
+            }
+          }
 
-                for (let ig = ibagObj.genNdx; ig < nextIgenNdx && ig < this.igen.length; ig++) {
-                  const igenObj = this.igen[ig];
-                  if (igenObj.oper === 53) { // Generator 53 = Sample ID
-                    if (igenObj.amount < totalSamples) {
-                      sampleSet.add(igenObj.amount);
-                    }
-                  }
-                }
-              }
+          // Sample Zones (ibags com sampleID)
+          for (let ib = instObj.bagNdx; ib < nextInstBagNdx && ib < this.ibag.length; ib++) {
+            const ibagObj = this.ibag[ib];
+            const nextIgenNdx = this.ibag[ib + 1] ? this.ibag[ib + 1].genNdx : this.igen.length;
+            const iGen = this.parseGens(this.igen, ibagObj.genNdx, nextIgenNdx);
+
+            if (iGen.sampleID !== undefined && iGen.sampleID < totalSamples) {
+              const sHeader = this.sampleHeaders[iGen.sampleID];
+              sampleSet.add(iGen.sampleID);
+
+              const keyLow = iGen.keyLow !== undefined ? iGen.keyLow : (instGlobalGen.keyLow !== undefined ? instGlobalGen.keyLow : (pGen.keyLow !== undefined ? pGen.keyLow : 0));
+              const keyHigh = iGen.keyHigh !== undefined ? iGen.keyHigh : (instGlobalGen.keyHigh !== undefined ? instGlobalGen.keyHigh : (pGen.keyHigh !== undefined ? pGen.keyHigh : 127));
+              const velLow = iGen.velLow !== undefined ? iGen.velLow : (instGlobalGen.velLow !== undefined ? instGlobalGen.velLow : (pGen.velLow !== undefined ? pGen.velLow : 0));
+              const velHigh = iGen.velHigh !== undefined ? iGen.velHigh : (instGlobalGen.velHigh !== undefined ? instGlobalGen.velHigh : (pGen.velHigh !== undefined ? pGen.velHigh : 127));
+
+              const rootKey = (iGen.overridingRootKey !== undefined)
+                ? iGen.overridingRootKey
+                : ((instGlobalGen.overridingRootKey !== undefined)
+                  ? instGlobalGen.overridingRootKey
+                  : sHeader.originalPitch);
+
+              const coarseTune = (pGen.coarseTune || 0) + (instGlobalGen.coarseTune || 0) + (iGen.coarseTune || 0);
+              const fineTune = (pGen.fineTune || 0) + (instGlobalGen.fineTune || 0) + (iGen.fineTune || 0);
+              const attenuation = (pGen.attenuation || 0) + (instGlobalGen.attenuation || 0) + (iGen.attenuation || 0);
+              const sampleModes = iGen.sampleModes !== undefined ? iGen.sampleModes : (instGlobalGen.sampleModes || 0);
+
+              zones.push({
+                sampleIndex: iGen.sampleID,
+                keyLow,
+                keyHigh,
+                velLow,
+                velHigh,
+                rootKey,
+                coarseTune,
+                fineTune,
+                attenuation,
+                sampleModes
+              });
             }
           }
         }
       }
 
       preset.sampleIndices = Array.from(sampleSet);
+      preset.zones = zones;
 
-      // Fallback Inteligente: Se o preset não tiver vinculo explícito por geradores, particionar amostras proporcionalmente!
-      if (preset.sampleIndices.length === 0) {
-        const samplesPerPreset = Math.max(1, Math.floor(totalSamples / this.presets.length));
-        const startIdx = Math.min(totalSamples - 1, presetIdx * samplesPerPreset);
-        const endIdx = Math.min(totalSamples, startIdx + samplesPerPreset);
-
-        for (let s = startIdx; s < endIdx; s++) {
-          preset.sampleIndices.push(s);
-        }
+      // Fallback Inteligente
+      if (preset.zones.length === 0) {
+        const samplesToUse = preset.sampleIndices.length > 0 ? preset.sampleIndices : Array.from({ length: totalSamples }, (_, i) => i);
+        samplesToUse.forEach(sIdx => {
+          const sHeader = this.sampleHeaders[sIdx] || { originalPitch: 60 };
+          zones.push({
+            sampleIndex: sIdx,
+            keyLow: 0,
+            keyHigh: 127,
+            velLow: 0,
+            velHigh: 127,
+            rootKey: sHeader.originalPitch || 60,
+            coarseTune: 0,
+            fineTune: 0,
+            attenuation: 0,
+            sampleModes: 0
+          });
+        });
+        preset.zones = zones;
+        preset.sampleIndices = samplesToUse;
       }
     });
 
-    console.log(`[SF2Parser] Vínculo concluído: ${this.presets.length} presets mapeados para ${totalSamples} amostras de áudio.`);
+    console.log(`[SF2Parser] Vínculo de geradores SF2 concluído: ${this.presets.length} presets parsed com ${this.presets.reduce((acc, p) => acc + (p.zones ? p.zones.length : 0), 0)} zonas de sample.`);
   }
 }
 

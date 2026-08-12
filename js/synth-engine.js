@@ -215,9 +215,14 @@ class SynthEngine {
     if (sf2ParsedObj.presets && sf2ParsedObj.presets.length > 0) {
       sf2ParsedObj.presets.forEach((p) => {
         const mappedSampleIndices = (p.sampleIndices || []).map(sIdx => sampleOffset + sIdx);
+        const mappedZones = (p.zones || []).map(z => ({
+          ...z,
+          sampleIndex: sampleOffset + z.sampleIndex
+        }));
         this.parsedSf2Data.presets.push({
           ...p,
           sampleIndices: mappedSampleIndices,
+          zones: mappedZones,
           sf2Source: cleanFileName
         });
       });
@@ -288,7 +293,7 @@ class SynthEngine {
       const isMatchingChannel = chConfig.assignedMidiChannel === 'all' || chConfig.assignedMidiChannel === channel || ch === channel;
       if (!isMatchingChannel) continue;
 
-      // Pular canal se não houver timbre atribuído (usuário ainda não selecionou do banco)
+      // Pular canal se não houver timbre atribuído
       if (chConfig.assignedPresetIndex === null || chConfig.assignedPresetIndex === undefined) continue;
 
       // Filtragem por Zona de Teclado (Split Min/Max)
@@ -310,89 +315,112 @@ class SynthEngine {
       }
 
       const now = ctx.currentTime;
-      const gainNode = ctx.createGain();
+      let velGain = Math.min(0.85, this.calculateVelocityGain(velocity, ch));
 
-      // Velocidade → gain linear normalizado (já aplica a curva de dinâmica configurada)
-      // Clampeado em 0.9 para garantir headroom e evitar clipping por vozes sobrepostas
-      let velGain = Math.min(0.9, this.calculateVelocityGain(velocity, ch));
+      const presetObj = (this.parsedSf2Data && this.parsedSf2Data.presets)
+        ? this.parsedSf2Data.presets[chConfig.assignedPresetIndex]
+        : null;
 
-      // BUG FIX: assignedSampleIndices DEVE ser declarado ANTES de ser usado
-      let assignedSampleIndices = [];
-      if (this.parsedSf2Data && this.parsedSf2Data.presets && this.parsedSf2Data.presets[chConfig.assignedPresetIndex]) {
-        const presetObj = this.parsedSf2Data.presets[chConfig.assignedPresetIndex];
-        if (presetObj.sampleIndices && presetObj.sampleIndices.length > 0) {
-          assignedSampleIndices = presetObj.sampleIndices;
-        }
+      // Filtrar Zonas de Sample pelo KeyRange e VelocityRange do SF2
+      let matchingZones = [];
+      if (presetObj && presetObj.zones && presetObj.zones.length > 0) {
+        matchingZones = presetObj.zones.filter(z =>
+          actualNote >= z.keyLow && actualNote <= z.keyHigh &&
+          velocity >= z.velLow && velocity <= z.velHigh
+        );
       }
 
-      if (assignedSampleIndices.length === 0) {
-        assignedSampleIndices = Array.from(this.decodedAudioBuffers.keys());
+      // Se nenhuma zona casar com o Velocity Range, filtrar por Key Range
+      if (matchingZones.length === 0 && presetObj && presetObj.zones && presetObj.zones.length > 0) {
+        matchingZones = presetObj.zones.filter(z => actualNote >= z.keyLow && actualNote <= z.keyHigh);
       }
 
-      // ADSR: attack de 10ms evita click/pop inicial, sustain em 0.85 fiel ao timbre original
+      // Se ainda não houver zonas, buscar a zona com afinação mais próxima
+      if (matchingZones.length === 0 && presetObj && presetObj.zones && presetObj.zones.length > 0) {
+        let bestZ = presetObj.zones[0];
+        let minDiff = 999;
+        presetObj.zones.forEach(z => {
+          const diff = Math.abs(actualNote - (z.rootKey || 60));
+          if (diff < minDiff) {
+            minDiff = diff;
+            bestZ = z;
+          }
+        });
+        matchingZones = [bestZ];
+      }
+
+      // Fallback para decodedAudioBuffers se não houver zonas
+      if (matchingZones.length === 0) {
+        const assignedSampleIndices = (presetObj && presetObj.sampleIndices && presetObj.sampleIndices.length > 0)
+          ? presetObj.sampleIndices
+          : Array.from(this.decodedAudioBuffers.keys());
+        const defaultSampleIdx = assignedSampleIndices[0] !== undefined ? assignedSampleIndices[0] : 0;
+        matchingZones = [{
+          sampleIndex: defaultSampleIdx,
+          keyLow: 0, keyHigh: 127, velLow: 0, velHigh: 127,
+          rootKey: 60, coarseTune: 0, fineTune: 0, attenuation: 0, sampleModes: 0
+        }];
+      }
+
       const adsr = chConfig.adsr || this.adsr;
-      const attackTime = Math.max(0.008, adsr.attack); // mín 8ms para evitar click de onset
+      const attackTime = Math.max(0.008, adsr.attack);
       const attackEnd = now + attackTime;
       const decayEnd = attackEnd + Math.max(0.05, adsr.decay);
-      const sustainLevel = Math.max(0.0001, velGain * Math.min(0.95, adsr.sustain));
 
-      gainNode.gain.setValueAtTime(0.0001, now);
-      gainNode.gain.linearRampToValueAtTime(velGain, attackEnd);
-      gainNode.gain.linearRampToValueAtTime(sustainLevel, decayEnd);
+      // Tocar cada zona de sample correspondente (suporta Stereo e Multi-velocity)
+      matchingZones.forEach((z) => {
+        const sampleObj = this.decodedAudioBuffers.get(z.sampleIndex);
+        if (!sampleObj) return;
 
-      let bestMatchedIdx = assignedSampleIndices[0];
-      let minPitchDiff = 999;
+        const sourceNode = ctx.createBufferSource();
+        sourceNode.buffer = sampleObj.audioBuffer;
 
-      for (let i = 0; i < assignedSampleIndices.length; i++) {
-        const sIdx = assignedSampleIndices[i];
-        const sObj = this.decodedAudioBuffers.get(sIdx);
-        if (sObj) {
-          const diff = Math.abs(actualNote - sObj.originalPitch);
-          if (diff < minPitchDiff) {
-            minPitchDiff = diff;
-            bestMatchedIdx = sIdx;
-            if (diff === 0) break; // Encontrou afinação perfeita!
-          }
+        if (sampleObj.hasLoop || z.sampleModes === 1 || z.sampleModes === 3) {
+          sourceNode.loop = true;
+          sourceNode.loopStart = sampleObj.loopStart;
+          sourceNode.loopEnd = sampleObj.loopEnd;
         }
-      }
 
-      const sampleObj = this.decodedAudioBuffers.get(bestMatchedIdx);
-      if (!sampleObj) continue;
+        // Cálculo de Afinação Exato do SF2: actualNote - rootKey + coarseTune + fineTune (cents / 100)
+        const currentBend = this.pitchBendSemi.get(ch) || 0;
+        const rootKey = (z.rootKey !== undefined && z.rootKey >= 0) ? z.rootKey : (sampleObj.originalPitch || 60);
+        const fineTuneCents = (z.fineTune || 0) + ((sampleObj.fineTuningSemitones || 0) * 100);
+        const totalNoteShift = (actualNote + currentBend) - rootKey + (z.coarseTune || 0) + (fineTuneCents / 100.0);
+        const pitchRatio = Math.pow(2, totalNoteShift / 12.0);
+        sourceNode.playbackRate.value = pitchRatio;
 
-      const sourceNode = ctx.createBufferSource();
-      sourceNode.buffer = sampleObj.audioBuffer;
+        // Atenuação do SF2 em centibels (cB) -> dB -> linear gain factor: 10^(-cB / 200)
+        const cB = z.attenuation || 0;
+        const attenuationGain = Math.pow(10, -cB / 200.0);
 
-      if (sampleObj.hasLoop) {
-        sourceNode.loop = true;
-        sourceNode.loopStart = sampleObj.loopStart;
-        sourceNode.loopEnd = sampleObj.loopEnd;
-      }
+        // Ganho final por voz (max 0.8 para dar headroom e evitar distorção)
+        const voiceGain = Math.min(0.8, velGain * attenuationGain);
+        const sustainLevel = Math.max(0.0001, voiceGain * Math.min(0.95, adsr.sustain));
 
-      const currentBend = this.pitchBendSemi.get(ch) || 0;
-      const basePitch = sampleObj.originalPitch || 60;
-      const fineTune = sampleObj.fineTuningSemitones || 0; // ajuste fino do SF2 (pitchCorrection em cents)
-      const totalNoteShift = (actualNote + currentBend + fineTune) - basePitch;
-      const pitchRatio = Math.pow(2, totalNoteShift / 12);
-      sourceNode.playbackRate.value = pitchRatio;
+        const voiceGainNode = ctx.createGain();
+        voiceGainNode.gain.setValueAtTime(0.0001, now);
+        voiceGainNode.gain.linearRampToValueAtTime(voiceGain, attackEnd);
+        voiceGainNode.gain.linearRampToValueAtTime(sustainLevel, decayEnd);
 
-      sourceNode.connect(gainNode);
-      gainNode.connect(chConfig.gainNode);
+        sourceNode.connect(voiceGainNode);
+        voiceGainNode.connect(chConfig.gainNode);
 
-      sourceNode.start(now);
+        sourceNode.start(now);
 
-      const voiceId = `v_${ch}_${actualNote}_${now}_${Math.random()}`;
+        const voiceId = `v_${ch}_${actualNote}_${now}_${Math.random()}`;
 
-      this.activeVoices.set(voiceId, {
-        id: voiceId,
-        sourceNode,
-        gainNode,
-        note: actualNote,
-        channel: ch,
-        originalPitch: basePitch,
-        adsr: adsr,
-        startTime: now,
-        isReleasing: false,
-        releaseTimeout: null
+        this.activeVoices.set(voiceId, {
+          id: voiceId,
+          sourceNode,
+          gainNode: voiceGainNode,
+          note: actualNote,
+          channel: ch,
+          originalPitch: rootKey,
+          adsr: adsr,
+          startTime: now,
+          isReleasing: false,
+          releaseTimeout: null
+        });
       });
     }
   }
