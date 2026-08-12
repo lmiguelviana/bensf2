@@ -830,23 +830,86 @@ document.addEventListener('DOMContentLoaded', () => {
     if (knobTrackReverbMix) knobTrackReverbMix.setValue(params.reverbMix);
   });
 
-  // Preset Manager Binds
+  // Modal de Nome do Novo Preset (Compatível 100% com Electron & Web)
+  const newPresetNameModal = document.getElementById('newPresetNameModal');
+  const inputNewPresetName = document.getElementById('inputNewPresetName');
+  const btnConfirmPresetModal = document.getElementById('btnConfirmPresetModal');
+  const btnCancelPresetModal = document.getElementById('btnCancelPresetModal');
+
+  function openNewPresetModal() {
+    if (!newPresetNameModal) return;
+    if (inputNewPresetName) {
+      inputNewPresetName.value = `Preset Live ${presetManager.userPresets.size + 1}`;
+    }
+    newPresetNameModal.style.display = 'flex';
+    if (inputNewPresetName) {
+      setTimeout(() => inputNewPresetName.focus(), 100);
+    }
+  }
+
+  function closeNewPresetModal() {
+    if (newPresetNameModal) newPresetNameModal.style.display = 'none';
+  }
+
   const btnNewPreset = document.getElementById('btnNewPreset');
   if (btnNewPreset) {
-    btnNewPreset.addEventListener('click', () => {
-      presetManager.createNewPreset();
+    btnNewPreset.addEventListener('click', () => openNewPresetModal());
+  }
+
+  if (btnCancelPresetModal) {
+    btnCancelPresetModal.addEventListener('click', () => closeNewPresetModal());
+  }
+
+  if (btnConfirmPresetModal) {
+    btnConfirmPresetModal.addEventListener('click', () => {
+      const name = inputNewPresetName ? inputNewPresetName.value.trim() : '';
+      if (name) {
+        presetManager.createNewPreset(name);
+        closeNewPresetModal();
+      }
+    });
+  }
+
+  if (inputNewPresetName) {
+    inputNewPresetName.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') {
+        const name = inputNewPresetName.value.trim();
+        if (name) {
+          presetManager.createNewPreset(name);
+          closeNewPresetModal();
+        }
+      } else if (e.key === 'Escape') {
+        closeNewPresetModal();
+      }
     });
   }
 
   if (btnSavePreset) {
     btnSavePreset.addEventListener('click', () => {
-      presetManager.saveActivePreset();
+      if (presetManager.activePresetName) {
+        presetManager.saveActivePreset();
+      } else {
+        openNewPresetModal();
+      }
     });
   }
 
   if (btnLoadPreset) {
     btnLoadPreset.addEventListener('click', () => {
       presetManager.openPresetFileDialog();
+    });
+  }
+
+  // Botão Recolher / Expandir Efeitos da Pista
+  const btnToggleCollapseTrackFx = document.getElementById('btnToggleCollapseTrackFx');
+  const trackFxBodyContainer = document.getElementById('trackFxBodyContainer');
+  let isTrackFxCollapsed = false;
+
+  if (btnToggleCollapseTrackFx && trackFxBodyContainer) {
+    btnToggleCollapseTrackFx.addEventListener('click', () => {
+      isTrackFxCollapsed = !isTrackFxCollapsed;
+      trackFxBodyContainer.style.display = isTrackFxCollapsed ? 'none' : 'flex';
+      btnToggleCollapseTrackFx.textContent = isTrackFxCollapsed ? '▲ Expandir' : '▼ Recolher';
     });
   }
 
@@ -1119,7 +1182,38 @@ document.addEventListener('DOMContentLoaded', () => {
         const chName = synth.channels[activeCh] ? synth.channels[activeCh].name : `CH ${activeCh}`;
         showToastNotification('Timbre Atribuído', `"${p.name}" atribuído à pista ${chName}.`, 'info');
       });
+
+      // Duplo Clique no Timbre ➔ Adicionar Nova Pista e Atribuir
+      item.addEventListener('dblclick', (e) => {
+        e.preventDefault();
+        if (mixerConsole) {
+          if (mixerConsole.totalChannels < 16) {
+            mixerConsole.addChannel();
+            const newCh = mixerConsole.totalChannels;
+            synth.setChannelPreset(newCh, idx);
+            mixerConsole.selectChannel(newCh);
+            mixerConsole.updateChannelPresetDropdown(newCh, idx);
+            showToastNotification('Nova Pista Criada!', `Pista CH ${newCh} adicionada com timbre "${p.name}".`, 'success');
+          } else {
+            showToastNotification('Limite Alcançado', 'Máximo de 16 pistas MIDI atingido.', 'warning');
+          }
+        }
+      });
+
       presetListEl.appendChild(item);
+    });
+  }
+
+  // Duplo clique na área vazia do Mixer ➔ Adicionar Nova Pista
+  const mixerContainerEl = document.getElementById('mixerContainer');
+  if (mixerContainerEl) {
+    mixerContainerEl.addEventListener('dblclick', (e) => {
+      if (e.target === mixerContainerEl || e.target.classList.contains('app-workspace')) {
+        if (mixerConsole && mixerConsole.totalChannels < 16) {
+          mixerConsole.addChannel();
+          showToastNotification('Nova Pista Criada', `Pista CH ${mixerConsole.totalChannels} adicionada.`, 'info');
+        }
+      }
     });
   }
 

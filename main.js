@@ -33,7 +33,8 @@ function createWindow() {
 
 // Handlers IPC para Janelas Nativas de Arquivos do Windows (Salvar / Carregar)
 ipcMain.handle('show-save-dialog', async (event, options) => {
-  const win = BrowserWindow.getFocusedWindow();
+  const win = BrowserWindow.getFocusedWindow() || BrowserWindow.getAllWindows()[0];
+  if (!win) return null;
   const result = await dialog.showSaveDialog(win, options);
   if (!result.canceled && result.filePath) {
     return result.filePath;
@@ -42,7 +43,8 @@ ipcMain.handle('show-save-dialog', async (event, options) => {
 });
 
 ipcMain.handle('show-open-dialog', async (event, options) => {
-  const win = BrowserWindow.getFocusedWindow();
+  const win = BrowserWindow.getFocusedWindow() || BrowserWindow.getAllWindows()[0];
+  if (!win) return null;
   const result = await dialog.showOpenDialog(win, options);
   if (!result.canceled && result.filePaths && result.filePaths.length > 0) {
     return result.filePaths[0];

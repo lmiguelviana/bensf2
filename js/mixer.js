@@ -132,10 +132,10 @@ class MixerConsoleManager {
       keyRangeHigh: 127
     };
 
-    let presetOptionsHtml = `<option value="" disabled selected>(sem timbre)</option>`;
+    let presetOptionsHtml = `<option value="">(sem timbre)</option>`;
     if (this.synth.parsedSf2Data && this.synth.parsedSf2Data.presets && this.synth.parsedSf2Data.presets.length > 0) {
       const noTimbreSelected = chConfig.assignedPresetIndex === null || chConfig.assignedPresetIndex === undefined;
-      presetOptionsHtml = `<option value="" ${noTimbreSelected ? 'selected' : ''} disabled style="color:#888;">(sem timbre)</option>`;
+      presetOptionsHtml = `<option value="" ${noTimbreSelected ? 'selected' : ''} style="color:#888;">(sem timbre)</option>`;
       presetOptionsHtml += this.synth.parsedSf2Data.presets.map((p, idx) => {
         const isSelected = !noTimbreSelected && idx === chConfig.assignedPresetIndex ? 'selected' : '';
         const cleanName = (p.name || `Preset #${idx}`).replace(/[^\x20-\x7E]/g, '').trim() || `Preset ${p.bank}:${p.preset}`;
@@ -368,7 +368,10 @@ class MixerConsoleManager {
 
     const presetSelect = strip.querySelector('.ch-preset-select');
     presetSelect.addEventListener('change', (e) => {
-      if (e.target.value === '' || e.target.value === null) return; // opção "(sem timbre)" ignorada
+      if (e.target.value === '' || e.target.value === null || e.target.value === 'none') {
+        this.synth.setChannelPreset(ch, null);
+        return;
+      }
       const idx = parseInt(e.target.value, 10);
       this.synth.setChannelPreset(ch, idx);
     });
