@@ -1,13 +1,12 @@
 /**
  * MASTER APPLICATION CONTROLLER
- * Liga a interface UI ao motor de síntese SF2, Mixer Console e FX Rack.
+ * Liga a interface UI ao motor de síntese SF2, Mixer Console, FX Rack, WebMIDI e PresetManager.
  */
 
 document.addEventListener('DOMContentLoaded', () => {
   const synth = new SynthEngine(window.audioEngine);
   window.synth = synth;
 
-  // Instanciar FX Rack e VU Meter Manager
   const fxRack = new FxRackManager(window.audioEngine);
   fxRack.init();
   window.fxRack = fxRack;
@@ -18,6 +17,21 @@ document.addEventListener('DOMContentLoaded', () => {
   const mixerConsole = new MixerConsoleManager(synth, vuMeter);
   mixerConsole.init(document.getElementById('mixerContainer'));
   window.mixerConsole = mixerConsole;
+
+  // Instanciar PresetManager
+  const presetManager = new PresetManager(synth, fxRack, mixerConsole);
+  window.presetManager = presetManager;
+
+  // Instanciar WebMIDI Manager
+  const midiDeviceStatusText = document.getElementById('midiDeviceStatusText');
+  const webMidi = new WebMidiManager(synth);
+  webMidi.init((deviceName) => {
+    if (midiDeviceStatusText) {
+      midiDeviceStatusText.textContent = deviceName;
+      midiDeviceStatusText.style.color = deviceName !== 'Nenhum' && deviceName !== 'Não Suportado' ? 'var(--accent-emerald)' : 'var(--accent-cyan)';
+    }
+  });
+  window.webMidi = webMidi;
 
   let baseOctave = 3;
 
@@ -40,6 +54,11 @@ document.addEventListener('DOMContentLoaded', () => {
   const polyphonySelect = document.getElementById('polyphonySelect');
   const velocityCurveSelect = document.getElementById('velocityCurveSelect');
   const btnAddChannel = document.getElementById('btnAddChannel');
+
+  const btnSavePreset = document.getElementById('btnSavePreset');
+  const btnLoadPreset = document.getElementById('btnLoadPreset');
+  const presetFileInput = document.getElementById('presetFileInput');
+  const presetSelect = document.getElementById('presetSelect');
 
   const pianoKeysEl = document.getElementById('pianoKeys');
   const octaveDisplay = document.getElementById('octaveDisplay');
@@ -64,14 +83,41 @@ document.addEventListener('DOMContentLoaded', () => {
   const fxReverbMix = document.getElementById('fxReverbMix');
   const reverbMixVal = document.getElementById('reverbMixVal');
 
-  // Bind Adicionar Nova Pista no Mixer
+  // 1. Preset Manager Binds
+  if (btnSavePreset) {
+    btnSavePreset.addEventListener('click', () => {
+      presetManager.savePreset();
+    });
+  }
+
+  if (btnLoadPreset && presetFileInput) {
+    btnLoadPreset.addEventListener('click', () => presetFileInput.click());
+    presetFileInput.addEventListener('change', (e) => {
+      if (e.target.files.length > 0) {
+        presetManager.importPresetFromJsonFile(e.target.files[0]);
+      }
+    });
+  }
+
+  if (presetSelect) {
+    presetSelect.addEventListener('change', (e) => {
+      const selectedVal = e.target.value;
+      if (presetManager.factoryPresets.has(selectedVal)) {
+        presetManager.loadPreset(presetManager.factoryPresets.get(selectedVal));
+      } else if (presetManager.userPresets.has(selectedVal)) {
+        presetManager.loadPreset(presetManager.userPresets.get(selectedVal));
+      }
+    });
+  }
+
+  // 2. Bind Adicionar Nova Pista no Mixer
   if (btnAddChannel) {
     btnAddChannel.addEventListener('click', () => {
       mixerConsole.addChannel();
     });
   }
 
-  // 1. Configurações de Polifonia e Velocidade
+  // Configurações de Polifonia e Velocidade
   polyphonySelect.addEventListener('change', (e) => {
     synth.setMaxPolyphony(e.target.value);
   });
@@ -80,7 +126,7 @@ document.addEventListener('DOMContentLoaded', () => {
     synth.setVelocityCurve(e.target.value);
   });
 
-  // Binds dos Efeitos FX Rack (EQ, Delay, Reverb)
+  // Binds dos Efeitos FX Rack
   if (eqLowGain) {
     eqLowGain.addEventListener('input', (e) => {
       const val = parseFloat(e.target.value);
@@ -137,7 +183,7 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
-  // 2. Renderizar Teclado Virtual Piano
+  // 3. Renderizar Teclado Virtual Piano
   function renderPianoKeyboard() {
     pianoKeysEl.innerHTML = '';
     const startNote = baseOctave * 12;
@@ -187,7 +233,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
   renderPianoKeyboard();
 
-  // Controles de Oitava
   btnOctaveUp.addEventListener('click', () => {
     if (baseOctave < 7) {
       baseOctave++;
@@ -202,7 +247,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   });
 
-  // 3. Mapeamento de Teclado QWERTY + Atalhos
+  // 4. Mapeamento de Teclado QWERTY + Atalho Ctrl+S para Salvar Preset
   const qwertyKeyMap = {
     'a': 0, 'w': 1, 's': 2, 'e': 3, 'd': 4, 'f': 5,
     't': 6, 'g': 7, 'y': 8, 'h': 9, 'u': 10, 'j': 11, 'k': 12
@@ -212,6 +257,13 @@ document.addEventListener('DOMContentLoaded', () => {
   let isMasterMuted = false;
 
   window.addEventListener('keydown', (e) => {
+    // Atalho Ctrl+S / Cmd+S para salvar preset
+    if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 's') {
+      e.preventDefault();
+      presetManager.savePreset();
+      return;
+    }
+
     if (e.repeat || e.target.tagName === 'INPUT' || e.target.tagName === 'SELECT') return;
     const key = e.key.toLowerCase();
 
@@ -262,7 +314,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   });
 
-  // 4. Upload & Drag-and-Drop de Arquivos SF2
+  // 5. Upload & Drag-and-Drop de Arquivos SF2
   sf2DropZone.addEventListener('click', () => sf2FileInput.click());
 
   sf2DropZone.addEventListener('dragover', (e) => {
@@ -337,7 +389,7 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
-  // 5. Monitor de Áudio e Vozes Polifônicas
+  // 6. Monitor de Áudio e Vozes Polifônicas
   function updateAudioStatus(active) {
     if (active) {
       audioStatusDot.classList.add('active');
