@@ -1396,6 +1396,7 @@ document.addEventListener('DOMContentLoaded', () => {
   const addSongModal = document.getElementById('addSongModal');
   const inputSongTitle = document.getElementById('inputSongTitle');
   const selectSongPreset = document.getElementById('selectSongPreset');
+  const songPresetSelectContainer = document.getElementById('songPresetSelectContainer');
   const inputSongNotes = document.getElementById('inputSongNotes');
   const btnConfirmAddSongModal = document.getElementById('btnConfirmAddSongModal');
   const btnCancelAddSongModal = document.getElementById('btnCancelAddSongModal');
@@ -1411,7 +1412,20 @@ document.addEventListener('DOMContentLoaded', () => {
         selectSongPreset.innerHTML = html;
       }
       if (inputSongTitle) inputSongTitle.value = `Música ${setlistManager.getSetlistItems().length + 1}`;
+      
+      const snapRadio = addSongModal.querySelector('input[name="songSourceType"][value="snapshot"]');
+      if (snapRadio) snapRadio.checked = true;
+      if (songPresetSelectContainer) songPresetSelectContainer.style.display = 'none';
+
       addSongModal.style.display = 'flex';
+    });
+
+    addSongModal.querySelectorAll('input[name="songSourceType"]').forEach(radio => {
+      radio.addEventListener('change', (e) => {
+        if (songPresetSelectContainer) {
+          songPresetSelectContainer.style.display = e.target.value === 'preset' ? 'block' : 'none';
+        }
+      });
     });
   }
 
@@ -1426,9 +1440,11 @@ document.addEventListener('DOMContentLoaded', () => {
       const title = inputSongTitle ? inputSongTitle.value.trim() : '';
       const preset = selectSongPreset ? selectSongPreset.value : '';
       const notes = inputSongNotes ? inputSongNotes.value.trim() : '';
+      const sourceType = addSongModal.querySelector('input[name="songSourceType"]:checked')?.value || 'snapshot';
 
       if (title) {
-        setlistManager.addItem(title, preset, notes);
+        const useSnapshot = sourceType === 'snapshot';
+        setlistManager.addItem(title, preset, notes, useSnapshot);
         if (addSongModal) addSongModal.style.display = 'none';
       }
     });

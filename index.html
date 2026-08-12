@@ -652,12 +652,12 @@
 
   <!-- Modal para Adicionar Música ao Setlist -->
   <div id="addSongModal" class="modal-backdrop" style="display: none; align-items: center; justify-content: center; z-index: 10000;">
-    <div class="glass-modal-card" style="width: 420px; padding: 24px; border-radius: 12px; background: rgba(10, 13, 20, 0.96); border: 1px solid var(--accent-cyan); box-shadow: 0 0 30px rgba(0, 242, 254, 0.3);">
+    <div class="glass-modal-card" style="width: 440px; padding: 24px; border-radius: 12px; background: rgba(10, 13, 20, 0.96); border: 1px solid var(--accent-cyan); box-shadow: 0 0 30px rgba(0, 242, 254, 0.3);">
       <div style="font-family: var(--font-heading); font-size: 16px; font-weight: 800; color: #fff; margin-bottom: 6px;">
         🎤 Adicionar Música ao Setlist
       </div>
       <div style="font-size: 12px; color: var(--text-muted); margin-bottom: 16px;">
-        Configure o título da música e selecione o preset associado para troca instantânea:
+        Defina a música para o seu show e escolha como salvar o som desejado:
       </div>
       
       <div style="display: flex; flex-direction: column; gap: 12px; margin-bottom: 20px;">
@@ -666,20 +666,33 @@
           <input type="text" id="inputSongTitle" placeholder="Ex: 01. Intro Culto - Piano + Pad" style="width: 100%; padding: 8px 10px; font-size: 12px; background: rgba(255,255,255,0.06); border: 1px solid rgba(0, 242, 254, 0.4); border-radius: 6px; color: #fff; outline: none;">
         </div>
 
-        <div>
-          <label style="font-size: 11px; color: var(--text-muted); font-weight: 700; display: block; margin-bottom: 4px;">Preset Associado:</label>
-          <select id="selectSongPreset" class="preset-select" style="width: 100%; font-size: 12px; padding: 6px;"></select>
+        <div style="background: rgba(255,255,255,0.03); padding: 10px; border-radius: 6px; border: 1px solid rgba(255,255,255,0.06); display: flex; flex-direction: column; gap: 8px;">
+          <label style="font-size: 11px; color: var(--accent-cyan); font-weight: 800;">Origem do Som:</label>
+          
+          <label style="font-size: 11px; color: var(--text-main); display: flex; align-items: center; gap: 6px; cursor: pointer;">
+            <input type="radio" name="songSourceType" value="snapshot" checked>
+            <span>📸 <b>Salvar Configuração ATUAL do Mixer</b> (Grava todas as pistas, timbres e efeitos ativos agora)</span>
+          </label>
+
+          <label style="font-size: 11px; color: var(--text-main); display: flex; align-items: center; gap: 6px; cursor: pointer;">
+            <input type="radio" name="songSourceType" value="preset">
+            <span>💾 <b>Vincular a um Preset Salvo</b></span>
+          </label>
+
+          <div id="songPresetSelectContainer" style="display: none; margin-top: 4px;">
+            <select id="selectSongPreset" class="preset-select" style="width: 100%; font-size: 11px; padding: 6px;"></select>
+          </div>
         </div>
 
         <div>
           <label style="font-size: 11px; color: var(--text-muted); font-weight: 700; display: block; margin-bottom: 4px;">Anotações / BPM / Tom (Opcional):</label>
-          <input type="text" id="inputSongNotes" placeholder="Ex: Tom: C | BPM: 72 | LVs no CH2" style="width: 100%; padding: 8px 10px; font-size: 12px; background: rgba(255,255,255,0.06); border: 1px solid rgba(0, 242, 254, 0.4); border-radius: 6px; color: #fff; outline: none;">
+          <input type="text" id="inputSongNotes" placeholder="Ex: Tom: C | BPM: 72 | Solos no CH02" style="width: 100%; padding: 8px 10px; font-size: 12px; background: rgba(255,255,255,0.06); border: 1px solid rgba(0, 242, 254, 0.4); border-radius: 6px; color: #fff; outline: none;">
         </div>
       </div>
 
       <div style="display: flex; justify-content: flex-end; gap: 10px;">
         <button id="btnCancelAddSongModal" class="btn" style="padding: 6px 16px; font-size: 12px;">Cancelar</button>
-        <button id="btnConfirmAddSongModal" class="btn btn-accent" style="padding: 6px 20px; font-size: 12px; font-weight: 800;">Adicionar Música</button>
+        <button id="btnConfirmAddSongModal" class="btn btn-accent" style="padding: 6px 20px; font-size: 12px; font-weight: 800;">Adicionar ao Setlist</button>
       </div>
     </div>
   </div>
