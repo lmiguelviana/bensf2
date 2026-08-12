@@ -174,7 +174,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
   const fxRackTitleEl = document.getElementById('fxRackTitleText');
 
-  // Tab View Switcher (Garante que o Rack FX Master SÓ aparece quando a aba 'Rack FX Master' estiver selecionada)
+  // Tab View Switcher
   function switchView(activeTab, showMixer, showFx, showMidi) {
     [tabMixer, tabFxRack, tabMidi].forEach(t => t && t.classList.remove('active'));
     if (activeTab) activeTab.classList.add('active');
@@ -204,7 +204,7 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
-  // 1. MASTER FX CONTROLS & ALGORITMOS VALHALLA
+  // 1. MASTER FX CONTROLS & ALGORITMOS VALHALLA (DESLIGADOS POR PADRÃO)
   const btnMasterEqToggle = document.getElementById('btnMasterEqToggle');
   if (btnMasterEqToggle) {
     btnMasterEqToggle.addEventListener('click', () => {
@@ -291,7 +291,7 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
-  // 2. PER-TRACK FX CONTROLS & FILTRO CUTOFF & ALGORITMOS VALHALLA
+  // 2. PER-TRACK FX CONTROLS & FILTRO CUTOFF & ALGORITMOS VALHALLA (DESLIGADOS POR PADRÃO)
   const btnTrackCutoffToggle = document.getElementById('btnTrackCutoffToggle');
   if (btnTrackCutoffToggle) {
     btnTrackCutoffToggle.addEventListener('click', () => {
@@ -344,7 +344,6 @@ document.addEventListener('DOMContentLoaded', () => {
       onChange: (val) => fxRack.setCutoffFrequency(val)
     });
     midiLearn.attach(knobTrackCutoffEl, 'Filtro Cutoff Pista', (normVal) => {
-      // Curva logarítmica de frequência Cutoff (200 Hz a 20.000 Hz)
       const freqHz = Math.round(200 * Math.pow(100, normVal));
       fxRack.setCutoffFrequency(freqHz);
       if (knobTrackCutoff) knobTrackCutoff.setValue(freqHz);
@@ -422,7 +421,7 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
-  // Atualizar Knobs, Toggles, Cutoff e Modo Reverb da pista individual ao trocar de canal no Mixer!
+  // Atualizar Knobs, Toggles (OFF por padrão) e Modo Reverb da pista selecionada
   fxRack.onSelectionChange((ch, params) => {
     const chName = synth.channels[ch] ? synth.channels[ch].name : `CH ${ch < 10 ? '0' + ch : ch}`;
     if (fxRackTitleEl) {
@@ -430,20 +429,24 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     if (btnTrackCutoffToggle) {
-      btnTrackCutoffToggle.classList.toggle('active', params.cutoffEnabled !== false);
-      btnTrackCutoffToggle.textContent = params.cutoffEnabled !== false ? 'ON' : 'OFF';
+      const isAct = params.cutoffEnabled === true;
+      btnTrackCutoffToggle.classList.toggle('active', isAct);
+      btnTrackCutoffToggle.textContent = isAct ? 'ON' : 'OFF';
     }
     if (btnTrackEqToggle) {
-      btnTrackEqToggle.classList.toggle('active', params.eqEnabled !== false);
-      btnTrackEqToggle.textContent = params.eqEnabled !== false ? 'ON' : 'OFF';
+      const isAct = params.eqEnabled === true;
+      btnTrackEqToggle.classList.toggle('active', isAct);
+      btnTrackEqToggle.textContent = isAct ? 'ON' : 'OFF';
     }
     if (btnTrackDelayToggle) {
-      btnTrackDelayToggle.classList.toggle('active', params.delayEnabled !== false);
-      btnTrackDelayToggle.textContent = params.delayEnabled !== false ? 'ON' : 'OFF';
+      const isAct = params.delayEnabled === true;
+      btnTrackDelayToggle.classList.toggle('active', isAct);
+      btnTrackDelayToggle.textContent = isAct ? 'ON' : 'OFF';
     }
     if (btnTrackReverbToggle) {
-      btnTrackReverbToggle.classList.toggle('active', params.reverbEnabled !== false);
-      btnTrackReverbToggle.textContent = params.reverbEnabled !== false ? 'ON' : 'OFF';
+      const isAct = params.reverbEnabled === true;
+      btnTrackReverbToggle.classList.toggle('active', isAct);
+      btnTrackReverbToggle.textContent = isAct ? 'ON' : 'OFF';
     }
 
     if (selectTrackReverbMode) {
@@ -731,7 +734,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
   setInterval(() => {
     if (voiceCountDisplay) {
-      voiceCountDisplay.textContent = `${synth.getActiveVoicesCount()} / ${synth.isAutoPolyphony ? 'Auto (' + synth.maxPolyphony + ')' : synth.maxPolyphony}`;
+      voiceCountDisplay.textContent = `${synth.getActiveVoicesCount()} / ${synth.isAutoPolyphony ? 'Auto (' + synth.maxPolyphony ? synth.maxPolyphony : '64' + ')' : synth.maxPolyphony}`;
     }
   }, 200);
 

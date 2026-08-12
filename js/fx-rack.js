@@ -1,6 +1,6 @@
 /**
- * MASTER & PER-TRACK FX RACK ENGINE (COM CUTOFF LOWPASS FILTER & ALGORITMOS VALHALLA)
- * Módulo de processamento de efeitos com Master FX Global, FX por pista individual e Filtro Passa-Baixas Cutoff.
+ * MASTER & PER-TRACK FX RACK ENGINE (COM TODOS OS EFEITOS DESLIGADOS POR PADRÃO)
+ * Módulo de processamento de efeitos com Master FX Global, FX por pista individual e Filtro Cutoff (Começam OFF por padrão).
  */
 
 class FxRackManager {
@@ -19,7 +19,7 @@ class FxRackManager {
       'synth_space':  { name: '🪐 Synth Space',   duration: 4.8, decay: 1.6, damping: 10000, preDelay: 0.035 }
     };
 
-    // Master FX Nodes (Saída Geral)
+    // Master FX Nodes (Saída Geral) - DESLIGADOS POR PADRÃO
     this.masterEqLow = null;
     this.masterEqMid = null;
     this.masterEqHigh = null;
@@ -28,9 +28,9 @@ class FxRackManager {
     this.masterReverbNode = null;
     this.masterReverbGain = null;
 
-    this.masterEqEnabled = true;
-    this.masterDelayEnabled = true;
-    this.masterReverbEnabled = true;
+    this.masterEqEnabled = false;
+    this.masterDelayEnabled = false;
+    this.masterReverbEnabled = false;
 
     this.masterParams = {
       eqLow: 0, eqMid: 0, eqHigh: 0,
@@ -48,19 +48,22 @@ class FxRackManager {
   init() {
     const ctx = this.audioCtx.init();
 
-    // 1. Inicializar Master FX Nodes
+    // 1. Inicializar Master FX Nodes (Gains em 0 por padrão)
     this.masterEqLow = ctx.createBiquadFilter();
     this.masterEqLow.type = 'lowshelf';
     this.masterEqLow.frequency.value = 100;
+    this.masterEqLow.gain.value = 0;
 
     this.masterEqMid = ctx.createBiquadFilter();
     this.masterEqMid.type = 'peaking';
     this.masterEqMid.frequency.value = 1000;
     this.masterEqMid.Q.value = 1.0;
+    this.masterEqMid.gain.value = 0;
 
     this.masterEqHigh = ctx.createBiquadFilter();
     this.masterEqHigh.type = 'highshelf';
     this.masterEqHigh.frequency.value = 8000;
+    this.masterEqHigh.gain.value = 0;
 
     this.masterEqLow.connect(this.masterEqMid);
     this.masterEqMid.connect(this.masterEqHigh);
@@ -70,7 +73,7 @@ class FxRackManager {
     const masterDelayFeedback = ctx.createGain();
     masterDelayFeedback.gain.value = 0.3;
     this.masterDelayGain = ctx.createGain();
-    this.masterDelayGain.gain.value = 0.2;
+    this.masterDelayGain.gain.value = 0.0; // OFF por padrão
 
     this.masterDelayNode.connect(masterDelayFeedback);
     masterDelayFeedback.connect(this.masterDelayNode);
@@ -79,7 +82,7 @@ class FxRackManager {
     this.masterReverbNode = ctx.createConvolver();
     this.masterReverbNode.buffer = this.createSyntheticImpulse(ctx, this.reverbModes['concert_hall']);
     this.masterReverbGain = ctx.createGain();
-    this.masterReverbGain.gain.value = 0.25;
+    this.masterReverbGain.gain.value = 0.0; // OFF por padrão
     this.masterReverbNode.connect(this.masterReverbGain);
 
     if (this.audioCtx.masterGain && this.audioCtx.limiterNode) {
@@ -94,7 +97,7 @@ class FxRackManager {
       this.masterReverbGain.connect(this.audioCtx.limiterNode);
     }
 
-    // 2. Inicializar Nódulos de Efeito para cada um dos 16 canais (com Filtro Cutoff)
+    // 2. Inicializar Nódulos de Efeito para cada um dos 16 canais (DESLIGADOS POR PADRÃO)
     for (let ch = 1; ch <= 16; ch++) {
       const cutoffFilter = ctx.createBiquadFilter();
       cutoffFilter.type = 'lowpass';
@@ -128,7 +131,7 @@ class FxRackManager {
       delayFeedback.gain.value = 0.3;
 
       const delayGain = ctx.createGain();
-      delayGain.gain.value = 0.2;
+      delayGain.gain.value = 0.0; // OFF por padrão
 
       delayNode.connect(delayFeedback);
       delayFeedback.connect(delayNode);
@@ -138,7 +141,7 @@ class FxRackManager {
       reverbNode.buffer = this.createSyntheticImpulse(ctx, this.reverbModes['concert_hall']);
 
       const reverbGain = ctx.createGain();
-      reverbGain.gain.value = 0.25;
+      reverbGain.gain.value = 0.0; // OFF por padrão
 
       reverbNode.connect(reverbGain);
 
@@ -155,11 +158,11 @@ class FxRackManager {
         reverbNode,
         reverbGain,
         params: {
-          cutoffEnabled: true,
+          cutoffEnabled: false,
           cutoffFreq: 20000,
-          eqEnabled: true,
-          delayEnabled: true,
-          reverbEnabled: true,
+          eqEnabled: false,
+          delayEnabled: false,
+          reverbEnabled: false,
           eqLow: 0,
           eqMid: 0,
           eqHigh: 0,
@@ -172,10 +175,10 @@ class FxRackManager {
       });
     }
 
-    console.log('[FxRack] Motor de Efeitos Master, Filtros Cutoff e Canais com Algoritmos Valhalla inicializados.');
+    console.log('[FxRack] Motor de Efeitos Master e Canais inicializados (TODOS OS EFEITOS DESLIGADOS POR PADRÃO).');
   }
 
-  // Gerador de Resposta de Impulso Sintético estilo Valhalla DSP (com amortecimento de frequências agudas)
+  // Gerador de Resposta de Impulso Sintético estilo Valhalla DSP
   createSyntheticImpulse(ctx, modeConfig) {
     const duration = modeConfig.duration || 3.0;
     const decay = modeConfig.decay || 2.0;
@@ -189,7 +192,6 @@ class FxRackManager {
     const left = impulse.getChannelData(0);
     const right = impulse.getChannelData(1);
 
-    // Filtro de amortecimento IIR de primeira ordem (Valhalla High-Damping Filter)
     const dt = 1.0 / sampleRate;
     const RC = 1.0 / (2 * Math.PI * damping);
     const alpha = dt / (RC + dt);
@@ -210,7 +212,6 @@ class FxRackManager {
       const rawLeft = (Math.random() * 2 - 1) * env;
       const rawRight = (Math.random() * 2 - 1) * env;
 
-      // Amortecimento passa-baixas dinâmico no rabo do reverb
       lastLeft = lastLeft + alpha * (rawLeft - lastLeft);
       lastRight = lastRight + alpha * (rawRight - lastRight);
 
@@ -283,7 +284,6 @@ class FxRackManager {
       this.masterParams.reverbMode = modeKey;
       const ctx = this.audioCtx.init();
       this.masterReverbNode.buffer = this.createSyntheticImpulse(ctx, this.reverbModes[modeKey]);
-      console.log(`[FxRack] Modo de Reverb Master alterado para: ${this.reverbModes[modeKey].name}`);
     }
   }
 
@@ -332,7 +332,7 @@ class FxRackManager {
     const fx = this.channelFx.get(channel);
     if (fx) {
       fx.params.cutoffFreq = freqHz;
-      if (fx.params.cutoffEnabled !== false) {
+      if (fx.params.cutoffEnabled) {
         fx.cutoffFilter.frequency.setTargetAtTime(freqHz, this.audioCtx.getCurrentTime(), 0.01);
       }
     }
@@ -426,7 +426,6 @@ class FxRackManager {
       fx.params.reverbMode = modeKey;
       const ctx = this.audioCtx.init();
       fx.reverbNode.buffer = this.createSyntheticImpulse(ctx, this.reverbModes[modeKey]);
-      console.log(`[FxRack] Modo de Reverb Pista ${channel} alterado para: ${this.reverbModes[modeKey].name}`);
     }
   }
 
