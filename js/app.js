@@ -1,6 +1,6 @@
 /**
  * MASTER APPLICATION CONTROLLER
- * Liga a interface UI ao motor de síntese SF2, Mixer Console, FX Rack, WebMIDI, PresetManager e RotaryKnobs 3D.
+ * Liga a interface UI ao motor de síntese SF2, Mixer Console, FX Rack, WebMIDI, PresetManager e Teclado de 5-7 Oitavas.
  */
 
 document.addEventListener('DOMContentLoaded', () => {
@@ -21,8 +21,13 @@ document.addEventListener('DOMContentLoaded', () => {
   const presetManager = new PresetManager(synth, fxRack, mixerConsole);
   window.presetManager = presetManager;
 
-  // WebMIDI Manager
+  let baseOctave = 2; // Início em C2 por padrão para cobrir 5 a 7 oitavas
+  let totalKeysToRender = 61; // 61 teclas (5 oitavas) por padrão
+
+  // WebMIDI Manager com iluminação de teclas em tempo real quando o controlador físico toca
   const midiDeviceStatusText = document.getElementById('midiDeviceStatusText');
+  const pianoKeysEl = document.getElementById('pianoKeys');
+
   const webMidi = new WebMidiManager(synth);
   webMidi.init((deviceName) => {
     if (midiDeviceStatusText) {
@@ -32,7 +37,24 @@ document.addEventListener('DOMContentLoaded', () => {
   });
   window.webMidi = webMidi;
 
-  let baseOctave = 3;
+  // Interceptar NoteOn/NoteOff do Synth para iluminação visual do teclado
+  const originalNoteOn = synth.noteOn.bind(synth);
+  synth.noteOn = function(note, velocity, channel) {
+    originalNoteOn(note, velocity, channel);
+    if (pianoKeysEl) {
+      const keyEl = pianoKeysEl.querySelector(`[data-note="${note}"]`);
+      if (keyEl) keyEl.classList.add('active');
+    }
+  };
+
+  const originalNoteOff = synth.noteOff.bind(synth);
+  synth.noteOff = function(note, channel) {
+    originalNoteOff(note, channel);
+    if (pianoKeysEl) {
+      const keyEl = pianoKeysEl.querySelector(`[data-note="${note}"]`);
+      if (keyEl) keyEl.classList.remove('active');
+    }
+  };
 
   // Registrar Service Worker para PWA (Instalação no Android + Suporte Offline)
   if ('serviceWorker' in navigator) {
@@ -62,15 +84,15 @@ document.addEventListener('DOMContentLoaded', () => {
   const velocityCurveSelect = document.getElementById('velocityCurveSelect');
   const btnAddChannel = document.getElementById('btnAddChannel');
 
+  const keyboardRangeSelect = document.getElementById('keyboardRangeSelect');
+  const octaveDisplay = document.getElementById('octaveDisplay');
+  const btnOctaveUp = document.getElementById('btnOctaveUp');
+  const btnOctaveDown = document.getElementById('btnOctaveDown');
+
   const btnSavePreset = document.getElementById('btnSavePreset');
   const btnLoadPreset = document.getElementById('btnLoadPreset');
   const presetFileInput = document.getElementById('presetFileInput');
   const presetSelect = document.getElementById('presetSelect');
-
-  const pianoKeysEl = document.getElementById('pianoKeys');
-  const octaveDisplay = document.getElementById('octaveDisplay');
-  const btnOctaveUp = document.getElementById('btnOctaveUp');
-  const btnOctaveDown = document.getElementById('btnOctaveDown');
 
   // Tab View Switcher (Navegação Suave)
   function switchView(activeTab, showMixer, showFx, showMidi) {
@@ -193,14 +215,24 @@ document.addEventListener('DOMContentLoaded', () => {
     synth.setVelocityCurve(e.target.value);
   });
 
-  // Renderizar Teclado Virtual Piano
+  // Seletor de Extensão de Teclado (24, 61, 88 teclas)
+  if (keyboardRangeSelect) {
+    keyboardRangeSelect.addEventListener('change', (e) => {
+      totalKeysToRender = parseInt(e.target.value, 10) || 61;
+      renderPianoKeyboard();
+    });
+  }
+
+  // Renderizar Teclado Virtual Piano (5 Oitavas / 61 teclas ou 7 Oitavas / 88 teclas)
   function renderPianoKeyboard() {
     pianoKeysEl.innerHTML = '';
-    const startNote = baseOctave * 12;
+    const startNote = totalKeysToRender === 88 ? 21 : baseOctave * 12; // 88 teclas inicia em A0 (MIDI 21)
     const noteNames = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'];
 
-    for (let i = 0; i < 24; i++) {
+    for (let i = 0; i < totalKeysToRender; i++) {
       const noteNum = startNote + i;
+      if (noteNum > 108) break; // Limite de 88 teclas (C8 = 108)
+
       const noteName = noteNames[noteNum % 12];
       const isBlack = noteName.includes('#');
 
@@ -238,7 +270,8 @@ document.addEventListener('DOMContentLoaded', () => {
       pianoKeysEl.appendChild(keyEl);
     }
 
-    octaveDisplay.textContent = `Oitava: C${baseOctave}-C${baseOctave + 2}`;
+    const endOctave = Math.floor((startNote + totalKeysToRender) / 12) - 1;
+    octaveDisplay.textContent = `Oitava: C${baseOctave}-C${endOctave}`;
   }
 
   renderPianoKeyboard();
@@ -305,9 +338,6 @@ document.addEventListener('DOMContentLoaded', () => {
       
       window.audioEngine.resume().then(() => updateAudioStatus(true));
       synth.noteOn(noteNum, 100, 1);
-
-      const keyEl = pianoKeysEl.querySelector(`[data-note="${noteNum}"]`);
-      if (keyEl) keyEl.classList.add('active');
     }
   });
 
@@ -317,9 +347,6 @@ document.addEventListener('DOMContentLoaded', () => {
       activeQwertyKeys.delete(key);
       const noteNum = (baseOctave * 12) + qwertyKeyMap[key];
       synth.noteOff(noteNum, 1);
-
-      const keyEl = pianoKeysEl.querySelector(`[data-note="${noteNum}"]`);
-      if (keyEl) keyEl.classList.remove('active');
     }
   });
 
