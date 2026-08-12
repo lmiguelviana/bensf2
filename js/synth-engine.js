@@ -1,19 +1,19 @@
 /**
  * POLYPHONIC WAVETABLE SYNTHESIZER ENGINE (MULTITIMBRIC)
- * Processador de síntese polifônica para reprodução de áudio SF2 multitimbrico por pista/canal.
+ * Processador de síntese polifônica para reprodução de áudio SF2 multitimbrico por pista/canal com sanitização de sampleRate.
  */
 
 class SynthEngine {
   constructor(audioEngineContext) {
     this.audioCtx = audioEngineContext;
-    this.activeVoices = new Map(); // Key: `${channel}_${note}`, Value: voice object
+    this.activeVoices = new Map();
     
     this.isAutoPolyphony = true;
     this.maxPolyphony = this.detectOptimalPolyphony(); 
     
     this.velocityCurve = 'normal';
     this.parsedSf2Data = null;
-    this.decodedAudioBuffers = new Map(); // SampleIndex -> { audioBuffer, loopStart, loopEnd, hasLoop }
+    this.decodedAudioBuffers = new Map();
     this.pitchBendSemi = new Map();
 
     this.adsr = {
@@ -55,8 +55,8 @@ class SynthEngine {
         muted: false,
         solo: false,
         transpose: 0,
-        assignedPresetIndex: 0, // Índice do preset SF2 atribuído a esta pista
-        assignedMidiChannel: ch // Canal MIDI escutado (1-16 ou 'all')
+        assignedPresetIndex: 0,
+        assignedMidiChannel: ch
       };
 
       this.pitchBendSemi.set(ch, 0);
@@ -97,7 +97,14 @@ class SynthEngine {
       sf2ParsedObj.sampleHeaders.forEach((sh, idx) => {
         if (sh.end > sh.start && sh.end <= sf2ParsedObj.sampleData.length) {
           const sampleLength = sh.end - sh.start;
-          const audioBuf = ctx.createBuffer(1, sampleLength, sh.sampleRate || 44100);
+
+          // Sanitizar sampleRate para o intervalo aceito pela Web Audio API [3000 Hz a 768000 Hz]
+          let validSampleRate = sh.sampleRate;
+          if (!validSampleRate || validSampleRate < 3000 || validSampleRate > 768000 || isNaN(validSampleRate)) {
+            validSampleRate = ctx.sampleRate || 44100;
+          }
+
+          const audioBuf = ctx.createBuffer(1, sampleLength, validSampleRate);
           const channelData = audioBuf.getChannelData(0);
           const pcmData = sf2ParsedObj.sampleData;
 
@@ -106,8 +113,8 @@ class SynthEngine {
           }
 
           const hasLoop = sh.endLoop > sh.startLoop && sh.startLoop > sh.start;
-          const loopStartSec = hasLoop ? (sh.startLoop - sh.start) / sh.sampleRate : 0;
-          const loopEndSec = hasLoop ? (sh.endLoop - sh.start) / sh.sampleRate : 0;
+          const loopStartSec = hasLoop ? (sh.startLoop - sh.start) / validSampleRate : 0;
+          const loopEndSec = hasLoop ? (sh.endLoop - sh.start) / validSampleRate : 0;
 
           this.decodedAudioBuffers.set(idx, {
             audioBuffer: audioBuf,
@@ -120,7 +127,6 @@ class SynthEngine {
       });
     }
 
-    // Atribuir por padrão timbres sequenciais aos canais 1..16 se disponíveis
     if (sf2ParsedObj.presets && sf2ParsedObj.presets.length > 0) {
       for (let ch = 1; ch <= 16; ch++) {
         this.channels[ch].assignedPresetIndex = (ch - 1) % sf2ParsedObj.presets.length;
@@ -160,7 +166,6 @@ class SynthEngine {
     const ctx = this.audioCtx.init();
     this.audioCtx.resume();
 
-    // Roteamento Multitimbrico: tocar em todos os canais configurados para este canal MIDI ou 'all'
     for (let ch = 1; ch <= 16; ch++) {
       const chConfig = this.channels[ch];
       if (!chConfig || chConfig.muted) continue;
@@ -192,7 +197,6 @@ class SynthEngine {
       gainNode.gain.linearRampToValueAtTime(velGain, attackEnd);
       gainNode.gain.linearRampToValueAtTime(sustainLevel, decayEnd);
 
-      // Escolher amostra atribuída ao preset desta pista
       const sampleIndices = Array.from(this.decodedAudioBuffers.keys());
       const presetOffset = chConfig.assignedPresetIndex || 0;
       const matchedIdx = sampleIndices[(actualNote + presetOffset) % sampleIndices.length];

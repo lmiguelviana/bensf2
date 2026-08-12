@@ -1,6 +1,6 @@
 /**
  * SOUNDFONT 2 (SF2) BINARY PARSER
- * Parser puro de arquivos binários SF2 em JavaScript para extração de amostras PCM e presets.
+ * Parser puro de arquivos binários SF2 em JavaScript com alinhamento de 46-bytes no shdr.
  */
 
 class SoundFont2Parser {
@@ -16,7 +16,6 @@ class SoundFont2Parser {
 
   cleanString(str) {
     if (!str) return 'Sem Nome';
-    // Remover bytes nulos \0 e caracteres não imprimíveis ASCII
     return str.replace(/[\x00-\x1F\x7F-\xFF]/g, '').trim() || 'Preset Sem Nome';
   }
 
@@ -56,6 +55,12 @@ class SoundFont2Parser {
 
   readUint8() {
     const val = this.view.getUint8(this.offset);
+    this.offset += 1;
+    return val;
+  }
+
+  readInt8() {
+    const val = this.view.getInt8(this.offset);
     this.offset += 1;
     return val;
   }
@@ -105,7 +110,6 @@ class SoundFont2Parser {
       const nextSub = this.offset + subSize;
 
       if (subId === 'smpl') {
-        // Amostras PCM de 16-bits
         const sampleCount = Math.floor(subSize / 2);
         this.sampleData = new Int16Array(this.buffer, this.offset, sampleCount);
         this.offset = nextSub;
@@ -121,9 +125,9 @@ class SoundFont2Parser {
       const subSize = this.readUint32();
       const nextSub = this.offset + subSize;
 
-      if (subId === 'phdr') { // Preset Headers
+      if (subId === 'phdr') { // Preset Headers (38 bytes cada)
         const count = Math.floor(subSize / 38);
-        for (let i = 0; i < count - 1; i++) { // Último registro é EOP (End of Presets)
+        for (let i = 0; i < count - 1; i++) {
           const name = this.readString(20);
           const preset = this.readUint16();
           const bank = this.readUint16();
@@ -137,9 +141,9 @@ class SoundFont2Parser {
           }
         }
         this.offset = nextSub;
-      } else if (subId === 'shdr') { // Sample Headers
+      } else if (subId === 'shdr') { // Sample Headers (Exatamente 46 bytes cada)
         const count = Math.floor(subSize / 46);
-        for (let i = 0; i < count - 1; i++) { // Último registro é EOS
+        for (let i = 0; i < count - 1; i++) {
           const name = this.readString(20);
           const start = this.readUint32();
           const end = this.readUint32();
@@ -147,13 +151,19 @@ class SoundFont2Parser {
           const endLoop = this.readUint32();
           const sampleRate = this.readUint32();
           const originalPitch = this.readUint8();
-          const pitchCorrection = this.readInt16();
-          const sampleLink = this.readUint16();
-          const sampleType = this.readUint16();
+          const pitchCorrection = this.readInt8(); // 1 byte (char)
+          const sampleLink = this.readUint16();   // 2 bytes (WORD)
+          const sampleType = this.readUint16();   // 2 bytes (WORD)
 
           if (name && name !== 'EOS') {
             this.sampleHeaders.push({
-              name: this.cleanString(name), start, end, startLoop, endLoop, sampleRate, originalPitch
+              name: this.cleanString(name), 
+              start, 
+              end, 
+              startLoop, 
+              endLoop, 
+              sampleRate, 
+              originalPitch
             });
           }
         }
