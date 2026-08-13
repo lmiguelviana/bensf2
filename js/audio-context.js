@@ -1,6 +1,6 @@
 /**
  * AUDIO CONTEXT MANAGER
- * Gerencia o contexto de áudio da Web Audio API, volume master e limiter contra distorção.
+ * Gerencia o contexto de áudio da Web Audio API, volume master e compressor de proteção.
  */
 
 class AudioEngineContext {
@@ -17,8 +17,7 @@ class AudioEngineContext {
     const AudioCtx = window.AudioContext || window.webkitAudioContext;
     this.ctx = new AudioCtx();
 
-    // Node de Limiter Master — configuração transparente estilo mastering (sem pumping)
-    // threshold: -3dB (headroom seguro), knee: 6dB (curva suave), ratio: 4:1 (limiter leve)
+    // Compressor de proteção. Ele reduz picos, mas não é um limiter true-peak.
     this.masterLimiter = this.ctx.createDynamicsCompressor();
     this.masterLimiter.threshold.setValueAtTime(-3.0, this.ctx.currentTime);
     this.masterLimiter.knee.setValueAtTime(6.0, this.ctx.currentTime);
@@ -58,7 +57,7 @@ class AudioEngineContext {
   }
 
   getMasterVolume() {
-    return this.masterGain ? this.masterGain.gain.value : 0.8;
+    return this.masterGain ? this.masterGain.gain.value : 0.65;
   }
 
   getCurrentTime() {

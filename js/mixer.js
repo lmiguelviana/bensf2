@@ -40,6 +40,15 @@ function noteNameToMidi(str) {
   return Math.max(0, Math.min(127, midiNum));
 }
 
+function escapeMixerHtml(value) {
+  return String(value === undefined || value === null ? '' : value)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
 class MixerConsoleManager {
   constructor(synthEngine, vuMeterManager) {
     this.synth = synthEngine;
@@ -49,10 +58,16 @@ class MixerConsoleManager {
     this.midiLearn = null;
     this.fxRack = null;
     this.selectedChannel = 1;
+    this.userMuteState = new Map();
+    for (let ch = 1; ch <= 16; ch++) {
+      const channel = this.synth.channels[ch];
+      this.userMuteState.set(ch, !!(channel && (channel.userMuted ?? channel.muted)));
+    }
   }
 
   init(containerElement) {
     this.container = containerElement;
+    this.applyAllChannelAudibility();
     this.renderMixer();
   }
 
@@ -64,17 +79,24 @@ class MixerConsoleManager {
     this.fxRack = fxRackManager;
   }
 
-  setVisibleChannelCount(count) {
+  setVisibleChannelCount(count, shouldRender = true) {
     this.totalChannels = Math.max(1, Math.min(16, parseInt(count, 10) || 4));
-    this.renderMixer();
+    if (this.selectedChannel > this.totalChannels) {
+      this.selectedChannel = this.totalChannels;
+      if (this.fxRack) this.fxRack.setSelectedChannel(this.selectedChannel);
+    }
+    this.applyAllChannelAudibility();
+    if (shouldRender) this.renderMixer();
   }
 
   selectChannel(ch) {
-    this.selectedChannel = parseInt(ch, 10) || 1;
+    this.selectedChannel = Math.max(1, Math.min(this.totalChannels, parseInt(ch, 10) || 1));
     if (this.container) {
       this.container.querySelectorAll('.mixer-channel-strip').forEach(el => {
         const c = parseInt(el.dataset.channel, 10);
-        el.classList.toggle('selected', c === this.selectedChannel);
+        const selected = c === this.selectedChannel;
+        el.classList.toggle('selected', selected);
+        el.setAttribute('aria-current', selected ? 'true' : 'false');
       });
     }
 
@@ -96,6 +118,7 @@ class MixerConsoleManager {
 
   renderMixer() {
     if (!this.container) return;
+    this.releaseMixerAnalysers();
     this.container.innerHTML = '';
 
     for (let ch = 1; ch <= this.totalChannels; ch++) {
@@ -106,7 +129,7 @@ class MixerConsoleManager {
       this.container.appendChild(stripEl);
 
       const chConfig = this.synth.channels[ch];
-      if (chConfig && chConfig.gainNode) {
+      if (chConfig && chConfig.gainNode && this.vuMeter) {
         const canvas = stripEl.querySelector(`.vu-canvas-${ch}`);
         this.vuMeter.createAnalyserForNode(chConfig.gainNode, `ch_${ch}`, canvas);
       }
@@ -118,6 +141,8 @@ class MixerConsoleManager {
     strip.className = 'mixer-channel-strip';
     strip.id = `channelStrip_${ch}`;
     strip.dataset.channel = ch;
+    strip.tabIndex = 0;
+    strip.setAttribute('role', 'group');
 
     const chConfig = this.synth.channels[ch] || { 
       name: `CH ${ch < 10 ? '0' + ch : ch}: LAYER ${ch}`,
@@ -132,6 +157,8 @@ class MixerConsoleManager {
       keyRangeLow: 0,
       keyRangeHigh: 127
     };
+    strip.setAttribute('aria-label', `Pista ${ch}: ${String(chConfig.name || `Layer ${ch}`)}. Pressione Enter ou EspaÃ§o para selecionar os efeitos.`);
+    strip.setAttribute('aria-current', ch === this.selectedChannel ? 'true' : 'false');
 
     let presetOptionsHtml = `<option value="">(sem timbre)</option>`;
     if (this.synth.parsedSf2Data && this.synth.parsedSf2Data.presets && this.synth.parsedSf2Data.presets.length > 0) {
@@ -139,9 +166,9 @@ class MixerConsoleManager {
       presetOptionsHtml = `<option value="" ${noTimbreSelected ? 'selected' : ''} style="color:#888;">(sem timbre)</option>`;
       presetOptionsHtml += this.synth.parsedSf2Data.presets.map((p, idx) => {
         const isSelected = !noTimbreSelected && idx === chConfig.assignedPresetIndex ? 'selected' : '';
-        const cleanName = (p.name || `Preset #${idx}`).replace(/[^\x20-\x7E]/g, '').trim() || `Preset ${p.bank}:${p.preset}`;
+        const displayName = String(p.name || `Preset #${idx}`).trim() || `Preset ${p.bank}:${p.preset}`;
         const sourceTag = p.sf2Source ? ` [${p.sf2Source}]` : '';
-        return `<option value="${idx}" ${isSelected}>${cleanName}${sourceTag} (${p.bank}:${p.preset})</option>`;
+        return `<option value="${idx}" ${isSelected}>${escapeMixerHtml(displayName + sourceTag)} (${escapeMixerHtml(p.bank)}:${escapeMixerHtml(p.preset)})</option>`;
       }).join('');
     }
 
@@ -165,7 +192,7 @@ class MixerConsoleManager {
       <div class="channel-header" title="Clique duas vezes sobre o nome para editar">
         <div class="ch-header-top-bar" style="display: flex; align-items: center; justify-content: space-between; width: 100%;">
           <div class="ch-name-container" style="display: flex; align-items: center; justify-content: center; flex: 1; overflow: hidden; margin-right: 2px;">
-            <span class="ch-name-text" style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${chConfig.name}</span>
+            <span class="ch-name-text" style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${escapeMixerHtml(chConfig.name)}</span>
           </div>
           <button class="btn-remove-track" data-channel="${ch}" title="Remover esta pista do Mixer" style="background: transparent; border: none; color: var(--accent-danger); font-size: 12px; font-weight: 800; cursor: pointer; padding: 0 2px; line-height: 1;">✕</button>
         </div>
@@ -206,7 +233,7 @@ class MixerConsoleManager {
       </div>
 
       <div class="channel-fader-area" style="margin-top: 6px;">
-        <input type="range" class="vertical-fader ch-volume" data-channel="${ch}" min="0" max="1" step="0.01" value="${chConfig.volume}" title="Clique com o botão direito para MIDI Learn">
+        <input type="range" class="vertical-fader ch-volume" data-channel="${ch}" min="0" max="1" step="0.01" value="${escapeMixerHtml(chConfig.volume)}" title="Clique com o botão direito para MIDI Learn">
         <canvas class="vu-meter-canvas vu-canvas-${ch}" width="10" height="120"></canvas>
       </div>
 
@@ -216,7 +243,7 @@ class MixerConsoleManager {
 
       <div class="knob-group">
         <div class="knob-label">PAN (L/R)</div>
-        <input type="range" class="knob-slider ch-pan" data-channel="${ch}" min="-1" max="1" step="0.05" value="${chConfig.pan}" title="Clique com o botão direito para MIDI Learn">
+        <input type="range" class="knob-slider ch-pan" data-channel="${ch}" min="-1" max="1" step="0.05" value="${escapeMixerHtml(chConfig.pan)}" title="Clique com o botão direito para MIDI Learn">
       </div>
 
       <!-- ZONA DE SPLIT DO TECLADO (DIGITAR EX: C0, C7 OU TOCAR NO CONTROLADOR MIDI) -->
@@ -240,7 +267,7 @@ class MixerConsoleManager {
       </div>
 
       <div class="button-group-row" style="margin-top: 4px;">
-        <button class="btn btn-mute ${chConfig.muted ? 'active' : ''}" data-channel="${ch}">M</button>
+        <button class="btn btn-mute ${this.getChannelUserMuted(ch) ? 'active' : ''}" data-channel="${ch}">M</button>
         <button class="btn btn-solo ${chConfig.solo ? 'active' : ''}" data-channel="${ch}">S</button>
       </div>
     `;
@@ -267,7 +294,7 @@ class MixerConsoleManager {
 
       headerEl.innerHTML = `
         <div class="inline-rename-container" style="display: flex; gap: 4px; width: 100%; align-items: center; justify-content: center;">
-          <input type="text" class="inline-rename-input" value="${currentName}" style="flex: 1; min-width: 0; background: #ffffff; color: #000000; font-family: var(--font-heading); font-weight: 700; font-size: 11px; padding: 2px 4px; border-radius: 4px; border: 1px solid var(--accent-cyan); outline: none;">
+          <input type="text" class="inline-rename-input" value="${escapeMixerHtml(currentName)}" style="flex: 1; min-width: 0; background: #ffffff; color: #000000; font-family: var(--font-heading); font-weight: 700; font-size: 11px; padding: 2px 4px; border-radius: 4px; border: 1px solid var(--accent-cyan); outline: none;">
           <button class="inline-rename-ok-btn btn btn-primary" style="padding: 2px 6px; font-size: 10px; font-weight: 800; border-radius: 4px;">OK</button>
         </div>
       `;
@@ -289,7 +316,7 @@ class MixerConsoleManager {
         headerEl.innerHTML = `
           <div class="ch-header-top-bar" style="display: flex; align-items: center; justify-content: space-between; width: 100%;">
             <div class="ch-name-container" style="display: flex; align-items: center; justify-content: center; flex: 1; overflow: hidden; margin-right: 2px;">
-              <span class="ch-name-text" style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${newName}</span>
+              <span class="ch-name-text" style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${escapeMixerHtml(newName)}</span>
             </div>
             <button class="btn-remove-track" data-channel="${ch}" title="Remover pista CH ${ch}">✕</button>
           </div>
@@ -327,7 +354,7 @@ class MixerConsoleManager {
             headerEl.innerHTML = `
               <div class="ch-header-top-bar" style="display: flex; align-items: center; justify-content: space-between; width: 100%;">
                 <div class="ch-name-container" style="display: flex; align-items: center; justify-content: center; flex: 1; overflow: hidden; margin-right: 2px;">
-                  <span class="ch-name-text" style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${currentName}</span>
+                  <span class="ch-name-text" style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${escapeMixerHtml(currentName)}</span>
                 </div>
                 <button class="btn-remove-track" data-channel="${ch}" title="Remover pista CH ${ch}">✕</button>
               </div>
@@ -347,7 +374,13 @@ class MixerConsoleManager {
     });
 
     // Selecionar pista ao clicar no strip
-    strip.addEventListener('click', () => {
+    strip.addEventListener('click', (event) => {
+      if (event.target.closest('button, input, select, a, [role="button"]')) return;
+      this.selectChannel(ch);
+    });
+    strip.addEventListener('keydown', (event) => {
+      if (event.target !== strip || (event.key !== 'Enter' && event.key !== ' ')) return;
+      event.preventDefault();
       this.selectChannel(ch);
     });
 
@@ -408,6 +441,7 @@ class MixerConsoleManager {
     volInput.addEventListener('input', (e) => {
       const val = parseFloat(e.target.value);
       this.synth.setChannelVolume(ch, val);
+      this.applyChannelAudibility(ch);
       volDisplay.textContent = `${Math.round(val * 100)}%`;
     });
 
@@ -421,6 +455,7 @@ class MixerConsoleManager {
     if (this.midiLearn) {
       this.midiLearn.attach(volInput, `Volume Pista ${chConfig.name}`, (normVal) => {
         this.synth.setChannelVolume(ch, normVal);
+        this.applyChannelAudibility(ch);
         volInput.value = normVal;
         volDisplay.textContent = `${Math.round(normVal * 100)}%`;
       });
@@ -489,8 +524,8 @@ class MixerConsoleManager {
             splitLowInput.style.boxShadow = '';
             updateLowVal(noteNum);
             // Feedback de áudio: tocar a nota para o usuário ouvir onde está no teclado
-            if (this.synth) this.synth.noteOn(noteNum, 80, 1);
-            setTimeout(() => { if (this.synth) this.synth.noteOff(noteNum, 1); }, 500);
+            if (this.synth) this.synth.noteOnTrack(noteNum, 80, ch);
+            setTimeout(() => { if (this.synth) this.synth.noteOffTrack(noteNum, ch); }, 500);
           });
         }
       };
@@ -564,8 +599,8 @@ class MixerConsoleManager {
             splitHighInput.style.boxShadow = '';
             updateHighVal(noteNum);
             // Feedback de áudio: tocar a nota para o usuário ouvir onde está no teclado
-            if (this.synth) this.synth.noteOn(noteNum, 80, 1);
-            setTimeout(() => { if (this.synth) this.synth.noteOff(noteNum, 1); }, 500);
+            if (this.synth) this.synth.noteOnTrack(noteNum, 80, ch);
+            setTimeout(() => { if (this.synth) this.synth.noteOffTrack(noteNum, ch); }, 500);
           });
         }
       };
@@ -601,15 +636,17 @@ class MixerConsoleManager {
     }
 
     const muteBtn = strip.querySelector('.btn-mute');
+    muteBtn.dataset.midiLearnKey = `ch_${ch}_mute`;
     muteBtn.title = "Mute (Silenciar) - Clique com o botão direito para MIDI Learn";
     muteBtn.addEventListener('click', (e) => {
       e.stopPropagation();
-      const isMuted = !muteBtn.classList.contains('active');
+      const isMuted = !this.getChannelUserMuted(ch);
       muteBtn.classList.toggle('active', isMuted);
-      this.synth.setChannelMute(ch, isMuted);
+      this.setChannelUserMute(ch, isMuted);
     });
 
     const soloBtn = strip.querySelector('.btn-solo');
+    soloBtn.dataset.midiLearnKey = `ch_${ch}_solo`;
     soloBtn.title = "Solo (Isolar Pista) - Clique com o botão direito para MIDI Learn";
     soloBtn.addEventListener('click', (e) => {
       e.stopPropagation();
@@ -619,18 +656,9 @@ class MixerConsoleManager {
     });
 
     if (this.midiLearn) {
-      // MIDI Learn Mute: CC > 64 = toggle Mute ON/OFF
-      this.midiLearn.attach(muteBtn, `Mute Pista ${chConfig.name}`, (normVal) => {
-        if (normVal > 0.5) {
-          muteBtn.click();
-        }
-      });
-      // MIDI Learn Solo: CC > 64 = toggle Solo ON/OFF
-      this.midiLearn.attach(soloBtn, `Solo Pista ${chConfig.name}`, (normVal) => {
-        if (normVal > 0.5) {
-          soloBtn.click();
-        }
-      });
+      // Botões são alternados uma única vez pelo MidiLearnManager na borda do CC.
+      this.midiLearn.attach(muteBtn, `Mute Pista ${chConfig.name}`, () => {});
+      this.midiLearn.attach(soloBtn, `Solo Pista ${chConfig.name}`, () => {});
     }
 
     return strip;
@@ -641,34 +669,18 @@ class MixerConsoleManager {
       this.synth.channels[channel].solo = isSolo;
     }
 
-    let hasSoloActive = false;
-    // Verificar apenas nos canais visíveis (totalChannels) para consistência
-    for (let c = 1; c <= this.totalChannels; c++) {
-      if (this.synth.channels[c] && this.synth.channels[c].solo) {
-        hasSoloActive = true;
-        break;
-      }
-    }
-
-    for (let c = 1; c <= this.totalChannels; c++) {
-      if (hasSoloActive) {
-        const chSolo = this.synth.channels[c] && this.synth.channels[c].solo;
-        this.synth.setChannelMute(c, !chSolo);
-      } else {
-        const chMuted = this.synth.channels[c] && this.synth.channels[c].muted;
-        this.synth.setChannelMute(c, chMuted);
-      }
-    }
+    this.applyAllChannelAudibility();
   }
 
   addChannel() {
     if (this.totalChannels < 16) {
-      this.totalChannels++;
-      this.renderMixer();
+      this.setVisibleChannelCount(this.totalChannels + 1);
     }
   }
 
   removeChannel(ch) {
+    ch = parseInt(ch, 10);
+    if (!Number.isFinite(ch) || ch < 1 || ch > this.totalChannels) return;
     if (this.totalChannels <= 1) {
       if (window.showToastNotification) {
         window.showToastNotification('Operação Não Permitida', 'É necessário manter pelo menos 1 pista ativa no Mixer.', 'warning');
@@ -676,21 +688,48 @@ class MixerConsoleManager {
       return;
     }
 
-    // Silenciar via gain (não setar chConfig.muted = true para não contaminar o estado)
-    if (this.synth.channels[ch] && this.synth.channels[ch].gainNode) {
-      this.synth.channels[ch].gainNode.gain.setTargetAtTime(0, this.synth.audioCtx.getCurrentTime(), 0.01);
+    if (typeof this.synth.stopAllVoices === 'function') {
+      this.synth.stopAllVoices();
     }
-    this.totalChannels--;
+
+    const previousTotal = this.totalChannels;
+    const channelStates = new Map();
+    const trackFxStates = new Map();
+    for (let source = ch + 1; source <= previousTotal; source++) {
+      channelStates.set(source, this.captureChannelState(source));
+      if (this.fxRack && typeof this.fxRack.getTrackState === 'function') {
+        trackFxStates.set(source, this.fxRack.getTrackState(source));
+      }
+    }
+
+    for (let target = ch; target < previousTotal; target++) {
+      this.applyChannelState(target, channelStates.get(target + 1));
+      if (this.fxRack && typeof this.fxRack.applyTrackState === 'function') {
+        this.fxRack.applyTrackState(target, trackFxStates.get(target + 1) || {});
+      }
+    }
+    this.resetChannelState(previousTotal);
+    if (this.fxRack && typeof this.fxRack.resetTrackState === 'function') {
+      this.fxRack.resetTrackState(previousTotal);
+    }
+
+    if (this.midiLearn && typeof this.midiLearn.removeBindingsForChannel === 'function') {
+      for (let affected = ch; affected <= previousTotal; affected++) {
+        this.midiLearn.removeBindingsForChannel(affected);
+      }
+    }
+
+    this.totalChannels = previousTotal - 1;
 
     const selectEl = document.getElementById('mixerChannelCountSelect');
     if (selectEl) {
       selectEl.value = this.totalChannels;
     }
 
-    if (this.selectedChannel > this.totalChannels) {
-      this.selectedChannel = this.totalChannels;
-    }
+    this.selectedChannel = Math.max(1, Math.min(this.selectedChannel, this.totalChannels));
+    if (this.fxRack) this.fxRack.setSelectedChannel(this.selectedChannel);
 
+    this.applyAllChannelAudibility();
     this.renderMixer();
 
     if (window.showToastNotification) {
@@ -705,6 +744,132 @@ class MixerConsoleManager {
     const isCustom = chConfig && chConfig.velocitySettings && !chConfig.velocitySettings.useGlobal;
     badge.textContent = isCustom ? '● PISTA' : '🌐 GLOBAL';
     badge.style.color = isCustom ? 'var(--accent-cyan)' : 'var(--text-muted)';
+  }
+
+  getChannelUserMuted(channel) {
+    channel = parseInt(channel, 10);
+    if (this.userMuteState.has(channel)) return !!this.userMuteState.get(channel);
+    const chConfig = this.synth.channels[channel];
+    return !!(chConfig && (chConfig.userMuted ?? chConfig.muted));
+  }
+
+  setChannelUserMute(channel, muted) {
+    channel = parseInt(channel, 10);
+    if (!this.synth.channels[channel]) return;
+    const value = !!muted;
+    this.userMuteState.set(channel, value);
+    this.synth.channels[channel].userMuted = value;
+    this.applyChannelAudibility(channel);
+  }
+
+  hasVisibleSolo() {
+    for (let channel = 1; channel <= this.totalChannels; channel++) {
+      if (this.synth.channels[channel] && this.synth.channels[channel].solo) return true;
+    }
+    return false;
+  }
+
+  applyChannelAudibility(channel, hasSolo = this.hasVisibleSolo()) {
+    const chConfig = this.synth.channels[channel];
+    if (!chConfig) return;
+    const hidden = channel > this.totalChannels;
+    const soloSuppressed = hasSolo && !chConfig.solo;
+    const effectiveMuted = hidden || soloSuppressed || this.getChannelUserMuted(channel);
+    chConfig.soloSuppressed = soloSuppressed;
+    chConfig.visibilitySuppressed = hidden;
+    this.synth.setChannelMute(channel, effectiveMuted);
+    // setChannelMute escreve o mute efetivo; preservar separadamente a intenção.
+    chConfig.userMuted = this.getChannelUserMuted(channel);
+  }
+
+  applyAllChannelAudibility() {
+    const hasSolo = this.hasVisibleSolo();
+    for (let channel = 1; channel <= 16; channel++) {
+      this.applyChannelAudibility(channel, hasSolo);
+    }
+  }
+
+  captureChannelState(channel) {
+    const source = this.synth.channels[channel];
+    if (!source) return null;
+    return {
+      name: source.name,
+      volume: source.volume,
+      pan: source.pan,
+      muted: this.getChannelUserMuted(channel),
+      solo: !!source.solo,
+      transpose: source.transpose,
+      semitoneTranspose: source.semitoneTranspose,
+      assignedPresetIndex: source.assignedPresetIndex,
+      assignedMidiChannel: source.assignedMidiChannel,
+      keyRangeLow: source.keyRangeLow,
+      keyRangeHigh: source.keyRangeHigh,
+      adsr: source.adsr ? { ...source.adsr } : null,
+      velocitySettings: source.velocitySettings ? { ...source.velocitySettings } : null
+    };
+  }
+
+  applyChannelState(channel, state) {
+    const target = this.synth.channels[channel];
+    if (!target || !state) return;
+    const volume = Number(state.volume);
+    const pan = Number(state.pan);
+    const low = Number(state.keyRangeLow);
+    const high = Number(state.keyRangeHigh);
+    if (typeof this.synth.setChannelName === 'function') this.synth.setChannelName(channel, String(state.name || `CH ${channel}`));
+    if (typeof this.synth.setChannelVolume === 'function') {
+      this.synth.setChannelVolume(channel, Math.max(0, Math.min(1, Number.isFinite(volume) ? volume : 1)));
+    }
+    if (typeof this.synth.setChannelPan === 'function') {
+      this.synth.setChannelPan(channel, Math.max(-1, Math.min(1, Number.isFinite(pan) ? pan : 0)));
+    }
+    if (typeof this.synth.setChannelPreset === 'function') this.synth.setChannelPreset(channel, state.assignedPresetIndex);
+    target.transpose = Number.isFinite(Number(state.transpose)) ? Number(state.transpose) : 0;
+    target.semitoneTranspose = Number.isFinite(Number(state.semitoneTranspose)) ? Number(state.semitoneTranspose) : 0;
+    target.assignedMidiChannel = state.assignedMidiChannel === 'all'
+      ? 'all'
+      : Math.max(1, Math.min(16, parseInt(state.assignedMidiChannel, 10) || 1));
+    target.keyRangeLow = Math.max(0, Math.min(127, Number.isFinite(low) ? Math.round(low) : 0));
+    target.keyRangeHigh = Math.max(target.keyRangeLow, Math.min(127, Number.isFinite(high) ? Math.round(high) : 127));
+    if (state.adsr) target.adsr = { ...state.adsr };
+    if (state.velocitySettings) target.velocitySettings = { ...state.velocitySettings };
+    target.solo = !!state.solo;
+    this.setChannelUserMute(channel, !!state.muted);
+  }
+
+  resetChannelState(channel) {
+    this.applyChannelState(channel, {
+      name: `CH ${channel < 10 ? '0' + channel : channel}: LAYER ${channel}`,
+      volume: 1,
+      pan: 0,
+      muted: false,
+      solo: false,
+      transpose: 0,
+      semitoneTranspose: 0,
+      assignedPresetIndex: null,
+      assignedMidiChannel: 'all',
+      keyRangeLow: 0,
+      keyRangeHigh: 127,
+      adsr: { attack: 0.005, decay: 0.1, sustain: 0.75, release: 0.25 },
+      velocitySettings: { useGlobal: true, mode: 'normal', minVel: 1, maxVel: 127, curvePower: 2, fixedVel: 120 }
+    });
+  }
+
+  releaseMixerAnalysers() {
+    if (!this.vuMeter || !this.vuMeter.analysers) return;
+    Array.from(this.vuMeter.analysers.entries()).forEach(([id, analyser]) => {
+      if (!String(id).startsWith('ch_')) return;
+      const channel = parseInt(String(id).slice(3), 10);
+      const gainNode = this.synth.channels[channel] && this.synth.channels[channel].gainNode;
+      if (gainNode && typeof gainNode.disconnect === 'function') {
+        try { gainNode.disconnect(analyser); } catch (error) {}
+      }
+      if (analyser && typeof analyser.disconnect === 'function') {
+        try { analyser.disconnect(); } catch (error) {}
+      }
+      this.vuMeter.analysers.delete(id);
+      if (this.vuMeter.canvases) this.vuMeter.canvases.delete(id);
+    });
   }
 }
 

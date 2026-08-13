@@ -1,6 +1,6 @@
 /**
  * REAL-TIME VU METER RENDERER
- * Renderizador de medidores de áudio VU estéreo em tempo real usando Web Audio AnalyserNode e Canvas HTML5.
+ * Renderizador de nível RMS por pista usando Web Audio AnalyserNode e Canvas HTML5.
  */
 
 class VuMeterManager {
@@ -8,10 +8,14 @@ class VuMeterManager {
     this.audioCtx = audioEngineContext;
     this.analysers = new Map(); // ChannelOrId -> AnalyserNode
     this.canvases = new Map();   // ChannelOrId -> HTMLCanvasElement
+    this.sources = new Map();
+    this.buffers = new Map();
     this.isRunning = false;
+    this.animationId = null;
   }
 
   createAnalyserForNode(node, id, canvasElement) {
+    this.removeAnalyser(id);
     const ctx = this.audioCtx.init();
     const analyser = ctx.createAnalyser();
     analyser.fftSize = 256;
@@ -20,6 +24,8 @@ class VuMeterManager {
     node.connect(analyser);
 
     this.analysers.set(id, analyser);
+    this.sources.set(id, node);
+    this.buffers.set(id, new Uint8Array(analyser.frequencyBinCount));
     if (canvasElement) {
       this.canvases.set(id, canvasElement);
     }
@@ -30,6 +36,7 @@ class VuMeterManager {
   }
 
   startLoop() {
+    if (this.isRunning) return;
     this.isRunning = true;
 
     const render = () => {
@@ -41,7 +48,11 @@ class VuMeterManager {
 
         const ctx = canvas.getContext('2d');
         const bufferLength = analyser.frequencyBinCount;
-        const dataArray = new Uint8Array(bufferLength);
+        let dataArray = this.buffers.get(id);
+        if (!dataArray || dataArray.length !== bufferLength) {
+          dataArray = new Uint8Array(bufferLength);
+          this.buffers.set(id, dataArray);
+        }
         analyser.getByteTimeDomainData(dataArray);
 
         // Calcular RMS / Peak Volume
@@ -56,10 +67,10 @@ class VuMeterManager {
         this.drawMeter(ctx, canvas.width, canvas.height, peak);
       });
 
-      requestAnimationFrame(render);
+      this.animationId = requestAnimationFrame(render);
     };
 
-    requestAnimationFrame(render);
+    this.animationId = requestAnimationFrame(render);
   }
 
   drawMeter(ctx, width, height, peakLevel) {
@@ -92,6 +103,30 @@ class VuMeterManager {
 
   stop() {
     this.isRunning = false;
+    if (this.animationId !== null && typeof cancelAnimationFrame === 'function') {
+      cancelAnimationFrame(this.animationId);
+      this.animationId = null;
+    }
+  }
+
+  removeAnalyser(id) {
+    const source = this.sources.get(id);
+    const analyser = this.analysers.get(id);
+    if (source && analyser && typeof source.disconnect === 'function') {
+      try { source.disconnect(analyser); } catch (error) {}
+    }
+    if (analyser && typeof analyser.disconnect === 'function') {
+      try { analyser.disconnect(); } catch (error) {}
+    }
+    this.sources.delete(id);
+    this.analysers.delete(id);
+    this.canvases.delete(id);
+    this.buffers.delete(id);
+  }
+
+  destroy() {
+    this.stop();
+    Array.from(this.analysers.keys()).forEach((id) => this.removeAnalyser(id));
   }
 }
 

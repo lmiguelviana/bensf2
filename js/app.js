@@ -49,17 +49,24 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     const toast = document.createElement('div');
-    toast.className = `toast-banner ${type}`;
+    const safeType = ['success', 'warning', 'info'].includes(type) ? type : 'info';
+    toast.className = `toast-banner ${safeType}`;
+    toast.setAttribute('role', safeType === 'warning' ? 'alert' : 'status');
     const iconMap = { success: '🎉', warning: '⚠️', info: 'ℹ️' };
-    const icon = iconMap[type] || '✨';
+    const icon = document.createElement('div');
+    icon.className = 'toast-icon';
+    icon.setAttribute('aria-hidden', 'true');
+    icon.textContent = iconMap[safeType] || 'ℹ️';
 
-    toast.innerHTML = `
-      <div style="font-size: 20px;">${icon}</div>
-      <div>
-        <div style="font-family: var(--font-heading); font-size: 13px; font-weight: 800; color: var(--accent-cyan);">${title}</div>
-        <div style="font-size: 11px; color: var(--text-main); margin-top: 2px;">${message}</div>
-      </div>
-    `;
+    const content = document.createElement('div');
+    const titleEl = document.createElement('div');
+    titleEl.className = 'toast-title';
+    titleEl.textContent = String(title ?? '');
+    const messageEl = document.createElement('div');
+    messageEl.className = 'toast-message';
+    messageEl.textContent = String(message ?? '');
+    content.append(titleEl, messageEl);
+    toast.append(icon, content);
 
     container.appendChild(toast);
 
@@ -69,6 +76,50 @@ document.addEventListener('DOMContentLoaded', () => {
     }, 4500);
   }
   window.showToastNotification = showToastNotification;
+
+  let activeModal = null;
+  const modalReturnFocus = new WeakMap();
+  function openAccessibleModal(backdrop, initialFocus) {
+    if (!backdrop) return;
+    modalReturnFocus.set(backdrop, document.activeElement);
+    backdrop.style.display = 'flex';
+    backdrop.setAttribute('aria-hidden', 'false');
+    activeModal = backdrop;
+    const dialog = backdrop.querySelector('[role="dialog"]');
+    requestAnimationFrame(() => (initialFocus || dialog)?.focus());
+  }
+  function closeAccessibleModal(backdrop) {
+    if (!backdrop) return;
+    backdrop.style.display = 'none';
+    backdrop.setAttribute('aria-hidden', 'true');
+    if (activeModal === backdrop) activeModal = null;
+    const previous = modalReturnFocus.get(backdrop);
+    if (previous && typeof previous.focus === 'function') previous.focus();
+  }
+  window.openAccessibleModal = openAccessibleModal;
+  window.closeAccessibleModal = closeAccessibleModal;
+
+  document.addEventListener('keydown', (event) => {
+    if (!activeModal) return;
+    if (event.key === 'Escape') {
+      const cancel = activeModal.querySelector('#btnCloseSettings, [id^="btnCancel"]');
+      if (cancel) cancel.click();
+      else closeAccessibleModal(activeModal);
+      return;
+    }
+    if (event.key !== 'Tab') return;
+    const focusable = Array.from(activeModal.querySelectorAll('button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])'));
+    if (focusable.length === 0) return;
+    const first = focusable[0];
+    const last = focusable[focusable.length - 1];
+    if (event.shiftKey && document.activeElement === first) {
+      event.preventDefault();
+      last.focus();
+    } else if (!event.shiftKey && document.activeElement === last) {
+      event.preventDefault();
+      first.focus();
+    }
+  });
 
   // WebMIDI Manager com iluminação de teclas em tempo real quando o controlador físico toca
   const midiDeviceStatusText = document.getElementById('midiDeviceStatusText');
@@ -111,31 +162,35 @@ document.addEventListener('DOMContentLoaded', () => {
   if (modWheelInput) {
     modWheelInput.addEventListener('input', (e) => {
       const val = parseFloat(e.target.value);
-      fxRack.setReverbMix(val * 0.5);
+      if (typeof synth.setChannelModulation === 'function') synth.setChannelModulation('all', val);
     });
 
     midiLearn.attach(modWheelInput, 'Modulation Wheel (CC1)', (normVal) => {
-      fxRack.setReverbMix(normVal * 0.5);
+      if (typeof synth.setChannelModulation === 'function') synth.setChannelModulation('all', normVal);
     });
   }
 
   // Intercept NoteOn/NoteOff do Synth para iluminação visual do teclado
   const originalNoteOn = synth.noteOn.bind(synth);
-  synth.noteOn = function(note, velocity, channel) {
-    originalNoteOn(note, velocity, channel);
+  synth.noteOn = function(...args) {
+    const note = args[0];
+    const result = originalNoteOn(...args);
     if (pianoKeysEl) {
       const keyEl = pianoKeysEl.querySelector(`[data-note="${note}"]`);
       if (keyEl) keyEl.classList.add('active');
     }
+    return result;
   };
 
   const originalNoteOff = synth.noteOff.bind(synth);
-  synth.noteOff = function(note, channel) {
-    originalNoteOff(note, channel);
+  synth.noteOff = function(...args) {
+    const note = args[0];
+    const result = originalNoteOff(...args);
     if (pianoKeysEl) {
       const keyEl = pianoKeysEl.querySelector(`[data-note="${note}"]`);
       if (keyEl) keyEl.classList.remove('active');
     }
+    return result;
   };
 
   // Registrar Service Worker para PWA
@@ -162,6 +217,7 @@ document.addEventListener('DOMContentLoaded', () => {
   const sf2FileInput = document.getElementById('sf2FileInput');
   const presetListEl = document.getElementById('presetList');
   const sf2PresetCount = document.getElementById('sf2PresetCount');
+  const sf2LoadStatus = document.getElementById('sf2LoadStatus');
 
   const mixerChannelCountSelect = document.getElementById('mixerChannelCountSelect');
   const btnAddChannel = document.getElementById('btnAddChannel');
@@ -177,6 +233,39 @@ document.addEventListener('DOMContentLoaded', () => {
   const presetSelect = document.getElementById('presetSelect');
 
   const fxRackTitleEl = document.getElementById('fxRackTitleText');
+
+  const accessibleControlNames = {
+    presetSelect: 'Preset salvo',
+    mixerChannelCountSelect: 'Quantidade de pistas visíveis',
+    selectTrackVelMode: 'Curva de velocity da pista selecionada',
+    inputTrackVelMin: 'Velocity mínima da pista',
+    inputTrackVelMax: 'Velocity máxima da pista',
+    inputTrackVelPower: 'Potência da curva de velocity da pista',
+    selectTrackReverbMode: 'Algoritmo de reverb da pista',
+    selectMasterReverbMode: 'Algoritmo de reverb master',
+    trackVelCanvas: 'Curva de velocity da pista',
+    velocityCurveCanvas: 'Curva de velocity global'
+  };
+  Object.entries(accessibleControlNames).forEach(([id, label]) => {
+    const element = document.getElementById(id);
+    if (element && !element.getAttribute('aria-label')) element.setAttribute('aria-label', label);
+    if (element?.tagName === 'CANVAS') element.setAttribute('role', 'img');
+  });
+
+  const syncToggleAccessibility = (root = document) => {
+    const candidates = root.matches?.('.btn-fx-toggle, .btn-mute, .btn-solo') ? [root] : root.querySelectorAll?.('.btn-fx-toggle, .btn-mute, .btn-solo') || [];
+    candidates.forEach((button) => button.setAttribute('aria-pressed', String(button.classList.contains('active'))));
+  };
+  syncToggleAccessibility();
+  const toggleObserver = new MutationObserver((mutations) => {
+    mutations.forEach((mutation) => {
+      if (mutation.type === 'attributes') syncToggleAccessibility(mutation.target);
+      mutation.addedNodes.forEach((node) => {
+        if (node.nodeType === Node.ELEMENT_NODE) syncToggleAccessibility(node);
+      });
+    });
+  });
+  toggleObserver.observe(document.body, { subtree: true, childList: true, attributes: true, attributeFilter: ['class'] });
 
   // Lógica de Recolher / Expandir Painel Lateral (Sidebar) & Teclado Virtual
   const sidebarPanel = document.querySelector('.sidebar-panel');
@@ -224,12 +313,20 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // Tab View Switcher (Mixer & Layers, Rack FX Master, Setlist Live Mode)
   function switchView(activeTab, showMixer, showFx, showSetlist) {
-    [tabMixer, tabFxRack, tabSetlist].forEach(t => t && t.classList.remove('active'));
-    if (activeTab) activeTab.classList.add('active');
+    [tabMixer, tabFxRack, tabSetlist].forEach((tab) => {
+      if (!tab) return;
+      const selected = tab === activeTab;
+      tab.classList.toggle('active', selected);
+      tab.setAttribute('aria-selected', String(selected));
+      tab.tabIndex = selected ? 0 : -1;
+    });
 
     if (sectionMixer) sectionMixer.style.display = showMixer ? 'flex' : 'none';
     if (sectionFxRack) sectionFxRack.style.display = showFx ? 'block' : 'none';
     if (sectionSetlist) sectionSetlist.style.display = showSetlist ? 'block' : 'none';
+    if (sectionMixer) sectionMixer.setAttribute('aria-hidden', String(!showMixer));
+    if (sectionFxRack) sectionFxRack.setAttribute('aria-hidden', String(!showFx));
+    if (sectionSetlist) sectionSetlist.setAttribute('aria-hidden', String(!showSetlist));
     if (sectionMidiKeyboard && !isKeyboardCollapsed) sectionMidiKeyboard.style.display = 'flex';
   }
 
@@ -943,28 +1040,31 @@ document.addEventListener('DOMContentLoaded', () => {
   function populateVelocityCurveDropdown() {
     if (!selectTrackVelMode || !dbManager) return;
     const curves = dbManager.getVelocityCurves();
+    selectTrackVelMode.replaceChildren();
+    const addOption = (parent, value, label) => {
+      const option = document.createElement('option');
+      option.value = value;
+      option.textContent = label;
+      parent.appendChild(option);
+    };
+    addOption(selectTrackVelMode, 'global', '🌐 Usar Padrão Global');
+    addOption(selectTrackVelMode, 'normal', 'Standard (Normal)');
+    addOption(selectTrackVelMode, 'soft', 'Soft (Sensível / Leve)');
+    addOption(selectTrackVelMode, 'hard', 'Hard (Forte / Pesado)');
+    addOption(selectTrackVelMode, 'compressed', 'Comprimido (Dyn Compress)');
+    addOption(selectTrackVelMode, 'fixed', 'Fixo (Velocity 120)');
 
-    let html = `<option value="global">🌐 Usar Padrão Global</option>`;
-    html += `<option value="normal">Standard (Normal)</option>`;
-    html += `<option value="soft">Soft (Sensível / Leve)</option>`;
-    html += `<option value="hard">Hard (Forte / Pesado)</option>`;
-    html += `<option value="compressed">Comprimido (Dyn Compress)</option>`;
-    html += `<option value="fixed">Fixo (Velocidade 120)</option>`;
-
-    if (curves.length > 0) {
-      html += `<optgroup label="💾 CURVAS SALVAS NO SQLITE DB">`;
-      curves.forEach(c => {
-        if (!c.isFactory) {
-          html += `<option value="${c.id}">💾 ${c.name}</option>`;
-        }
-      });
-      html += `</optgroup>`;
+    const customCurves = curves.filter((curve) => !curve.isFactory);
+    if (customCurves.length > 0) {
+      const group = document.createElement('optgroup');
+      group.label = 'CURVAS SALVAS NO APP';
+      customCurves.forEach((curve) => addOption(group, curve.id, curve.name));
+      selectTrackVelMode.appendChild(group);
     }
-    html += `<option value="custom">✏️ Personalizado (Sliders)</option>`;
-    selectTrackVelMode.innerHTML = html;
+    addOption(selectTrackVelMode, 'custom', '✏️ Personalizado (Sliders)');
   }
 
-  setTimeout(() => populateVelocityCurveDropdown(), 200);
+  Promise.resolve(dbManager?.ready).then(() => populateVelocityCurveDropdown());
 
   function updateTrackVelUI(ch) {
     const chObj = synth.channels[ch];
@@ -1049,15 +1149,14 @@ document.addEventListener('DOMContentLoaded', () => {
         if (inputVelCurveName) {
           inputVelCurveName.value = `Curva Persona ${dbManager ? dbManager.getVelocityCurves().length + 1 : 1}`;
         }
-        saveVelCurveModal.style.display = 'flex';
-        setTimeout(() => inputVelCurveName && inputVelCurveName.focus(), 100);
+        openAccessibleModal(saveVelCurveModal, inputVelCurveName);
       }
     });
   }
 
   if (btnCancelVelCurveModal) {
     btnCancelVelCurveModal.addEventListener('click', () => {
-      if (saveVelCurveModal) saveVelCurveModal.style.display = 'none';
+      closeAccessibleModal(saveVelCurveModal);
     });
   }
 
@@ -1081,10 +1180,10 @@ document.addEventListener('DOMContentLoaded', () => {
       if (saved) {
         populateVelocityCurveDropdown();
         if (selectTrackVelMode) selectTrackVelMode.value = saved.id;
-        showToastNotification('Curva Salva no SQLite DB!', `Curva "${name}" armazenada no banco de dados SQLite.`, 'success');
+        showToastNotification('Curva salva', `Curva "${name}" armazenada no app.`, 'success');
       }
 
-      if (saveVelCurveModal) saveVelCurveModal.style.display = 'none';
+      closeAccessibleModal(saveVelCurveModal);
     });
   }
 
@@ -1166,14 +1265,11 @@ document.addEventListener('DOMContentLoaded', () => {
     if (inputNewPresetName) {
       inputNewPresetName.value = `Preset Live ${presetManager.userPresets.size + 1}`;
     }
-    newPresetNameModal.style.display = 'flex';
-    if (inputNewPresetName) {
-      setTimeout(() => inputNewPresetName.focus(), 100);
-    }
+    openAccessibleModal(newPresetNameModal, inputNewPresetName);
   }
 
   function closeNewPresetModal() {
-    if (newPresetNameModal) newPresetNameModal.style.display = 'none';
+    closeAccessibleModal(newPresetNameModal);
   }
 
   const btnNewPreset = document.getElementById('btnNewPreset');
@@ -1263,9 +1359,24 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
+  const activePointerNotes = new Map();
+
+  function releaseVirtualPointer(pointerId) {
+    const played = activePointerNotes.get(pointerId);
+    if (!played) return;
+    activePointerNotes.delete(pointerId);
+    played.keyElement.classList.remove('active');
+    synth.noteOffTrack(played.note, played.track);
+  }
+
+  function releaseAllVirtualPointers() {
+    Array.from(activePointerNotes.keys()).forEach(releaseVirtualPointer);
+  }
+
   // Renderizar Teclado Virtual Piano com Proporções Piano Real Slender
   function renderPianoKeyboard() {
-    pianoKeysEl.innerHTML = '';
+    releaseAllVirtualPointers();
+    pianoKeysEl.replaceChildren();
     const startNote = totalKeysToRender === 88 ? 21 : baseOctave * 12;
     const noteNames = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'];
 
@@ -1286,9 +1397,14 @@ document.addEventListener('DOMContentLoaded', () => {
       const noteName = noteNames[noteNum % 12];
       const isBlack = noteName.includes('#');
 
-      const keyEl = document.createElement('div');
+      const keyEl = document.createElement('button');
+      keyEl.type = 'button';
       keyEl.className = `piano-key ${isBlack ? 'black' : 'white'}`;
       keyEl.dataset.note = noteNum;
+      keyEl.style.touchAction = 'none';
+      const octave = Math.floor(noteNum / 12) - 1;
+      keyEl.setAttribute('aria-label', `${noteName}${octave}, nota MIDI ${noteNum}`);
+      keyEl.title = `${noteName}${octave}. Velocity por pressão quando disponível; caso contrário, pela posição vertical.`;
 
       if (isBlack) {
         keyEl.style.width = `${blackWidthPct}%`;
@@ -1303,28 +1419,46 @@ document.addEventListener('DOMContentLoaded', () => {
         }
       }
 
+      const playVirtualKey = (ownerId, velocity) => {
+        if (activePointerNotes.has(ownerId)) return;
+        keyEl.classList.add('active');
+        const activeTrack = mixerConsole ? mixerConsole.selectedChannel : 1;
+        activePointerNotes.set(ownerId, { note: noteNum, track: activeTrack, keyElement: keyEl });
+        synth.noteOnTrack(noteNum, velocity, activeTrack);
+      };
+
       const triggerNoteOn = (e) => {
+        if (e.pointerType === 'mouse' && e.button !== 0) return;
         e.preventDefault();
         window.audioEngine.resume().then(() => updateAudioStatus(true));
-        keyEl.classList.add('active');
-        // Usar o canal selecionado no mixer (não hardcoded canal 1)
-        const activeCh = mixerConsole ? mixerConsole.selectedChannel : 1;
-        synth.noteOn(noteNum, 100, activeCh);
+        const velocity = window.PerformanceInput
+          ? PerformanceInput.pointerVelocity(e, keyEl.getBoundingClientRect())
+          : 100;
+        playVirtualKey(e.pointerId, velocity);
+        try { keyEl.setPointerCapture(e.pointerId); } catch (err) {}
       };
 
       const triggerNoteOff = (e) => {
         e.preventDefault();
-        keyEl.classList.remove('active');
-        const activeCh = mixerConsole ? mixerConsole.selectedChannel : 1;
-        synth.noteOff(noteNum, activeCh);
+        releaseVirtualPointer(e.pointerId);
       };
 
-      keyEl.addEventListener('mousedown', triggerNoteOn);
-      keyEl.addEventListener('mouseup', triggerNoteOff);
-      keyEl.addEventListener('mouseleave', triggerNoteOff);
-
-      keyEl.addEventListener('touchstart', triggerNoteOn, { passive: false });
-      keyEl.addEventListener('touchend', triggerNoteOff, { passive: false });
+      keyEl.addEventListener('pointerdown', triggerNoteOn);
+      keyEl.addEventListener('pointerup', triggerNoteOff);
+      keyEl.addEventListener('pointercancel', triggerNoteOff);
+      keyEl.addEventListener('lostpointercapture', triggerNoteOff);
+      keyEl.addEventListener('keydown', (event) => {
+        if (!['Enter', ' '].includes(event.key) || event.repeat) return;
+        event.preventDefault();
+        window.audioEngine.resume().then(() => updateAudioStatus(true));
+        playVirtualKey(`keyboard-${noteNum}`, 100);
+      });
+      keyEl.addEventListener('keyup', (event) => {
+        if (!['Enter', ' '].includes(event.key)) return;
+        event.preventDefault();
+        releaseVirtualPointer(`keyboard-${noteNum}`);
+      });
+      keyEl.addEventListener('blur', () => releaseVirtualPointer(`keyboard-${noteNum}`));
 
       pianoKeysEl.appendChild(keyEl);
     }
@@ -1333,19 +1467,25 @@ document.addEventListener('DOMContentLoaded', () => {
     if (octaveDisplay) {
       octaveDisplay.textContent = `C${Math.floor(startNote / 12) - 1} - C${endOctave}`;
     }
+    const fullPiano = totalKeysToRender === 88;
+    [btnOctaveDown, btnOctaveUp].forEach((button) => {
+      if (!button) return;
+      button.disabled = fullPiano;
+      button.title = fullPiano ? 'A extensão de 88 teclas já mostra todo o piano.' : 'Deslocar a janela do teclado virtual em uma oitava.';
+    });
   }
 
   renderPianoKeyboard();
 
   btnOctaveUp.addEventListener('click', () => {
-    if (baseOctave < 7) {
+    if (totalKeysToRender !== 88 && baseOctave < 7) {
       baseOctave++;
       renderPianoKeyboard();
     }
   });
 
   btnOctaveDown.addEventListener('click', () => {
-    if (baseOctave > 1) {
+    if (totalKeysToRender !== 88 && baseOctave > 1) {
       baseOctave--;
       renderPianoKeyboard();
     }
@@ -1357,8 +1497,27 @@ document.addEventListener('DOMContentLoaded', () => {
     't': 6, 'g': 7, 'y': 8, 'h': 9, 'u': 10, 'j': 11, 'k': 12
   };
 
-  const activeQwertyKeys = new Set();
+  const activeQwertyKeys = new Map();
   let isMasterMuted = false;
+  let previousMasterVolume = window.audioEngine.getMasterVolume();
+
+  const isTypingTarget = (target) => target && ['INPUT', 'SELECT', 'TEXTAREA'].includes(target.tagName);
+
+  function releaseAllQwertyKeys() {
+    activeQwertyKeys.forEach((played) => synth.noteOffTrack(played.note, played.track));
+    activeQwertyKeys.clear();
+  }
+
+  function panicAllNotes(showFeedback = true) {
+    releaseAllVirtualPointers();
+    releaseAllQwertyKeys();
+    if (typeof synth.allNotesOff === 'function') synth.allNotesOff();
+    pianoKeysEl?.querySelectorAll('.active').forEach((key) => key.classList.remove('active'));
+    if (showFeedback) showToastNotification('Panic acionado', 'Todas as notas e pedais pendentes foram liberados.', 'warning');
+  }
+
+  const btnPanic = document.getElementById('btnPanic');
+  if (btnPanic) btnPanic.addEventListener('click', () => panicAllNotes(true));
 
   window.addEventListener('keydown', (e) => {
     if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 's') {
@@ -1367,18 +1526,23 @@ document.addEventListener('DOMContentLoaded', () => {
       return;
     }
 
-    if (e.repeat || e.target.tagName === 'INPUT' || e.target.tagName === 'SELECT') return;
+    if (e.key === 'Escape' && !activeModal) {
+      e.preventDefault();
+      panicAllNotes(true);
+      return;
+    }
+    if (e.repeat || isTypingTarget(e.target) || e.target.closest?.('[role="slider"], .piano-key')) return;
     const key = e.key.toLowerCase();
 
     if (key === 'z') {
-      if (baseOctave > 1) {
+      if (totalKeysToRender !== 88 && baseOctave > 1) {
         baseOctave--;
         renderPianoKeyboard();
       }
       return;
     }
     if (key === 'x') {
-      if (baseOctave < 7) {
+      if (totalKeysToRender !== 88 && baseOctave < 7) {
         baseOctave++;
         renderPianoKeyboard();
       }
@@ -1388,32 +1552,61 @@ document.addEventListener('DOMContentLoaded', () => {
     if (e.code === 'Space') {
       e.preventDefault();
       isMasterMuted = !isMasterMuted;
-      window.audioEngine.setMasterVolume(isMasterMuted ? 0 : 0.8);
-      console.log(`[QWERTY] Master Mute: ${isMasterMuted}`);
+      if (isMasterMuted) {
+        previousMasterVolume = window.audioEngine.getMasterVolume();
+        window.audioEngine.setMasterVolume(0);
+      } else {
+        window.audioEngine.setMasterVolume(previousMasterVolume);
+      }
+      document.body.classList.toggle('master-muted', isMasterMuted);
+      showToastNotification('Master Mute', isMasterMuted ? 'Saída master silenciada.' : `Volume restaurado em ${Math.round(previousMasterVolume * 100)}%.`, 'info');
       return;
     }
 
     if (key in qwertyKeyMap && !activeQwertyKeys.has(key)) {
-      activeQwertyKeys.add(key);
       const noteNum = (baseOctave * 12) + qwertyKeyMap[key];
-      const activeCh = mixerConsole ? mixerConsole.selectedChannel : 1;
+      const activeTrack = mixerConsole ? mixerConsole.selectedChannel : 1;
+      activeQwertyKeys.set(key, { note: noteNum, track: activeTrack });
       window.audioEngine.resume().then(() => updateAudioStatus(true));
-      synth.noteOn(noteNum, 100, activeCh);
+      // Teclados QWERTY comuns não possuem sensor de pressão.
+      synth.noteOnTrack(noteNum, 100, activeTrack);
     }
   });
+
+  const viewTabs = [tabMixer, tabFxRack, tabSetlist].filter(Boolean);
+  viewTabs.forEach((tab, index) => tab.addEventListener('keydown', (event) => {
+    if (!['ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(event.key)) return;
+    event.preventDefault();
+    let nextIndex = index;
+    if (event.key === 'ArrowLeft') nextIndex = (index - 1 + viewTabs.length) % viewTabs.length;
+    if (event.key === 'ArrowRight') nextIndex = (index + 1) % viewTabs.length;
+    if (event.key === 'Home') nextIndex = 0;
+    if (event.key === 'End') nextIndex = viewTabs.length - 1;
+    viewTabs[nextIndex].focus();
+    viewTabs[nextIndex].click();
+  }));
 
   window.addEventListener('keyup', (e) => {
     const key = e.key.toLowerCase();
     if (key in qwertyKeyMap) {
+      const played = activeQwertyKeys.get(key);
       activeQwertyKeys.delete(key);
-      const noteNum = (baseOctave * 12) + qwertyKeyMap[key];
-      const activeCh = mixerConsole ? mixerConsole.selectedChannel : 1;
-      synth.noteOff(noteNum, activeCh);
+      if (played) synth.noteOffTrack(played.note, played.track);
     }
+  });
+
+  window.addEventListener('blur', () => panicAllNotes(false));
+  document.addEventListener('visibilitychange', () => {
+    if (document.hidden) panicAllNotes(false);
   });
 
   // Upload & Drag-and-Drop de Arquivos SF2
   sf2DropZone.addEventListener('click', () => sf2FileInput.click());
+  sf2DropZone.addEventListener('keydown', (event) => {
+    if (!['Enter', ' '].includes(event.key)) return;
+    event.preventDefault();
+    sf2FileInput.click();
+  });
 
   sf2DropZone.addEventListener('dragover', (e) => {
     e.preventDefault();
@@ -1467,13 +1660,20 @@ document.addEventListener('DOMContentLoaded', () => {
 
   if (btnAddSongToSetlist && addSongModal) {
     btnAddSongToSetlist.addEventListener('click', () => {
-      if (selectSongPreset) {
-        let html = '';
+    if (selectSongPreset) {
+        selectSongPreset.replaceChildren();
         presetManager.userPresets.forEach((p, name) => {
-          html += `<option value="${name}">${name}</option>`;
+          const option = document.createElement('option');
+          option.value = name;
+          option.textContent = name;
+          selectSongPreset.appendChild(option);
         });
-        if (html === '') html = `<option value="">(Nenhum preset salvo - Crie presets no mixer primeiro)</option>`;
-        selectSongPreset.innerHTML = html;
+        if (selectSongPreset.options.length === 0) {
+          const option = document.createElement('option');
+          option.value = '';
+          option.textContent = '(Nenhum preset salvo — crie um preset no Mixer primeiro)';
+          selectSongPreset.appendChild(option);
+        }
       }
       if (inputSongTitle) inputSongTitle.value = `Música ${setlistManager.getSetlistItems().length + 1}`;
       
@@ -1481,7 +1681,7 @@ document.addEventListener('DOMContentLoaded', () => {
       if (snapRadio) snapRadio.checked = true;
       if (songPresetSelectContainer) songPresetSelectContainer.style.display = 'none';
 
-      addSongModal.style.display = 'flex';
+      openAccessibleModal(addSongModal, inputSongTitle);
     });
 
     addSongModal.querySelectorAll('input[name="songSourceType"]').forEach(radio => {
@@ -1495,7 +1695,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
   if (btnCancelAddSongModal) {
     btnCancelAddSongModal.addEventListener('click', () => {
-      if (addSongModal) addSongModal.style.display = 'none';
+      closeAccessibleModal(addSongModal);
     });
   }
 
@@ -1509,19 +1709,29 @@ document.addEventListener('DOMContentLoaded', () => {
       if (title) {
         const useSnapshot = sourceType === 'snapshot';
         setlistManager.addItem(title, preset, notes, useSnapshot);
-        if (addSongModal) addSongModal.style.display = 'none';
+        closeAccessibleModal(addSongModal);
       }
     });
   }
 
   function handleSf2Files(filesList) {
-    const files = Array.from(filesList).filter(f => f.name.toLowerCase().endsWith('.sf2') || f.name.toLowerCase().endsWith('.sf3'));
+    const files = Array.from(filesList).filter(f => f.name.toLowerCase().endsWith('.sf2'));
     if (files.length === 0) {
-      showToastNotification('Arquivo Inválido', 'Por favor, selecione arquivos válidos com extensão .sf2 ou .sf3', 'warning');
+      showToastNotification('Arquivo Inválido', 'Selecione um arquivo .sf2 PCM. SF3 comprimido ainda não é suportado.', 'warning');
       return;
     }
 
     let loadedCount = 0;
+    let failedCount = 0;
+    let completedCount = 0;
+    sf2DropZone.setAttribute('aria-busy', 'true');
+    if (sf2LoadStatus) sf2LoadStatus.textContent = `Carregando ${files.length} arquivo(s) SoundFont.`;
+    const finishFile = () => {
+      completedCount++;
+      if (completedCount < files.length) return;
+      sf2DropZone.setAttribute('aria-busy', 'false');
+      if (sf2LoadStatus) sf2LoadStatus.textContent = `${loadedCount} SoundFont(s) carregado(s); ${failedCount} falha(s).`;
+    };
     files.forEach((file) => {
       const reader = new FileReader();
       reader.onload = (evt) => {
@@ -1545,32 +1755,54 @@ document.addEventListener('DOMContentLoaded', () => {
             'success'
           );
         } catch (err) {
+          failedCount++;
           console.error(`Erro ao ler arquivo SF2 (${file.name}):`, err);
           showToastNotification('Erro ao Carregar SF2', `Falha ao carregar "${file.name}": ${err.message}`, 'warning');
+        } finally {
+          finishFile();
         }
+      };
+      reader.onerror = () => {
+        failedCount++;
+        showToastNotification('Erro ao Ler Arquivo', `Não foi possível ler "${file.name}".`, 'warning');
+        finishFile();
       };
       reader.readAsArrayBuffer(file);
     });
   }
 
   function updatePresetListUI(presets) {
-    presetListEl.innerHTML = '';
+    presetListEl.replaceChildren();
     sf2PresetCount.textContent = `${presets.length} Timbres`;
 
     presets.forEach((p, idx) => {
-      const item = document.createElement('div');
+      const item = document.createElement('button');
+      item.type = 'button';
       item.className = `preset-item ${idx === 0 ? 'active' : ''}`;
-      const sourceBadge = p.sf2Source ? `<span style="font-size: 9px; color: var(--accent-cyan); font-weight: 700; opacity: 0.8; display: block;">${p.sf2Source}</span>` : '';
-      item.innerHTML = `
-        <div style="display: flex; flex-direction: column; overflow: hidden; flex: 1;">
-          <span style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${p.name}</span>
-          ${sourceBadge}
-        </div>
-        <span style="font-family: var(--font-mono); font-size: 10px; color: var(--text-muted); font-weight: 700;">${p.bank}:${p.preset}</span>
-      `;
+      item.setAttribute('aria-pressed', String(idx === 0));
+      const text = document.createElement('span');
+      text.className = 'preset-item-text';
+      const name = document.createElement('span');
+      name.className = 'preset-item-name';
+      name.textContent = String(p.name || 'Timbre sem nome');
+      text.appendChild(name);
+      if (p.sf2Source) {
+        const source = document.createElement('span');
+        source.className = 'preset-item-source';
+        source.textContent = String(p.sf2Source);
+        text.appendChild(source);
+      }
+      const program = document.createElement('span');
+      program.className = 'preset-item-program';
+      program.textContent = `${p.bank}:${p.preset}`;
+      item.append(text, program);
       item.addEventListener('click', () => {
-        presetListEl.querySelectorAll('.preset-item').forEach(el => el.classList.remove('active'));
+        presetListEl.querySelectorAll('.preset-item').forEach((element) => {
+          element.classList.remove('active');
+          element.setAttribute('aria-pressed', 'false');
+        });
         item.classList.add('active');
+        item.setAttribute('aria-pressed', 'true');
 
         // Atribuir o timbre clicado EXCLUSIVAMENTE à PISTA SELECIONADA no Mixer!
         const activeCh = mixerConsole ? mixerConsole.selectedChannel : 1;

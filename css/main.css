@@ -1,6 +1,4 @@
 /* SF2 LIVE SAMPLER WORKSTATION - HIGH END DESIGN SYSTEM */
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;700&display=swap');
-
 :root {
   --bg-dark: #07090e;
   --bg-dark-surface: #0c101a;
@@ -20,9 +18,9 @@
   --text-muted: #8a99ad;
   --text-dim: #546375;
 
-  --font-heading: 'Outfit', sans-serif;
-  --font-body: 'Inter', sans-serif;
-  --font-mono: 'JetBrains Mono', monospace;
+  --font-heading: 'Segoe UI', system-ui, sans-serif;
+  --font-body: 'Segoe UI', system-ui, sans-serif;
+  --font-mono: 'Cascadia Mono', 'Consolas', monospace;
 
   --radius-sm: 6px;
   --radius-md: 10px;
@@ -49,10 +47,35 @@ body {
     radial-gradient(circle at 85% 85%, rgba(127, 0, 255, 0.06) 0%, transparent 40%);
   color: var(--text-main);
   font-family: var(--font-body);
-  height: 100vh;
+  height: 100dvh;
   overflow: hidden;
   display: flex;
   flex-direction: column;
+}
+
+input,
+textarea,
+[contenteditable="true"] {
+  user-select: text;
+  -webkit-user-select: text;
+}
+
+.sr-only {
+  position: absolute !important;
+  width: 1px !important;
+  height: 1px !important;
+  padding: 0 !important;
+  margin: -1px !important;
+  overflow: hidden !important;
+  clip: rect(0, 0, 0, 0) !important;
+  white-space: nowrap !important;
+  border: 0 !important;
+}
+
+:where(button, input, select, textarea, [role="button"], [role="tab"], [tabindex]):focus-visible {
+  outline: 3px solid var(--accent-warning) !important;
+  outline-offset: 3px;
+  box-shadow: 0 0 0 2px var(--bg-dark) !important;
 }
 
 /* Header Principal 2-Linhas (Clean & Espaçoso) */
@@ -148,6 +171,7 @@ body {
   display: flex;
   align-items: center;
   gap: 6px;
+  min-height: 36px;
 }
 
 .tab-btn:hover {
@@ -235,6 +259,7 @@ body {
   align-items: center;
   gap: 4px;
   transition: all 0.2s ease;
+  min-height: 36px;
 }
 
 .btn:hover {
@@ -254,6 +279,12 @@ body {
   color: #fff;
   border: none;
   box-shadow: 0 2px 10px rgba(127, 0, 255, 0.3);
+}
+
+.btn-danger {
+  background: var(--accent-danger);
+  color: #fff;
+  border-color: transparent;
 }
 
 /* Audio Status Indicator */
@@ -469,7 +500,20 @@ body {
   align-items: center;
   justify-content: space-between;
   transition: all 0.15s ease;
+  width: 100%;
+  border: 1px solid transparent;
+  text-align: left;
 }
+
+.preset-item-text {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  flex: 1;
+}
+.preset-item-name { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.preset-item-source { font-size: 9px; color: var(--accent-cyan); font-weight: 700; opacity: 0.8; }
+.preset-item-program { font-family: var(--font-mono); font-size: 10px; color: var(--text-muted); font-weight: 700; }
 
 .preset-item:hover {
   background: rgba(0, 242, 254, 0.12);
@@ -510,6 +554,12 @@ body {
   display: flex;
   flex-direction: column;
   overflow: hidden;
+}
+
+.glass-modal-card {
+  max-width: min(94vw, 440px);
+  max-height: 90dvh;
+  overflow-y: auto;
 }
 
 .modal-header {
@@ -602,6 +652,12 @@ body {
   font-size: 11px;
   font-weight: 600;
   color: var(--text-main);
+}
+
+.settings-help {
+  color: var(--text-muted);
+  font-size: 11px;
+  line-height: 1.45;
 }
 
 .settings-styled-select {
@@ -880,6 +936,22 @@ body {
   border-radius: 0 0 3px 3px;
   transition: background 0.04s ease, box-shadow 0.04s ease;
   touch-action: none;
+  appearance: none;
+  padding: 0;
+  font: inherit;
+}
+
+.toast-icon { font-size: 20px; }
+.toast-title {
+  font-family: var(--font-heading);
+  font-size: 13px;
+  font-weight: 800;
+  color: var(--accent-cyan);
+}
+.toast-message {
+  font-size: 11px;
+  color: var(--text-main);
+  margin-top: 2px;
 }
 
 /* Teclas Brancas (Elegantes, Esbeltas, Proporção Piano Real 1:5) */
@@ -950,9 +1022,17 @@ body {
 @media (max-width: 900px) {
   .header-top-row {
     padding-right: 16px;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+  .view-tabs-bar {
+    order: 3;
+    width: 100%;
+    overflow-x: auto;
   }
   .app-workspace {
     flex-direction: column;
+    min-height: 0;
   }
   .sidebar-panel {
     width: 100%;
@@ -961,9 +1041,65 @@ body {
   .piano-keys-wrapper {
     overflow-x: auto;
   }
+  .piano-key.white {
+    flex: 0 0 30px;
+    min-width: 30px;
+  }
+  .piano-key.black {
+    flex: 0 0 18px;
+    min-width: 18px;
+  }
   .settings-grid-2col {
     grid-template-columns: 1fr;
   }
+}
+
+@media (max-width: 600px) {
+  body { min-height: 100dvh; }
+  .app-header { max-height: 42dvh; overflow-y: auto; }
+  .header-top-row,
+  .header-bottom-row,
+  .modal-header,
+  .modal-body,
+  .modal-footer { padding-left: 12px; padding-right: 12px; }
+  .header-bottom-row,
+  .top-toolbar,
+  .keyboard-controls-bar { flex-wrap: wrap; height: auto; }
+  .sidebar-panel { height: 180px; }
+  .main-view-area { padding: 8px; }
+  .fx-rack-container { grid-template-columns: minmax(0, 1fr); }
+  .keyboard-container { height: 170px; align-items: stretch; }
+  .pitch-mod-wheels { min-width: 54px; }
+  .modal-card,
+  .glass-modal-card {
+    width: calc(100vw - 16px) !important;
+    max-width: calc(100vw - 16px) !important;
+    max-height: calc(100dvh - 16px);
+    border-radius: var(--radius-md) !important;
+  }
+  .btn,
+  .tab-btn,
+  .btn-close-modal,
+  select,
+  input:not([type="range"]) { min-height: 44px; }
+  .toast-notification-container { left: 8px; right: 8px; top: 8px; }
+  .toast-banner { min-width: 0; width: 100%; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    scroll-behavior: auto !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+@media (forced-colors: active) {
+  .status-dot,
+  .piano-key,
+  .glass-card,
+  .mixer-channel-strip { forced-color-adjust: auto; }
 }
 
 /* ==============================================================================

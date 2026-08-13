@@ -25,6 +25,7 @@ class FxRackManager {
     this.masterEqHigh = null;
     this.masterChorusNode = null;
     this.masterChorusGain = null;
+    this.masterChorusLfo = null;
     this.masterDelayNode = null;
     this.masterDelayGain = null;
     this.masterReverbNode = null;
@@ -76,6 +77,7 @@ class FxRackManager {
     const masterChorus = this.createStereoChorusNodes(ctx, 1.5);
     this.masterChorusNode = masterChorus.inputNode;
     this.masterChorusGain = masterChorus.outputGain;
+    this.masterChorusLfo = masterChorus.lfoNode;
     this.masterChorusGain.gain.value = 0.0; // OFF por padrão
 
     this.masterDelayNode = ctx.createDelay();
@@ -243,10 +245,14 @@ class FxRackManager {
 
   // Gerador de Resposta de Impulso Sintético estilo Valhalla DSP
   createSyntheticImpulse(ctx, modeConfig) {
-    const duration = modeConfig.duration || 3.0;
-    const decay = modeConfig.decay || 2.0;
-    const damping = modeConfig.damping || 8000;
-    const preDelay = modeConfig.preDelay || 0.02;
+    const clamp = (value, min, max, fallback) => {
+      const numeric = Number(value);
+      return Math.max(min, Math.min(max, Number.isFinite(numeric) ? numeric : fallback));
+    };
+    const duration = clamp(modeConfig && modeConfig.duration, 0.05, 10, 3.0);
+    const decay = clamp(modeConfig && modeConfig.decay, 0.1, 10, 2.0);
+    const damping = clamp(modeConfig && modeConfig.damping, 20, 20000, 8000);
+    const preDelay = clamp(modeConfig && modeConfig.preDelay, 0, Math.max(0, duration - 0.001), 0.02);
 
     const sampleRate = ctx.sampleRate;
     const length = Math.floor(sampleRate * duration);
@@ -316,6 +322,7 @@ class FxRackManager {
 
   // Master Params Setters
   setMasterEqLowGain(gainDb) {
+    gainDb = this.clampNumber(gainDb, -24, 24, 0);
     this.masterParams.eqLow = gainDb;
     if (this.masterEqEnabled) {
       this.masterEqLow.gain.setTargetAtTime(gainDb, this.audioCtx.getCurrentTime(), 0.01);
@@ -323,6 +330,7 @@ class FxRackManager {
   }
 
   setMasterEqMidGain(gainDb) {
+    gainDb = this.clampNumber(gainDb, -24, 24, 0);
     this.masterParams.eqMid = gainDb;
     if (this.masterEqEnabled) {
       this.masterEqMid.gain.setTargetAtTime(gainDb, this.audioCtx.getCurrentTime(), 0.01);
@@ -330,6 +338,7 @@ class FxRackManager {
   }
 
   setMasterEqHighGain(gainDb) {
+    gainDb = this.clampNumber(gainDb, -24, 24, 0);
     this.masterParams.eqHigh = gainDb;
     if (this.masterEqEnabled) {
       this.masterEqHigh.gain.setTargetAtTime(gainDb, this.audioCtx.getCurrentTime(), 0.01);
@@ -337,18 +346,29 @@ class FxRackManager {
   }
 
   setMasterChorusMix(mixNorm) {
+    mixNorm = this.clampNumber(mixNorm, 0, 1, 0.3);
     this.masterParams.chorusMix = Math.round(mixNorm * 100);
     if (this.masterChorusEnabled) {
       this.masterChorusGain.gain.setTargetAtTime(mixNorm, this.audioCtx.getCurrentTime(), 0.01);
     }
   }
 
+  setMasterChorusRate(rateHz) {
+    rateHz = this.clampNumber(rateHz, 0.05, 20, 1.5);
+    this.masterParams.chorusRate = rateHz;
+    if (this.masterChorusLfo && this.masterChorusLfo.frequency) {
+      this.masterChorusLfo.frequency.setTargetAtTime(rateHz, this.audioCtx.getCurrentTime(), 0.01);
+    }
+  }
+
   setMasterDelayTime(seconds) {
+    seconds = this.clampNumber(seconds, 0, 1, 0.3);
     this.masterParams.delayTime = Math.round(seconds * 1000);
     this.masterDelayNode.delayTime.setTargetAtTime(seconds, this.audioCtx.getCurrentTime(), 0.01);
   }
 
   setMasterDelayMix(mixNorm) {
+    mixNorm = this.clampNumber(mixNorm, 0, 1, 0.2);
     this.masterParams.delayMix = Math.round(mixNorm * 100);
     if (this.masterDelayEnabled) {
       this.masterDelayGain.gain.setTargetAtTime(mixNorm, this.audioCtx.getCurrentTime(), 0.01);
@@ -364,6 +384,7 @@ class FxRackManager {
   }
 
   setMasterReverbSize(sizeNorm) {
+    sizeNorm = this.clampNumber(sizeNorm, 0, 1, 0.4);
     this.masterParams.reverbSize = Math.round(sizeNorm * 100);
     const modeConfig = { ...this.reverbModes[this.masterParams.reverbMode || 'concert_hall'] };
     modeConfig.duration = (modeConfig.duration * 0.5) + (sizeNorm * 3.5);
@@ -372,6 +393,7 @@ class FxRackManager {
   }
 
   setMasterReverbMix(mixNorm) {
+    mixNorm = this.clampNumber(mixNorm, 0, 1, 0.25);
     this.masterParams.reverbMix = Math.round(mixNorm * 100);
     if (this.masterReverbEnabled) {
       this.masterReverbGain.gain.setTargetAtTime(mixNorm, this.audioCtx.getCurrentTime(), 0.01);
@@ -379,7 +401,7 @@ class FxRackManager {
   }
 
   setSelectedChannel(ch) {
-    this.selectedChannel = parseInt(ch, 10) || 1;
+    this.selectedChannel = Math.max(1, Math.min(16, parseInt(ch, 10) || 1));
     this.notifySelectionChange();
   }
 
@@ -407,6 +429,7 @@ class FxRackManager {
   setCutoffFrequency(freqHz, channel = this.selectedChannel) {
     const fx = this.channelFx.get(channel);
     if (fx) {
+      freqHz = this.clampNumber(freqHz, 20, 20000, 20000);
       fx.params.cutoffFreq = freqHz;
       if (fx.params.cutoffEnabled) {
         fx.cutoffFilter.frequency.setTargetAtTime(freqHz, this.audioCtx.getCurrentTime(), 0.01);
@@ -460,6 +483,7 @@ class FxRackManager {
   setEqLowGain(gainDb, channel = this.selectedChannel) {
     const fx = this.channelFx.get(channel);
     if (fx) {
+      gainDb = this.clampNumber(gainDb, -24, 24, 0);
       fx.params.eqLow = gainDb;
       if (fx.params.eqEnabled) {
         fx.eqLow.gain.setTargetAtTime(gainDb, this.audioCtx.getCurrentTime(), 0.01);
@@ -470,6 +494,7 @@ class FxRackManager {
   setEqMidGain(gainDb, channel = this.selectedChannel) {
     const fx = this.channelFx.get(channel);
     if (fx) {
+      gainDb = this.clampNumber(gainDb, -24, 24, 0);
       fx.params.eqMid = gainDb;
       if (fx.params.eqEnabled) {
         fx.eqMid.gain.setTargetAtTime(gainDb, this.audioCtx.getCurrentTime(), 0.01);
@@ -480,6 +505,7 @@ class FxRackManager {
   setEqHighGain(gainDb, channel = this.selectedChannel) {
     const fx = this.channelFx.get(channel);
     if (fx) {
+      gainDb = this.clampNumber(gainDb, -24, 24, 0);
       fx.params.eqHigh = gainDb;
       if (fx.params.eqEnabled) {
         fx.eqHigh.gain.setTargetAtTime(gainDb, this.audioCtx.getCurrentTime(), 0.01);
@@ -490,6 +516,7 @@ class FxRackManager {
   setChorusMix(mixNorm, channel = this.selectedChannel) {
     const fx = this.channelFx.get(channel);
     if (fx) {
+      mixNorm = this.clampNumber(mixNorm, 0, 1, 0.3);
       fx.params.chorusMix = Math.round(mixNorm * 100);
       if (fx.params.chorusEnabled) {
         fx.chorusGain.gain.setTargetAtTime(mixNorm, this.audioCtx.getCurrentTime(), 0.01);
@@ -497,9 +524,21 @@ class FxRackManager {
     }
   }
 
+  setChorusRate(rateHz, channel = this.selectedChannel) {
+    const fx = this.channelFx.get(channel);
+    if (fx) {
+      rateHz = this.clampNumber(rateHz, 0.05, 20, 1.5);
+      fx.params.chorusRate = rateHz;
+      if (fx.chorusLfo && fx.chorusLfo.frequency) {
+        fx.chorusLfo.frequency.setTargetAtTime(rateHz, this.audioCtx.getCurrentTime(), 0.01);
+      }
+    }
+  }
+
   setDelayTime(seconds, channel = this.selectedChannel) {
     const fx = this.channelFx.get(channel);
     if (fx) {
+      seconds = this.clampNumber(seconds, 0, 1, 0.3);
       fx.params.delayTime = Math.round(seconds * 1000);
       fx.delayNode.delayTime.setTargetAtTime(seconds, this.audioCtx.getCurrentTime(), 0.01);
     }
@@ -508,6 +547,7 @@ class FxRackManager {
   setDelayMix(mixNorm, channel = this.selectedChannel) {
     const fx = this.channelFx.get(channel);
     if (fx) {
+      mixNorm = this.clampNumber(mixNorm, 0, 1, 0.2);
       fx.params.delayMix = Math.round(mixNorm * 100);
       if (fx.params.delayEnabled) {
         fx.delayGain.gain.setTargetAtTime(mixNorm, this.audioCtx.getCurrentTime(), 0.01);
@@ -527,6 +567,7 @@ class FxRackManager {
   setReverbSize(sizeNorm, channel = this.selectedChannel) {
     const fx = this.channelFx.get(channel);
     if (fx) {
+      sizeNorm = this.clampNumber(sizeNorm, 0, 1, 0.4);
       fx.params.reverbSize = Math.round(sizeNorm * 100);
       const modeConfig = { ...this.reverbModes[fx.params.reverbMode || 'concert_hall'] };
       modeConfig.duration = (modeConfig.duration * 0.5) + (sizeNorm * 3.5);
@@ -538,6 +579,7 @@ class FxRackManager {
   setReverbMix(mixNorm, channel = this.selectedChannel) {
     const fx = this.channelFx.get(channel);
     if (fx) {
+      mixNorm = this.clampNumber(mixNorm, 0, 1, 0.25);
       fx.params.reverbMix = Math.round(mixNorm * 100);
       if (fx.params.reverbEnabled) {
         fx.reverbGain.gain.setTargetAtTime(mixNorm, this.audioCtx.getCurrentTime(), 0.01);
@@ -559,6 +601,116 @@ class FxRackManager {
     fx.chorusGain.connect(targetPannerNode);
     fx.delayGain.connect(targetPannerNode);
     fx.reverbGain.connect(targetPannerNode);
+  }
+
+  clampNumber(value, min, max, fallback) {
+    const numeric = Number(value);
+    return Math.max(min, Math.min(max, Number.isFinite(numeric) ? numeric : fallback));
+  }
+
+  getMasterState() {
+    return {
+      eqEnabled: !!this.masterEqEnabled,
+      chorusEnabled: !!this.masterChorusEnabled,
+      delayEnabled: !!this.masterDelayEnabled,
+      reverbEnabled: !!this.masterReverbEnabled,
+      eqLow: this.clampNumber(this.masterParams.eqLow, -24, 24, 0),
+      eqMid: this.clampNumber(this.masterParams.eqMid, -24, 24, 0),
+      eqHigh: this.clampNumber(this.masterParams.eqHigh, -24, 24, 0),
+      chorusRate: this.clampNumber(this.masterParams.chorusRate, 0.05, 20, 1.5),
+      chorusMix: this.clampNumber(this.masterParams.chorusMix / 100, 0, 1, 0.3),
+      delayTime: this.clampNumber(this.masterParams.delayTime / 1000, 0, 1, 0.3),
+      delayMix: this.clampNumber(this.masterParams.delayMix / 100, 0, 1, 0.2),
+      reverbSize: this.clampNumber(this.masterParams.reverbSize / 100, 0, 1, 0.4),
+      reverbMix: this.clampNumber(this.masterParams.reverbMix / 100, 0, 1, 0.25),
+      reverbMode: this.reverbModes[this.masterParams.reverbMode]
+        ? this.masterParams.reverbMode
+        : 'concert_hall'
+    };
+  }
+
+  applyMasterState(state = {}) {
+    this.setMasterEqLowGain(state.eqLow);
+    this.setMasterEqMidGain(state.eqMid);
+    this.setMasterEqHighGain(state.eqHigh);
+    this.setMasterChorusRate(state.chorusRate);
+    this.setMasterChorusMix(state.chorusMix);
+    this.setMasterDelayTime(state.delayTime);
+    this.setMasterDelayMix(state.delayMix);
+    this.setMasterReverbMode(state.reverbMode || 'concert_hall');
+    this.setMasterReverbSize(state.reverbSize);
+    this.setMasterReverbMix(state.reverbMix);
+    this.toggleMasterEq(!!state.eqEnabled);
+    this.toggleMasterChorus(!!state.chorusEnabled);
+    this.toggleMasterDelay(!!state.delayEnabled);
+    this.toggleMasterReverb(!!state.reverbEnabled);
+    return this.getMasterState();
+  }
+
+  getTrackState(channel) {
+    const fx = this.channelFx.get(parseInt(channel, 10));
+    if (!fx) return null;
+    const params = fx.params;
+    return {
+      cutoffEnabled: !!params.cutoffEnabled,
+      cutoffFreq: this.clampNumber(params.cutoffFreq, 20, 20000, 20000),
+      eqEnabled: !!params.eqEnabled,
+      chorusEnabled: !!params.chorusEnabled,
+      delayEnabled: !!params.delayEnabled,
+      reverbEnabled: !!params.reverbEnabled,
+      eqLow: this.clampNumber(params.eqLow, -24, 24, 0),
+      eqMid: this.clampNumber(params.eqMid, -24, 24, 0),
+      eqHigh: this.clampNumber(params.eqHigh, -24, 24, 0),
+      chorusRate: this.clampNumber(params.chorusRate, 0.05, 20, 1.5),
+      chorusMix: this.clampNumber(params.chorusMix / 100, 0, 1, 0.3),
+      delayTime: this.clampNumber(params.delayTime / 1000, 0, 1, 0.3),
+      delayMix: this.clampNumber(params.delayMix / 100, 0, 1, 0.2),
+      reverbSize: this.clampNumber(params.reverbSize / 100, 0, 1, 0.4),
+      reverbMix: this.clampNumber(params.reverbMix / 100, 0, 1, 0.25),
+      reverbMode: this.reverbModes[params.reverbMode] ? params.reverbMode : 'concert_hall'
+    };
+  }
+
+  applyTrackState(channel, state = {}) {
+    channel = parseInt(channel, 10);
+    if (!this.channelFx.has(channel)) return null;
+    this.setCutoffFrequency(state.cutoffFreq, channel);
+    this.setEqLowGain(state.eqLow, channel);
+    this.setEqMidGain(state.eqMid, channel);
+    this.setEqHighGain(state.eqHigh, channel);
+    this.setChorusRate(state.chorusRate, channel);
+    this.setChorusMix(state.chorusMix, channel);
+    this.setDelayTime(state.delayTime, channel);
+    this.setDelayMix(state.delayMix, channel);
+    this.setTrackReverbMode(state.reverbMode || 'concert_hall', channel);
+    this.setReverbSize(state.reverbSize, channel);
+    this.setReverbMix(state.reverbMix, channel);
+    this.toggleTrackCutoff(!!state.cutoffEnabled, channel);
+    this.toggleTrackEq(!!state.eqEnabled, channel);
+    this.toggleTrackChorus(!!state.chorusEnabled, channel);
+    this.toggleTrackDelay(!!state.delayEnabled, channel);
+    this.toggleTrackReverb(!!state.reverbEnabled, channel);
+    return this.getTrackState(channel);
+  }
+
+  resetTrackState(channel) {
+    return this.applyTrackState(channel, {
+      cutoffEnabled: false,
+      cutoffFreq: 20000,
+      eqEnabled: false,
+      chorusEnabled: false,
+      delayEnabled: false,
+      reverbEnabled: false,
+      eqLow: 0,
+      eqMid: 0,
+      eqHigh: 0,
+      chorusMix: 0.3,
+      delayTime: 0.3,
+      delayMix: 0.2,
+      reverbSize: 0.4,
+      reverbMix: 0.25,
+      reverbMode: 'concert_hall'
+    });
   }
 }
 

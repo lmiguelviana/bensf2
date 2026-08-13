@@ -36,20 +36,24 @@ Este arquivo contém o registro histórico detalhado, decisões arquiteturais, p
 - **Botão 📸 Capturar**: Recalibra e atualiza a música com a nova configuração do mixer em 1 clique.
 - **Atalhos Globais de Palco**: Teclas `N` (Próxima Música) / `P` (Música Anterior) ou `PageDown`/`PageUp`.
 
-### 2. 📦 Suporte ao Formato Comprimido SF3 (Ogg Vorbis)
-- **Parser Binário (`js/sf2-parser.js`)**: Leitura nativa de amostras comprimidas Vorbis (`isCompressed`).
-- **Aceitação Dupla**: Permite carregar arquivos `.sf2` e `.sf3` reduzindo o tamanho de bancos gigantes de 500 MB para apenas 40 MB.
+### 2. 📦 Compatibilidade de Formato SoundFont
+- **SF2 PCM**: É o formato de áudio suportado pelo motor atual.
+- **SF3/Ogg Vorbis**: O parser reconhece o bit de amostra comprimida, mas ainda não possui decoder Vorbis. Bancos SF3 são rejeitados explicitamente para impedir que bytes comprimidos sejam reproduzidos como PCM e gerem ruído/distorção. É necessário convertê-los para SF2 PCM antes do carregamento.
 
-### 3. 🎹 Velocity Layer Crossfading & Motor de Velocidade por Pista
-- **Equal-Power Crossfading**: Transição suave (`Math.sin(velNorm * (Math.PI / 2.0))`) entre zonas de velocity diferentes.
+### 3. 🎹 Zonas de Velocity & Motor de Velocidade por Pista
+- **Seleção de zonas SF2**: `keyRange` e `velRange` são critérios estritos. Não há crossfade artificial entre samples, pois isso altera o mapeamento definido pelo próprio banco.
+- **Velocity efetiva coerente**: A mesma transformação de curva seleciona a camada `velRange` e define o ganho. O modo `fixed`, por exemplo, não combina mais sample suave com volume forte.
+- **Entrada expressiva**: Controladores físicos preservam velocity MIDI 1–127. O teclado virtual usa pressão via Pointer Events quando disponível e posição vertical como fallback determinístico em telas sem sensor de força.
 - **Visualizador Canvas 128 Barras (60 FPS)**: Sliders *MIN VEL*, *MAX VEL* e *CURVA POWER* com gráfico neon e marcador de nota em tempo real.
 - **Badge Reativa no Mixer**: Atualiza dinamicamente para `VELOCITY ● PISTA` ou `VELOCITY 🌐 GLOBAL`.
+- **Persistência**: Presets e snapshots de setlist armazenam configurações globais/por pista; mapeamentos e estado ativo dos dispositivos MIDI ficam no `localStorage`.
 
-### 4. ⚡ Engine AudioWorklet DSP Multi-threaded (Sub-5ms)
-- Processador de áudio dedicado ([js/audio-worklet-processor.js](file:///c:/Users/user/Documents/sf2/js/audio-worklet-processor.js)) rodando em thread separada para latência sub-5ms e zero engasgos de CPU.
+### 4. ⚡ Engine de Áudio
+- O motor em uso é baseado em nós da Web Audio API. Existe um processador experimental em `js/audio-worklet-processor.js`, mas ele ainda não está conectado ao fluxo de reprodução; portanto, não se deve anunciar AudioWorklet ou latência sub-5 ms como capacidades ativas.
 
 ### 5. 🎛️ Plugin Nativo VST3 (JUCE 8 / C++) & Instalador Duplo NSIS
 - **Wrapper C++ JUCE 8 (`vst3/`)**: Compilação nativa do arquivo `BenSF2.vst3` com renderizador WebView que exibe a interface exata do aplicativo dentro de DAWs (Reaper, FL Studio, Ableton, Cubase, Studio One).
+- **Limite arquitetural confirmado**: O `processBlock()` atual não consome `midiMessages` nem renderiza o motor SF2; ele apenas limpa canais de saída sem entrada. O VST3 ainda não é um instrumento de áudio funcional e requer uma fase própria de integração nativa/ponte em tempo real.
 - **Instalador NSIS (`build/installer.nsh`)**: Grava o **App Standalone (`.exe`)** e instala o **Plugin VST3** em `C:\Program Files\Common Files\VST3\BenSF2.vst3\`.
 
 ### 6. 💾 Banco de Dados SQLite Persistente & Diálogos Nativos
@@ -60,11 +64,12 @@ Este arquivo contém o registro histórico detalhado, decisões arquiteturais, p
 - **Abas Flutuantes Neon**: `📁 BIBLIOTECA ▶` na borda esquerda e `🎹 EXIBIR TECLADO PIANO ▲` no rodapé.
 - **Ícone Transparente**: Imagens PNG Photoroom sem moldura/caixa branca na barra de tarefas do Windows.
 
-### 8. 🎹 Especificação Oficial SF2 de Zonas de Geradores & Eliminação de Distorção
-- **Parser de Geradores SF2 (`js/sf2-parser.js`)**: Leitura completa dos geradores das zonas de instrumentos e presets (`keyRange` oper 43, `velRange` oper 44, `initialAttenuation` oper 48, `coarseTune` oper 51, `fineTune` oper 52, `sampleModes` oper 54 e `overridingRootKey` oper 58).
-- **Síntese Fiel sem Distorção (`js/synth-engine.js`)**: Mapeamento dinâmico de amostras por zona exata de nota e velocidade. Elimina o aliasing de 3+ oitavas e o clipping digital aplicando a atenuação nativa em centibels ($10^{-\text{cB}/200}$).
+### 8. 🎹 Núcleo de Reprodução SF2
+- **Parser de zonas (`js/sf2-parser.js`)**: Implementa o subconjunto de geradores necessário para seleção de sample, ranges, afinação, atenuação e loops. A cobertura total da especificação (envelopes nativos, filtros, moduladores e offsets) ainda é trabalho futuro.
+- **Síntese baseada no banco (`js/synth-engine.js`)**: Usa as zonas reais de nota e velocidade e não inventa samples quando uma faixa não corresponde. A atenuação segue a compatibilidade EMU e a afinação estática é preservada durante pitch bend.
 - **Labels de Áudio Reais do Windows**: Enumeração de dispositivos de áudio com permissões desbloqueadas no Electron (`audioCapture`/`microphone`), exibindo nomes reais (*Alto-falantes HK2*, etc.).
 - **Gestão de Controladores MIDI Físicos**: Botões `● ATIVO` / `○ INATIVO` e roteamento de canal por teclado controlador conectado.
+- **Semântica de canal**: Canal MIDI externo e número da pista interna são domínios separados. Pistas em `TODOS` formam layer; pistas em `1..16` só respondem ao canal atribuído. Note Off guarda os destinos do Note On para não prender notas após trocar rota, pista ou oitava.
 - **MIDI Learn Ampliado em Botões**: Mapeamento por clique com botão direito em todos os botões ON/OFF de efeitos por pista, Master FX, Mute e Solo.
 - **Truncamento Estético de Presets (`...`)**: Estilo ajustado no CSS para evitar que nomes extensos de SoundFont estourem o container do Mixer, com tooltip no hover.
 
@@ -75,9 +80,10 @@ Este arquivo contém o registro histórico detalhado, decisões arquiteturais, p
 | Arquivo/Pasta | Responsabilidade no Projeto |
 | :--- | :--- |
 | [js/setlist-manager.js](file:///d:/Sistemas/bensf2/js/setlist-manager.js) | Gerenciador do Setlist Mode com Instant Snapshot e Seamless Patch Change |
-| [js/audio-worklet-processor.js](file:///d:/Sistemas/bensf2/js/audio-worklet-processor.js) | Engine DSP de baixa latência em AudioWorklet |
-| [js/sf2-parser.js](file:///d:/Sistemas/bensf2/js/sf2-parser.js) | Parser binário de SoundFonts SF2 e SF3 com suporte a Geradores de Zona |
+| [js/audio-worklet-processor.js](file:///d:/Sistemas/bensf2/js/audio-worklet-processor.js) | Processador AudioWorklet experimental, ainda não conectado ao motor principal |
+| [js/sf2-parser.js](file:///d:/Sistemas/bensf2/js/sf2-parser.js) | Parser binário de SoundFonts SF2 PCM com suporte ao núcleo de geradores de zona |
 | [js/synth-engine.js](file:///d:/Sistemas/bensf2/js/synth-engine.js) | Motor de síntese Web Audio com filtragem de zonas SF2 e atenuação nativa |
+| [js/performance-input.js](file:///d:/Sistemas/bensf2/js/performance-input.js) | Converte pressão/posição do Pointer Event em velocity MIDI para o teclado virtual |
 | [js/web-midi.js](file:///d:/Sistemas/bensf2/js/web-midi.js) | Gerenciador WebMIDI para múltiplos controladores com toggles de ativacao |
 | [js/midi-learn.js](file:///d:/Sistemas/bensf2/js/midi-learn.js) | Automação MIDI Learn em sliders e botões ON/OFF |
 | [js/database.js](file:///d:/Sistemas/bensf2/js/database.js) | Gerenciador do banco de dados SQLite local |

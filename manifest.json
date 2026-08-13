@@ -1,21 +1,28 @@
 {
   "short_name": "BenSF2",
   "name": "BenSF2 - Live Sampler Workstation",
+  "description": "Sampler SoundFont 2 e mixer MIDI para performance ao vivo.",
+  "id": "./",
+  "lang": "pt-BR",
   "icons": [
     {
       "src": "assets/icon-192.png",
       "type": "image/png",
-      "sizes": "192x192"
+      "sizes": "192x192",
+      "purpose": "any"
     },
     {
       "src": "assets/icon-512.png",
       "type": "image/png",
-      "sizes": "512x512"
+      "sizes": "512x512",
+      "purpose": "any"
     }
   ],
   "start_url": "./index.html",
+  "scope": "./",
   "background_color": "#07090e",
   "theme_color": "#07090e",
   "display": "standalone",
-  "orientation": "any"
+  "orientation": "any",
+  "categories": ["music", "utilities"]
 }

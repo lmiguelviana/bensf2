@@ -4,6 +4,7 @@
   "description": "BenSF2 - Live Sampler Workstation and Live MIDI Keyboard Synth (Electron, Mobile & VST3)",
   "main": "main.js",
   "scripts": {
+    "test": "node --test test/*.test.js",
     "start": "electron .",
     "web": "npx http-server -p 8080 .",
     "pack:dir": "electron-builder --dir",

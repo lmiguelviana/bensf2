@@ -1,328 +1,271 @@
 /**
- * BEN SF2 SETLIST & SONG MODE MANAGER (MAINSTAGE / NORD STAGE STYLE)
- * Gerencia a organização de presets e captura do estado completo do workstation para shows ao vivo.
- * Suporta Seamless Patch Change (Troca de música/patch sem corte de som).
+ * SETLIST & SONG MODE MANAGER
+ * Setlists reutilizam exatamente o schema versionado do PresetManager.
  */
-
 class BenSetlistManager {
   constructor(synthEngine, presetManager, mixerManager, fxRackManager) {
     this.synth = synthEngine;
     this.presetManager = presetManager;
     this.mixer = mixerManager;
     this.fxRack = fxRackManager;
-
-    this.activeSetlistName = 'Show Ao Vivo Default';
+    this.activeSetlistName = 'Show Ao Vivo';
     this.items = [];
-    this.currentIndex = 0;
-
+    this.currentIndex = -1;
     this.loadFromStorage();
-    if (this.items.length === 0) {
-      this.addDemoItems();
-    }
   }
 
-  addDemoItems() {
-    this.items = [
-      { id: 'item_1', songName: '01. Intro Culto - Piano + Pad', presetName: 'Piano e Pad Warm', notes: 'Tom: C | BPM: 72', snapshot: null },
-      { id: 'item_2', songName: '02. Louvor Rápido - Synth Lead', presetName: 'Lead Brass Split', notes: 'Tom: G | BPM: 128', snapshot: null },
-      { id: 'item_3', songName: '03. Solo de Órgão B3', presetName: 'Organ Rock B3', notes: 'Tom: E | BPM: 100', snapshot: null }
-    ];
-    this.saveToStorage();
-    this.renderSetlistPanel();
+  cleanText(value, fallback = '', maxLength = 300) {
+    if (typeof value !== 'string') return fallback;
+    const clean = value.replace(/[\u0000-\u001f\u007f]/g, '').trim();
+    return (clean || fallback).slice(0, maxLength);
+  }
+
+  normalizeItem(candidate, index = 0) {
+    if (!candidate || typeof candidate !== 'object') return null;
+    const songName = this.cleanText(candidate.songName, `Música ${index + 1}`, 160);
+    const presetName = this.cleanText(candidate.presetName, '', 120);
+    const notes = this.cleanText(candidate.notes, '', 600);
+    let snapshot = null;
+    let snapshotError = null;
+    if (candidate.snapshot) {
+      try {
+        snapshot = this.presetManager.normalizeRigState(candidate.snapshot, `Snapshot: ${songName}`);
+      } catch (error) {
+        snapshotError = error.message;
+      }
+    }
+    return {
+      id: this.cleanText(candidate.id, `song_${Date.now()}_${index}`, 100),
+      songName,
+      presetName,
+      notes,
+      snapshot,
+      ...(snapshotError ? { snapshotError } : {})
+    };
   }
 
   getSetlistItems() {
     return this.items;
   }
 
-  // Captura o Estado Atual do Workstation (Timbres, Canais, Volumes, Transpose, Efeitos)
-  captureCurrentWorkstationState() {
-    if (!this.synth) return null;
-
-    const snapshot = {
-      timestamp: Date.now(),
-      totalChannels: this.mixer ? this.mixer.totalChannels : 4,
-      channels: []
-    };
-
-    for (let ch = 1; ch <= snapshot.totalChannels; ch++) {
-      const chConfig = this.synth.channels[ch];
-      if (chConfig) {
-        snapshot.channels.push({
-          channel: ch,
-          name: chConfig.name || `CH ${ch}`,
-          assignedPresetIndex: chConfig.assignedPresetIndex,
-          presetName: chConfig.presetName || '',
-          volume: chConfig.volume,
-          pan: chConfig.pan,
-          transpose: chConfig.transpose,
-          semitoneTranspose: chConfig.semitoneTranspose || 0,
-          keyRangeLow: chConfig.keyRangeLow || 0,
-          keyRangeHigh: chConfig.keyRangeHigh || 127,
-          muted: chConfig.muted || false,
-          solo: chConfig.solo || false
-        });
-      }
-    }
-
-    if (this.fxRack) {
-      snapshot.masterFx = {
-        reverbMix: this.fxRack.reverbMix,
-        reverbMode: this.fxRack.reverbMode,
-        chorusMix: this.fxRack.chorusMix,
-        cutoffFreq: this.fxRack.cutoffFreq
-      };
-    }
-
-    return snapshot;
+  captureCurrentWorkstationState(songName = 'Snapshot do Setlist') {
+    return this.presetManager.captureRigState(songName);
   }
 
   addItem(songName, presetName = '', notes = '', useCurrentState = false) {
-    let snapshot = null;
-    if (useCurrentState) {
-      snapshot = this.captureCurrentWorkstationState();
+    const normalizedName = this.cleanText(songName, `Música ${this.items.length + 1}`, 160);
+    const item = this.normalizeItem({
+      id: `song_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
+      songName: normalizedName,
+      presetName,
+      notes,
+      snapshot: useCurrentState ? this.captureCurrentWorkstationState(`Snapshot: ${normalizedName}`) : null
+    }, this.items.length);
+    if (!item) return null;
+    this.items.push(item);
+    if (!this.saveToStorage()) {
+      this.items.pop();
+      this.notify('Falha ao Atualizar Setlist', 'O armazenamento local não está disponível.', 'warning');
+      return null;
     }
-
-    const newItem = {
-      id: 'song_' + Date.now(),
-      songName: songName || `Música ${this.items.length + 1}`,
-      presetName: presetName || '',
-      notes: notes,
-      snapshot: snapshot
-    };
-
-    this.items.push(newItem);
     this.renderSetlistPanel();
-    this.saveToStorage();
-
-    if (window.showToastNotification) {
-      window.showToastNotification(
-        '🎤 Setlist Atualizado',
-        `Música "${newItem.songName}" adicionada com sucesso ao Setlist!`,
-        'success'
-      );
-    }
-
-    return newItem;
+    this.notify('Setlist Atualizado', `Música "${item.songName}" adicionada.`, 'success');
+    return item;
   }
 
   recaptureSongState(index) {
-    if (index >= 0 && index < this.items.length) {
-      const snapshot = this.captureCurrentWorkstationState();
-      this.items[index].snapshot = snapshot;
-      this.saveToStorage();
-      this.renderSetlistPanel();
-
-      if (window.showToastNotification) {
-        window.showToastNotification(
-          '📸 Configuração Recapturada',
-          `Estado atual do mixer gravado na música "${this.items[index].songName}".`,
-          'info'
-        );
-      }
+    if (!Number.isInteger(index) || index < 0 || index >= this.items.length) return false;
+    const previous = this.items[index].snapshot;
+    this.items[index].snapshot = this.captureCurrentWorkstationState(`Snapshot: ${this.items[index].songName}`);
+    delete this.items[index].snapshotError;
+    if (!this.saveToStorage()) {
+      this.items[index].snapshot = previous;
+      this.notify('Falha ao Capturar', 'Não foi possível persistir o snapshot.', 'warning');
+      return false;
     }
+    this.renderSetlistPanel();
+    this.notify('Configuração Recapturada', `Estado atual salvo em "${this.items[index].songName}".`, 'info');
+    return true;
   }
 
   removeItem(index) {
-    if (index >= 0 && index < this.items.length) {
-      this.items.splice(index, 1);
-      if (this.currentIndex >= this.items.length) {
-        this.currentIndex = Math.max(0, this.items.length - 1);
-      }
-      this.renderSetlistPanel();
-      this.saveToStorage();
+    if (!Number.isInteger(index) || index < 0 || index >= this.items.length) return false;
+    const removed = this.items.splice(index, 1)[0];
+    const previousIndex = this.currentIndex;
+    if (this.items.length === 0) this.currentIndex = -1;
+    else if (this.currentIndex >= this.items.length) this.currentIndex = this.items.length - 1;
+    else if (index < this.currentIndex) this.currentIndex--;
+    if (!this.saveToStorage()) {
+      this.items.splice(index, 0, removed);
+      this.currentIndex = previousIndex;
+      this.notify('Falha ao Remover', 'Não foi possível persistir o Setlist.', 'warning');
+      return false;
     }
+    this.renderSetlistPanel();
+    return true;
   }
 
   applySnapshot(snapshot) {
-    if (!snapshot || !this.synth) return;
-
-    if (this.mixer && snapshot.totalChannels) {
-      this.mixer.setVisibleChannelCount(snapshot.totalChannels);
+    const result = this.presetManager.applyRigState(snapshot, {
+      updateActiveName: false,
+      fallbackName: 'Snapshot do Setlist',
+      requireTimbres: true
+    });
+    if (!result.ok) {
+      this.notify('Falha ao Aplicar Snapshot', result.error.message, 'warning');
+      return false;
     }
-
-    if (snapshot.channels && Array.isArray(snapshot.channels)) {
-      snapshot.channels.forEach(chData => {
-        const ch = chData.channel;
-        const chConfig = this.synth.channels[ch];
-        if (chConfig) {
-          if (chData.assignedPresetIndex !== undefined && chData.assignedPresetIndex !== null) {
-            this.synth.setChannelPreset(ch, chData.assignedPresetIndex);
-            if (this.mixer) this.mixer.updateChannelPresetDropdown(ch, chData.assignedPresetIndex);
-          }
-
-          this.synth.setChannelVolume(ch, chData.volume !== undefined ? chData.volume : 0.8);
-          this.synth.setChannelPan(ch, chData.pan !== undefined ? chData.pan : 0);
-          this.synth.setChannelTranspose(ch, chData.transpose !== undefined ? chData.transpose : 0);
-          chConfig.semitoneTranspose = chData.semitoneTranspose || 0;
-          chConfig.keyRangeLow = chData.keyRangeLow || 0;
-          chConfig.keyRangeHigh = chData.keyRangeHigh || 127;
-        }
-      });
-    }
-
-    if (snapshot.masterFx && this.fxRack) {
-      if (snapshot.masterFx.reverbMix !== undefined) this.fxRack.setReverbMix(snapshot.masterFx.reverbMix);
-      if (snapshot.masterFx.reverbMode) this.fxRack.setMasterReverbMode(snapshot.masterFx.reverbMode);
-    }
-
-    if (this.mixer) {
-      this.mixer.renderMixer();
-    }
+    return true;
   }
 
   selectSong(index, seamless = true) {
-    if (index < 0 || index >= this.items.length) return;
-
-    this.currentIndex = index;
+    if (!Number.isInteger(index) || index < 0 || index >= this.items.length) return false;
     const item = this.items[index];
-
-    console.log(`[SetlistManager] Alternando para música ${index + 1}: "${item.songName}"`);
-
-    // Seamless Patch Change: Não encerra vozes que ainda estão soando
-    if (!seamless && this.synth) {
-      this.synth.stopAllVoices();
-    }
-
-    // Se a música tiver um Instant Snapshot do Workstation, carregar diretamente!
+    let applied = false;
     if (item.snapshot) {
-      this.applySnapshot(item.snapshot);
-    } else if (item.presetName && this.presetManager) {
-      const presetObj = this.presetManager.userPresets.get(item.presetName);
-      if (presetObj) {
-        this.presetManager.loadPreset(presetObj);
+      applied = this.applySnapshot(item.snapshot);
+    } else if (item.presetName) {
+      const preset = this.presetManager.userPresets.get(item.presetName);
+      if (preset) {
+        const result = this.presetManager.applyRigState(preset, {
+          updateActiveName: true,
+          requireTimbres: true
+        });
+        applied = result.ok;
+        if (!result.ok) this.notify('Falha ao Carregar Preset', result.error.message, 'warning');
       }
+      else this.notify('Preset Ausente', `O preset "${item.presetName}" não existe mais.`, 'warning');
+    } else if (item.snapshotError) {
+      this.notify('Snapshot Inválido', item.snapshotError, 'warning');
+    } else {
+      this.notify('Música sem Som', 'Associe um snapshot ou preset antes de selecionar esta música.', 'warning');
     }
-
+    if (!applied) return false;
+    if (!seamless && this.synth && typeof this.synth.stopAllVoices === 'function') this.synth.stopAllVoices();
+    this.currentIndex = index;
     this.renderSetlistPanel();
-
-    if (window.showToastNotification) {
-      window.showToastNotification(
-        '🎤 Setlist Live Mode',
-        `Música Ativa: ${item.songName}`,
-        'success'
-      );
-    }
+    this.notify('Setlist Live Mode', `Música ativa: ${item.songName}`, 'success');
+    return true;
   }
 
   nextSong() {
-    if (this.currentIndex < this.items.length - 1) {
-      this.selectSong(this.currentIndex + 1);
-    }
+    const nextIndex = this.currentIndex < 0 ? 0 : this.currentIndex + 1;
+    return nextIndex < this.items.length ? this.selectSong(nextIndex) : false;
   }
 
   prevSong() {
-    if (this.currentIndex > 0) {
-      this.selectSong(this.currentIndex - 1);
-    }
+    const previousIndex = this.currentIndex - 1;
+    return previousIndex >= 0 ? this.selectSong(previousIndex) : false;
   }
 
   saveToStorage() {
     try {
       localStorage.setItem('bensf2_setlist_items', JSON.stringify(this.items));
-    } catch (e) { }
+      return true;
+    } catch (error) {
+      console.error('[SetlistManager] Falha ao salvar Setlist:', error);
+      return false;
+    }
   }
 
   loadFromStorage() {
     try {
-      const stored = localStorage.getItem('bensf2_setlist_items');
-      if (stored) {
-        this.items = JSON.parse(stored);
-      }
-    } catch (e) { }
+      const raw = localStorage.getItem('bensf2_setlist_items');
+      if (!raw) return;
+      const parsed = JSON.parse(raw);
+      if (!Array.isArray(parsed)) throw new Error('Formato de Setlist inválido.');
+      this.items = parsed
+        .slice(0, 500)
+        .map((candidate, index) => this.normalizeItem(candidate, index))
+        .filter(Boolean);
+      this.currentIndex = -1;
+    } catch (error) {
+      console.error('[SetlistManager] Setlist local inválido ignorado:', error);
+      this.items = [];
+      this.currentIndex = -1;
+    }
+  }
+
+  createElement(tag, className, text) {
+    const element = document.createElement(tag);
+    if (className) element.className = className;
+    if (text !== undefined) element.textContent = text;
+    return element;
   }
 
   renderSetlistPanel() {
     const container = document.getElementById('setlistItemsContainer');
     if (!container) return;
-
+    container.replaceChildren();
     if (this.items.length === 0) {
-      container.innerHTML = `
-        <div style="text-align: center; color: var(--text-muted); font-size: 11px; padding: 24px; background: rgba(255,255,255,0.02); border-radius: 8px; border: 1px dashed rgba(255,255,255,0.1);">
-          <div style="font-size: 24px; margin-bottom: 8px;">🎤</div>
-          <div style="font-weight: 700; color: var(--accent-cyan); margin-bottom: 4px;">Setlist Vazio</div>
-          Nenhuma música adicionada ao seu repertório. Monte seu som no mixer e clique no botão <b>➕ Adicionar Música</b>!
-        </div>
-      `;
+      const empty = this.createElement('div', 'setlist-empty-state');
+      empty.style.cssText = 'text-align:center;color:var(--text-muted);font-size:11px;padding:24px;background:rgba(255,255,255,0.02);border-radius:8px;border:1px dashed rgba(255,255,255,0.1);';
+      const icon = this.createElement('div', '', '🎤');
+      icon.style.cssText = 'font-size:24px;margin-bottom:8px;';
+      const title = this.createElement('div', '', 'Setlist Vazio');
+      title.style.cssText = 'font-weight:700;color:var(--accent-cyan);margin-bottom:4px;';
+      const help = this.createElement('div', '', 'Monte seu som no mixer e clique em “Adicionar Música”.');
+      empty.append(icon, title, help);
+      container.appendChild(empty);
       return;
     }
 
-    let html = '';
-    this.items.forEach((item, idx) => {
-      const isActive = idx === this.currentIndex;
-      const typeLabel = item.snapshot ? '📸 ESTADO COMPLETO DO MIXER' : `PR: ${item.presetName || 'Padrão'}`;
+    this.items.forEach((item, index) => {
+      const active = index === this.currentIndex;
+      const card = this.createElement('div', `setlist-item-card${active ? ' active' : ''}`);
+      card.dataset.index = String(index);
+      card.tabIndex = 0;
+      card.setAttribute('role', 'button');
+      card.setAttribute('aria-label', `Selecionar ${item.songName}`);
+      card.style.cssText = `display:flex;align-items:center;justify-content:space-between;padding:10px 14px;border-radius:8px;background:${active ? 'linear-gradient(90deg,rgba(0,242,254,.22),rgba(127,0,255,.18))' : 'rgba(255,255,255,.03)'};border:1px solid ${active ? 'var(--accent-cyan)' : 'rgba(255,255,255,.06)'};margin-bottom:8px;cursor:pointer;`;
 
-      html += `
-        <div class="setlist-item-card ${isActive ? 'active' : ''}" data-index="${idx}" style="
-          display: flex;
-          align-items: center;
-          justify-content: space-between;
-          padding: 10px 14px;
-          border-radius: 8px;
-          background: ${isActive ? 'linear-gradient(90deg, rgba(0, 242, 254, 0.22), rgba(127, 0, 255, 0.18))' : 'rgba(255,255,255,0.03)'};
-          border: 1px solid ${isActive ? 'var(--accent-cyan)' : 'rgba(255,255,255,0.06)'};
-          margin-bottom: 8px;
-          cursor: pointer;
-          transition: all 0.2s ease;
-          box-shadow: ${isActive ? '0 0 15px rgba(0, 242, 254, 0.2)' : 'none'};
-        ">
-          <div style="display: flex; align-items: center; gap: 12px; flex: 1; overflow: hidden;">
-            <div style="
-              font-family: var(--font-mono);
-              font-size: 14px;
-              font-weight: 800;
-              color: ${isActive ? 'var(--accent-cyan)' : 'var(--text-muted)'};
-              min-width: 28px;
-              text-align: center;
-            ">${idx + 1}</div>
+      const content = this.createElement('div', 'setlist-item-content');
+      content.style.cssText = 'display:flex;align-items:center;gap:12px;flex:1;overflow:hidden;';
+      const number = this.createElement('div', 'setlist-item-number', String(index + 1));
+      number.style.cssText = 'font-family:var(--font-mono);font-size:14px;font-weight:800;min-width:28px;text-align:center;';
+      const details = this.createElement('div', 'setlist-item-details');
+      details.style.cssText = 'display:flex;flex-direction:column;overflow:hidden;';
+      const name = this.createElement('span', 'setlist-item-name', item.songName);
+      name.style.cssText = 'font-family:var(--font-heading);font-size:13px;font-weight:800;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;';
+      const source = item.snapshot ? '📸 SNAPSHOT DO RIG' : `PR: ${item.presetName || '(não associado)'}`;
+      const meta = this.createElement('span', 'setlist-item-meta', `${source}${item.notes ? ` • ${item.notes}` : ''}`);
+      meta.style.cssText = 'font-size:10px;color:var(--text-muted);margin-top:2px;';
+      details.append(name, meta);
+      content.append(number, details);
 
-            <div style="display: flex; flex-direction: column; overflow: hidden;">
-              <span style="
-                font-family: var(--font-heading);
-                font-size: 13px;
-                font-weight: 800;
-                color: ${isActive ? '#fff' : 'var(--text-main)'};
-                white-space: nowrap;
-                overflow: hidden;
-                text-overflow: ellipsis;
-              ">${item.songName}</span>
+      const actions = this.createElement('div', 'setlist-item-actions');
+      actions.style.cssText = 'display:flex;gap:6px;align-items:center;';
+      const capture = this.createElement('button', 'btn btn-sm btn-recapture-song', '📸 Capturar');
+      capture.type = 'button';
+      capture.dataset.index = String(index);
+      const select = this.createElement('button', 'btn btn-sm btn-select-song', active ? '● EM USO' : '▶ SELECIONAR');
+      select.type = 'button';
+      select.dataset.index = String(index);
+      const remove = this.createElement('button', 'btn btn-sm btn-delete-song', '✕');
+      remove.type = 'button';
+      remove.dataset.index = String(index);
+      remove.setAttribute('aria-label', `Excluir ${item.songName}`);
+      actions.append(capture, select, remove);
+      card.append(content, actions);
 
-              <span style="font-size: 10px; color: var(--text-muted); margin-top: 2px;">
-                <strong style="color: ${item.snapshot ? 'var(--accent-cyan)' : 'var(--accent-purple)'};">${typeLabel}</strong> ${item.notes ? ' • ' + item.notes : ''}
-              </span>
-            </div>
-          </div>
-
-          <div style="display: flex; gap: 6px; align-items: center;">
-            <button class="btn btn-sm btn-recapture-song" data-index="${idx}" style="font-size: 10px; padding: 3px 8px;" title="Atualizar esta música com o timbre/estado atual do mixer">
-              📸 Capturar
-            </button>
-            <button class="btn btn-sm btn-select-song" data-index="${idx}" style="font-size: 10px; padding: 3px 12px; font-weight: 800; background: ${isActive ? 'var(--accent-cyan)' : ''}; color: ${isActive ? '#000' : ''};">
-              ${isActive ? '● EM USO' : '▶ SELECIONAR'}
-            </button>
-            <button class="btn btn-sm btn-delete-song" data-index="${idx}" style="font-size: 10px; padding: 3px 8px; color: var(--accent-danger);" title="Excluir do Setlist">✕</button>
-          </div>
-        </div>
-      `;
-    });
-
-    container.innerHTML = html;
-
-    // Vinculo de eventos de clique nos botões das músicas no Setlist
-    container.querySelectorAll('.setlist-item-card').forEach(card => {
-      card.addEventListener('click', (e) => {
-        const idx = parseInt(card.dataset.index, 10);
-        if (e.target.classList.contains('btn-delete-song')) {
-          e.stopPropagation();
-          this.removeItem(idx);
-        } else if (e.target.classList.contains('btn-recapture-song')) {
-          e.stopPropagation();
-          this.recaptureSongState(idx);
-        } else {
-          this.selectSong(idx, true);
+      card.addEventListener('click', event => {
+        if (event.target.closest('.btn-delete-song')) this.removeItem(index);
+        else if (event.target.closest('.btn-recapture-song')) this.recaptureSongState(index);
+        else this.selectSong(index, true);
+      });
+      card.addEventListener('keydown', event => {
+        if ((event.key === 'Enter' || event.key === ' ') && event.target === card) {
+          event.preventDefault();
+          this.selectSong(index, true);
         }
       });
+      container.appendChild(card);
     });
+  }
+
+  notify(title, message, type) {
+    if (window.showToastNotification) window.showToastNotification(title, message, type);
+    else if (type === 'warning') console.warn(`[SetlistManager] ${title}: ${message}`);
   }
 }
 

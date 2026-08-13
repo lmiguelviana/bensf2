@@ -33,9 +33,12 @@ O **BenSF2** é uma **Workstation Multitímbrica de Áudio (DAW / Live Rig)** de
 - **Gravação Automática no Controlador Físico**: Clique no campo e toque qualquer tecla no seu teclado MIDI (USB/Bluetooth) ou teclado virtual para definir o limite instantaneamente!
 - **Digitação Direta**: Suporta notação universal em inglês (`C0`, `C7`, `B3`, `F#4`) e em português (`DO2`, `RE4`, `SOL5`).
 - **Layering Global (`TODOS`)**: Por padrão, todas as pistas começam prontas para empilhamento layered no controlador.
+- **Roteamento MIDI estrito**: Ao escolher `CH 1..16` em uma pista, apenas mensagens daquele canal MIDI acionam a pista. A opção `TODOS` continua sendo o modo explícito de layer.
+- **Controlador sem remapeamento forçado**: Em Configurações, `Preservar canal MIDI do teclado` mantém o canal presente em cada mensagem; também é possível forçar um controlador inteiro para um canal específico.
 
 ### 🔊 2. Motor de Síntese SoundFont 2 (SF2) de Baixa Latência
 - **Parser Binário Direto**: Leitura binária nativa de arquivos `.sf2` com alinhamento preciso de blocos de áudio.
+- **Formato suportado**: Bancos `.sf2` com samples PCM. Arquivos `.sf3` usam Ogg Vorbis e precisam ser convertidos para SF2 PCM antes do carregamento; o aplicativo os rejeita para não reproduzir dados comprimidos como ruído.
 - **Sustentação Limpa (Zero Lag)**: Sistema inteligente de cancelamento de vozes anteriores (*Voice Stealing & Fade-ramp*) que elimina engasgos, estalos e lag em instrumentos sustentados (p. ex., Violinos, Strings e Organ).
 - **Atribuição Direta e Exclusiva de Timbres**: Clique em um instrumento do banco para atribuí-lo diretamente à pista selecionada.
 
@@ -51,7 +54,14 @@ O **BenSF2** é uma **Workstation Multitímbrica de Áudio (DAW / Live Rig)** de
 
 ### 🔌 5. Automação & MIDI Learn Universal
 - **Mapeamento via Botão Direito**: Clique com o botão direito em qualquer knob do sistema para mapear rapidamente a um fader, knob ou slider do seu controlador MIDI físico.
-- **Conectividade Total**: Suporte Plug-and-Play para pedais de sustain (CC64), ModWheel (CC1), Pitch Bend e volume de canal.
+- **Mensagens expressivas**: Note On/Off preservam canal e velocity; Pitch Bend e volume CC7 seguem o mesmo roteamento das pistas. CC1 e CC64 são reconhecidos pelo gerenciador MIDI, mas sua modulação/sustentação musical completa ainda é trabalho futuro.
+
+### 🎚️ 6. Dinâmica de Velocity
+- **Controlador físico**: Valores MIDI de 1 a 127 chegam ao motor sem serem substituídos e controlam simultaneamente o ganho e a seleção da camada `velRange` do SoundFont.
+- **Teclado na tela**: Usa `Pointer Events`. Em tela/caneta com sensor, usa pressão real; quando o hardware informa apenas a pressão padrão, usa a posição vertical do toque (topo mais suave, base mais forte), pois telas capacitivas comuns não medem força.
+- **Estado persistente**: Curvas globais e por pista, canal MIDI e limites de velocity são preservados em presets e snapshots de setlist. O mapeamento de cada dispositivo MIDI também é salvo localmente.
+
+> **Limite atual do VST3:** as correções de áudio, canais MIDI e velocity descritas acima pertencem ao aplicativo Web/PWA/Electron. O wrapper em `vst3/` ainda não possui um sintetizador nativo ligado a `processBlock()` e, portanto, não deve ser considerado um instrumento VST3 funcional até uma fase específica implementar a ponte de áudio/MIDI.
 
 ---
 
@@ -69,6 +79,7 @@ bensf2/
 │   ├── audio-context.js  # Gerenciador global do Web Audio Context
 │   ├── sf2-parser.js     # Parser binário SF2 em JS puro
 │   ├── synth-engine.js   # Motor de síntese polifônica e envelopes
+│   ├── performance-input.js # Pressão/posição do toque para velocity MIDI
 │   ├── fx-rack.js        # Módulos de efeitos DSP e Rack
 │   ├── mixer.js          # Console do Mixer (16 Canais & Split C0..C7)
 │   ├── web-midi.js       # Comunicação WebMIDI e MIDI Learn
@@ -98,6 +109,13 @@ npm install
 ```bash
 npm start
 ```
+
+### 4. Executar os testes de regressão
+```bash
+npm test
+```
+
+Para incluir um banco SF2 real sem adicioná-lo ao repositório, defina `BENSF2_TEST_SF2` com o caminho do arquivo antes do teste. A suíte valida estrutura de zonas, seleção de camadas de velocity, roteamento MIDI, notas sustentadas durante troca de rota e persistência de estado.
 
 ---
 

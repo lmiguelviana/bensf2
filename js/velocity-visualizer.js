@@ -11,22 +11,53 @@ class VelocityVisualizerManager {
     this.settingsGetter = settingsGetter || null;
     this.activeMarker = null; // { inVel, outVel, alpha }
     this.animationId = null;
+    this.removeVelocityListener = null;
 
     if (this.synth) {
-      this.synth.onVelocityTrigger = (ch, inVel, outVel) => {
+      const handleVelocity = (ch, inVel, outVel) => {
         this.activeMarker = { inVel, outVel, alpha: 1.0 };
+        this.startLoop();
       };
+      if (typeof this.synth.addVelocityListener === 'function') {
+        this.removeVelocityListener = this.synth.addVelocityListener(handleVelocity);
+      } else {
+        this.synth.onVelocityTrigger = handleVelocity;
+      }
     }
 
-    this.startLoop();
+    this.render();
   }
 
   startLoop() {
+    if (this.animationId !== null || typeof requestAnimationFrame !== 'function') return;
     const draw = () => {
+      this.animationId = null;
+      if (typeof document !== 'undefined' && document.hidden) {
+        this.activeMarker = null;
+        return;
+      }
       this.render();
-      this.animationId = requestAnimationFrame(draw);
+      if (this.activeMarker) this.animationId = requestAnimationFrame(draw);
     };
-    draw();
+    this.animationId = requestAnimationFrame(draw);
+  }
+
+  destroy() {
+    if (this.animationId !== null && typeof cancelAnimationFrame === 'function') {
+      cancelAnimationFrame(this.animationId);
+      this.animationId = null;
+    }
+    if (this.removeVelocityListener) {
+      this.removeVelocityListener();
+      this.removeVelocityListener = null;
+    }
+  }
+
+  getNormalizedOutputVelocity(inputVelocity, settings) {
+    if (this.synth && typeof this.synth.calculateVelocityResponse === 'function') {
+      return this.synth.calculateVelocityResponse(inputVelocity, 1, settings).effectiveVelocity / 127.0;
+    }
+    return Math.max(1, Math.min(127, inputVelocity)) / 127.0;
   }
 
   render(settingsOverride) {
@@ -73,27 +104,7 @@ class VelocityVisualizerManager {
     const barWidth = width / 127.0;
 
     for (let i = 1; i <= 127; i++) {
-      let normGain = 0;
-      const minV = settings.minVel !== undefined ? parseInt(settings.minVel, 10) : 1;
-      const maxV = settings.maxVel !== undefined ? parseInt(settings.maxVel, 10) : 127;
-
-      if (i < minV || i > maxV) {
-        normGain = 0;
-      } else if (settings.mode === 'fixed') {
-        normGain = (settings.fixedVel || 120) / 127.0;
-      } else {
-        const normIn = i / 127.0;
-        if (settings.mode === 'soft') {
-          normGain = Math.pow(normIn, 1.2);
-        } else if (settings.mode === 'hard') {
-          normGain = Math.pow(normIn, 2.8);
-        } else if (settings.mode === 'compressed') {
-          normGain = 0.3 + (0.7 * Math.pow(normIn, 1.5));
-        } else {
-          const p = settings.curvePower !== undefined ? parseFloat(settings.curvePower) : 2.0;
-          normGain = Math.pow(normIn, p);
-        }
-      }
+      const normGain = this.getNormalizedOutputVelocity(i, settings);
 
       const barHeight = Math.max(1, normGain * (height - 6));
       const x = (i - 1) * barWidth;
@@ -113,24 +124,7 @@ class VelocityVisualizerManager {
     ctx.strokeStyle = '#ffffff';
     ctx.lineWidth = 1.5;
     for (let i = 1; i <= 127; i++) {
-      let normGain = 0;
-      const minV = settings.minVel !== undefined ? parseInt(settings.minVel, 10) : 1;
-      const maxV = settings.maxVel !== undefined ? parseInt(settings.maxVel, 10) : 127;
-
-      if (i < minV || i > maxV) {
-        normGain = 0;
-      } else if (settings.mode === 'fixed') {
-        normGain = (settings.fixedVel || 120) / 127.0;
-      } else {
-        const normIn = i / 127.0;
-        if (settings.mode === 'soft') normGain = Math.pow(normIn, 1.2);
-        else if (settings.mode === 'hard') normGain = Math.pow(normIn, 2.8);
-        else if (settings.mode === 'compressed') normGain = 0.3 + (0.7 * Math.pow(normIn, 1.5));
-        else {
-          const p = settings.curvePower !== undefined ? parseFloat(settings.curvePower) : 2.0;
-          normGain = Math.pow(normIn, p);
-        }
-      }
+      const normGain = this.getNormalizedOutputVelocity(i, settings);
 
       const barHeight = normGain * (height - 6);
       const x = (i - 1) * barWidth;

@@ -2,7 +2,8 @@
 <html lang="pt-BR">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self' file:; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; media-src 'self' blob:; connect-src 'self'; worker-src 'self'; object-src 'none'; base-uri 'none'; form-action 'none'">
   <title>BenSF2 - Live Sampler Workstation</title>
 
   <!-- PWA Manifest & Meta Tags -->
@@ -32,11 +33,11 @@
       </div>
 
       <!-- View Switcher Tabs (Mixer & Layers, FX Master, Setlist Mode, Configurações ⚙️) -->
-      <div class="view-tabs-bar" style="display: flex; align-items: center; gap: 6px;">
-        <button id="tabMixer" class="tab-btn active">🎛️ Mixer & Layers</button>
-        <button id="tabFxRack" class="tab-btn">🏛️ Rack FX Master</button>
-        <button id="tabSetlist" class="tab-btn">🎤 Setlist Mode</button>
-        <button id="btnOpenSettings" class="tab-btn" title="Configurações de Áudio, Polifonia e Controladores MIDI" style="padding: 6px 12px; min-width: auto;">
+      <div class="view-tabs-bar" role="tablist" aria-label="Áreas do workstation" style="display: flex; align-items: center; gap: 6px;">
+        <button id="tabMixer" class="tab-btn active" role="tab" aria-selected="true" aria-controls="sectionMixer">🎛️ Mixer & Layers</button>
+        <button id="tabFxRack" class="tab-btn" role="tab" aria-selected="false" aria-controls="sectionFxRack" tabindex="-1">🏛️ Rack FX Master</button>
+        <button id="tabSetlist" class="tab-btn" role="tab" aria-selected="false" aria-controls="sectionSetlist" tabindex="-1">🎤 Setlist Mode</button>
+        <button id="btnOpenSettings" class="tab-btn" aria-label="Abrir configurações" title="Configurações de Áudio, Polifonia e Controladores MIDI" style="padding: 6px 12px; min-width: auto;">
           ⚙️
         </button>
       </div>
@@ -88,15 +89,16 @@
       <!-- SF2 Uploader Card -->
       <section class="glass-card">
         <div class="card-title">
-          <span>Biblioteca SoundFont (SF2 / SF3)</span>
+          <span>Biblioteca SoundFont (SF2)</span>
           <button id="btnCollapseSidebarDirect" class="btn btn-sm" title="Recolher Coluna da Biblioteca" style="font-size: 10px; padding: 1px 6px; background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.1); color: var(--accent-cyan); font-weight: 700;">◀ Recolher</button>
         </div>
-        <div class="sf2-uploader-zone" id="sf2DropZone">
+        <div class="sf2-uploader-zone" id="sf2DropZone" role="button" tabindex="0" aria-controls="sf2FileInput" aria-describedby="sf2LoadStatus">
           <img src="assets/isotipo.png" alt="BenSF2" class="sf2-logo-img" style="width: 72px; height: 72px; object-fit: contain; opacity: 0.9; margin-bottom: 4px; filter: drop-shadow(0 0 12px rgba(0, 242, 254, 0.25)); transition: transform 0.25s ease;">
-          <div class="sf2-uploader-text">Carregar Arquivo .SF2 / .SF3</div>
-          <div class="sf2-uploader-sub">Arraste ou clique para selecionar (.sf2 ou .sf3)</div>
-          <input type="file" id="sf2FileInput" accept=".sf2,.sf3" multiple style="display: none;">
+          <div class="sf2-uploader-text">Carregar Arquivo .SF2</div>
+          <div class="sf2-uploader-sub">Arraste ou clique para selecionar (.sf2 PCM)</div>
+          <input type="file" id="sf2FileInput" accept=".sf2" multiple style="display: none;">
         </div>
+        <div id="sf2LoadStatus" class="sr-only" role="status" aria-live="polite">Nenhum SoundFont carregado.</div>
       </section>
 
       <!-- Preset Browser Card -->
@@ -107,7 +109,7 @@
         </div>
         <div class="preset-list" id="presetList">
           <div style="padding: 12px; text-align: center; color: var(--accent-warning); font-size: 12px; font-weight: 600;">
-            ⚠️ Nenhum banco SoundFont carregado.<br>Por favor, carregue um arquivo .sf2 ou .sf3 para tocar!
+            ⚠️ Nenhum banco SoundFont carregado.<br>Por favor, carregue um arquivo .sf2 para tocar!
           </div>
         </div>
       </section>
@@ -129,7 +131,7 @@
     <section class="main-view-area">
 
       <!-- Section: Mixer Console 16-Canais + Dynamic Track FX Panel -->
-      <section id="sectionMixer" class="glass-card" style="display: flex; flex-direction: column; gap: 12px;">
+      <section id="sectionMixer" class="glass-card" role="tabpanel" aria-labelledby="tabMixer" style="display: flex; flex-direction: column; gap: 12px;">
         <div class="card-title">
           <span>Mixer Console Multitimbrico (Layers & 16 Canais MIDI)</span>
           <div style="display: flex; align-items: center; gap: 8px;">
@@ -315,7 +317,7 @@
       </section>
 
       <!-- Section: Rack de Processamento de Efeitos MASTER GLOBAL (Com Valhalla Reverb Modes, Chorus e Reset) -->
-      <section id="sectionFxRack" class="glass-card" style="display: none;">
+      <section id="sectionFxRack" class="glass-card" role="tabpanel" aria-labelledby="tabFxRack" aria-hidden="true" style="display: none;">
         <div class="card-title">
           <span style="color: var(--accent-purple); font-weight: 800; font-size: 14px;">RACK DE EFEITOS MASTER GLOBAL (SAÍDA GERAL)</span>
           <span>🌐 MASTER BUS</span>
@@ -405,14 +407,14 @@
           <!-- Módulo Master Limiter Status -->
           <div class="fx-module-card" style="justify-content: center; text-align: center;">
             <div class="fx-module-title">
-              <span>Master Limiter Proteção</span>
+              <span>Compressor de Proteção</span>
               <span>🛡️</span>
             </div>
             <div style="color: var(--accent-emerald); font-weight: 700; font-size: 13px; margin-top: 10px;">
-              ● Ativo (-1.0 dB Limit)
+              ● Ativo (threshold -3 dB, ratio 4:1)
             </div>
             <div style="font-size: 10px; color: var(--text-muted); margin-top: 4px;">
-              Proteção automática na saída geral do áudio
+              Reduz picos; não substitui um limiter true-peak.
             </div>
           </div>
 
@@ -420,7 +422,7 @@
       </section>
 
       <!-- Section: Setlist & Song Mode (MainStage & Nord Stage Live Performance) -->
-      <section id="sectionSetlist" class="glass-card" style="display: none;">
+      <section id="sectionSetlist" class="glass-card" role="tabpanel" aria-labelledby="tabSetlist" aria-hidden="true" style="display: none;">
         <div class="card-title">
           <span style="color: var(--accent-cyan); font-weight: 800; font-size: 14px;">🎤 SETLIST & SONG MODE (SHOWS AO VIVO)</span>
           <div style="display: flex; gap: 8px;">
@@ -430,10 +432,10 @@
 
         <div style="display: flex; flex-direction: column; gap: 12px;">
           <div style="display: flex; gap: 10px; align-items: center; background: rgba(0, 242, 254, 0.05); padding: 8px 12px; border-radius: 6px; border: 1px solid rgba(0, 242, 254, 0.2);">
-            <button id="btnPrevSong" class="btn btn-primary" style="padding: 6px 16px; font-weight: 800;">◀ Anterior (N)</button>
-            <button id="btnNextSong" class="btn btn-primary" style="padding: 6px 16px; font-weight: 800;">Próxima (M) ▶</button>
+            <button id="btnPrevSong" class="btn btn-primary" style="padding: 6px 16px; font-weight: 800;">◀ Anterior (P)</button>
+            <button id="btnNextSong" class="btn btn-primary" style="padding: 6px 16px; font-weight: 800;">Próxima (N) ▶</button>
             <span style="font-size: 11px; color: var(--text-muted); margin-left: auto;">
-              ⚡ <b>Seamless Patch Change</b>: Troca de preset sem corte de som das notas tocadas!
+              A troca só é confirmada depois que o preset ou snapshot é aplicado.
             </span>
           </div>
 
@@ -452,12 +454,12 @@
     <!-- Pitch & Mod Wheels (Lado Esquerdo) -->
     <div class="pitch-mod-wheels">
       <div class="wheel-group">
-        <span class="wheel-label">PITCH</span>
-        <input type="range" id="pitchWheel" min="-1" max="1" step="0.01" value="0" class="vertical-wheel" title="Pitch Bend Wheel">
+        <label class="wheel-label" for="pitchWheel">PITCH</label>
+        <input type="range" id="pitchWheel" min="-1" max="1" step="0.01" value="0" class="vertical-wheel" aria-label="Pitch bend, menos dois a mais dois semitons" title="Pitch Bend Wheel">
       </div>
       <div class="wheel-group">
-        <span class="wheel-label">MOD</span>
-        <input type="range" id="modWheel" min="0" max="1" step="0.01" value="0" class="vertical-wheel" title="Modulation Wheel (CC1)">
+        <label class="wheel-label" for="modWheel">MOD</label>
+        <input type="range" id="modWheel" min="0" max="1" step="0.01" value="0" class="vertical-wheel" aria-label="Modulação, zero a cem por cento" title="Modulation Wheel (CC1)">
       </div>
     </div>
 
@@ -471,7 +473,7 @@
         </div>
 
         <div class="preset-selector-group">
-          <span class="preset-label">Extensão:</span>
+          <label class="preset-label" for="keyboardRangeSelect">Extensão:</label>
           <select id="keyboardRangeSelect" class="preset-select" style="font-size: 10px; padding: 1px 4px;">
             <option value="88" selected>88 Teclas (Piano Real Completo)</option>
             <option value="61">61 Teclas (5 Oitavas)</option>
@@ -480,33 +482,35 @@
         </div>
 
         <div style="display: flex; align-items: center; gap: 8px;">
+          <span id="screenVelocityHint" style="font-size: 9px; color: var(--text-muted);">Velocity: pressão quando o aparelho informar; caso contrário, posição vertical na tecla.</span>
+          <button id="btnPanic" class="btn btn-sm btn-danger" title="Parar imediatamente todas as notas (Escape)">PANIC</button>
           <button id="btnCollapseKeyboardDirect" class="btn btn-sm" title="Recolher Teclado Piano Virtual" style="font-size: 10px; padding: 2px 8px; color: var(--accent-cyan); font-weight: 700;">▼ Recolher Teclado</button>
         </div>
       </div>
 
       <!-- Interactive Keys Container -->
-      <div id="pianoKeys" class="piano-keys-wrapper">
+      <div id="pianoKeys" class="piano-keys-wrapper" role="group" aria-label="Teclado virtual; use Tab para alcançar uma tecla e Espaço ou Enter para tocá-la" aria-describedby="screenVelocityHint">
         <!-- Teclas renderizadas dinamicamente via JS -->
       </div>
     </div>
   </footer>
 
   <!-- Modal de Configurações de Áudio e Mapeamento MIDI (Ampliado & Organizado em Subcards Glassmorphic) -->
-  <div id="settingsModal" class="modal-backdrop" style="display: none;">
-    <div class="modal-card">
+  <div id="settingsModal" class="modal-backdrop" style="display: none;" aria-hidden="true">
+    <div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="settingsModalTitle" tabindex="-1">
       
       <!-- Cabeçalho do Modal com Título e Fechar -->
       <div class="modal-header">
         <div style="display: flex; align-items: center; gap: 10px;">
           <div style="width: 28px; height: 28px; border-radius: 6px; background: rgba(0, 242, 254, 0.15); border: 1px solid rgba(0, 242, 254, 0.4); display: flex; align-items: center; justify-content: center; color: var(--accent-cyan); font-weight: 800;">⚙️</div>
           <div>
-            <div style="font-family: var(--font-heading); font-size: 16px; font-weight: 800; color: var(--text-main);">
+            <div id="settingsModalTitle" style="font-family: var(--font-heading); font-size: 16px; font-weight: 800; color: var(--text-main);">
               Configurações do Workstation
             </div>
             <div style="font-size: 10px; color: var(--text-muted);">Dispositivos de Áudio, Desempenho e Roteamento MIDI</div>
           </div>
         </div>
-        <button id="btnCloseSettings" class="btn-close-modal">✕</button>
+        <button id="btnCloseSettings" class="btn-close-modal" aria-label="Fechar configurações">✕</button>
       </div>
 
       <!-- Corpo do Modal Organizado em Sub-Cards -->
@@ -521,30 +525,26 @@
 
           <div class="settings-grid-2col">
             <div class="settings-field-group" style="grid-column: 1 / -1;">
-              <label class="settings-field-label">Dispositivo de Saída de Áudio:</label>
+              <label class="settings-field-label" for="audioOutputSelect">Dispositivo de Saída de Áudio:</label>
               <select id="audioOutputSelect" class="preset-select settings-styled-select">
                 <option value="default">Alto-falantes Padrão do Sistema</option>
               </select>
             </div>
 
             <div class="settings-field-group">
-              <label class="settings-field-label">Taxa de Amostragem (Sample Rate):</label>
-              <select id="sampleRateSelect" class="preset-select settings-styled-select">
-                <option value="44100" selected>44.1 kHz (CD Quality)</option>
-                <option value="48000">48.0 kHz (Estúdio Pro)</option>
-                <option value="96000">96.0 kHz (Hi-Res Audio)</option>
+              <label class="settings-field-label" for="sampleRateSelect">Taxa de Amostragem:</label>
+              <select id="sampleRateSelect" class="preset-select settings-styled-select" disabled aria-describedby="audioConfigHint">
+                <option value="actual" selected>Valor efetivo do dispositivo</option>
               </select>
             </div>
 
             <div class="settings-field-group">
-              <label class="settings-field-label">Buffer de Áudio / Latência:</label>
-              <select id="bufferSizeSelect" class="preset-select settings-styled-select">
-                <option value="128">Ultra-baixa (128 amostras / ~2.9ms)</option>
-                <option value="256" selected>Baixa Latência (256 amostras / ~5.8ms)</option>
-                <option value="512">Padrão (512 amostras / ~11.6ms)</option>
-                <option value="1024">Estabilidade (1024 amostras / ~23.2ms)</option>
+              <label class="settings-field-label" for="bufferSizeSelect">Buffer de Áudio / Latência:</label>
+              <select id="bufferSizeSelect" class="preset-select settings-styled-select" disabled aria-describedby="audioConfigHint">
+                <option value="browser" selected>Gerenciado pelo navegador/sistema</option>
               </select>
             </div>
+            <p id="audioConfigHint" class="settings-help" style="grid-column: 1 / -1;">Web Audio não permite trocar o buffer após iniciar. O app mostra somente os valores efetivos e não promete aplicar opções que a plataforma ignora.</p>
           </div>
         </div>
 
@@ -557,7 +557,7 @@
 
           <div class="settings-grid-2col">
             <div class="settings-field-group">
-              <label class="settings-field-label">Polifonia Máxima (Vozes Simultâneas):</label>
+              <label class="settings-field-label" for="modalPolyphonySelect">Polifonia Máxima (Vozes Simultâneas):</label>
               <select id="modalPolyphonySelect" class="preset-select settings-styled-select">
                 <option value="auto" selected>Auto (Recomendado)</option>
                 <option value="16">16 Vozes</option>
@@ -568,7 +568,7 @@
             </div>
 
             <div class="settings-field-group">
-              <label class="settings-field-label">Curva de Sensibilidade (Velocity Global):</label>
+              <label class="settings-field-label" for="modalVelocityCurveSelect">Curva de Sensibilidade (Velocity Global):</label>
               <select id="modalVelocityCurveSelect" class="preset-select settings-styled-select">
                 <option value="normal" selected>Normal (Standard Touch)</option>
                 <option value="soft">Suave (Soft Touch)</option>
@@ -614,7 +614,7 @@
 
           <div class="settings-grid-2col">
             <div class="settings-field-group" style="grid-column: 1 / -1;">
-              <label class="settings-field-label">Estilo Visual do Sintetizador / Workstation:</label>
+              <label class="settings-field-label" for="modalThemeSelect">Estilo Visual do Sintetizador / Workstation:</label>
               <select id="modalThemeSelect" class="preset-select settings-styled-select" style="font-weight: 700;">
                 <option value="nord_red" selected>🔴 Nord Stage Red Edition (Vermelho Nord Stage 3)</option>
                 <option value="cyberpunk_neon">🎛️ Cyberpunk Neon Cyan/Purple (Padrão Original)</option>
@@ -637,15 +637,16 @@
   </div>
 
   <!-- Modal Personalizado para Nome do Novo Preset (Substitui window.prompt em Electron) -->
-  <div id="newPresetNameModal" class="modal-backdrop" style="display: none; align-items: center; justify-content: center; z-index: 10000;">
-    <div class="glass-modal-card" style="width: 400px; padding: 24px; border-radius: 12px; background: rgba(10, 13, 20, 0.96); border: 1px solid var(--accent-cyan); box-shadow: 0 0 30px rgba(0, 242, 254, 0.3);">
-      <div style="font-family: var(--font-heading); font-size: 16px; font-weight: 800; color: #fff; margin-bottom: 6px;">
+  <div id="newPresetNameModal" class="modal-backdrop" style="display: none; align-items: center; justify-content: center; z-index: 10000;" aria-hidden="true">
+    <div class="glass-modal-card" role="dialog" aria-modal="true" aria-labelledby="newPresetModalTitle" tabindex="-1" style="width: 400px; padding: 24px; border-radius: 12px; background: rgba(10, 13, 20, 0.96); border: 1px solid var(--accent-cyan); box-shadow: 0 0 30px rgba(0, 242, 254, 0.3);">
+      <div id="newPresetModalTitle" style="font-family: var(--font-heading); font-size: 16px; font-weight: 800; color: #fff; margin-bottom: 6px;">
         ➕ Criar Novo Preset
       </div>
       <div style="font-size: 12px; color: var(--text-muted); margin-bottom: 16px;">
         Digite um nome para salvar a configuração de timbres, faixas e efeitos:
       </div>
-      <input type="text" id="inputNewPresetName" placeholder="Ex: Preset Culto Domingo 01" style="width: 100%; padding: 10px 12px; font-size: 13px; background: rgba(255,255,255,0.06); border: 1px solid rgba(0, 242, 254, 0.4); border-radius: 6px; color: #fff; outline: none; margin-bottom: 20px;">
+      <label class="sr-only" for="inputNewPresetName">Nome do novo preset</label>
+      <input type="text" id="inputNewPresetName" maxlength="120" placeholder="Ex: Preset Culto Domingo 01" style="width: 100%; padding: 10px 12px; font-size: 13px; background: rgba(255,255,255,0.06); border: 1px solid rgba(0, 242, 254, 0.4); border-radius: 6px; color: #fff; outline: none; margin-bottom: 20px;">
       <div style="display: flex; justify-content: flex-end; gap: 10px;">
         <button id="btnCancelPresetModal" class="btn" style="padding: 6px 16px; font-size: 12px;">Cancelar</button>
         <button id="btnConfirmPresetModal" class="btn btn-accent" style="padding: 6px 20px; font-size: 12px; font-weight: 800;">Salvar Preset</button>
@@ -654,26 +655,27 @@
   </div>
 
   <!-- Modal Personalizado para Salvar Curva de Velocity no SQLite DB -->
-  <div id="saveVelCurveModal" class="modal-backdrop" style="display: none; align-items: center; justify-content: center; z-index: 10000;">
-    <div class="glass-modal-card" style="width: 400px; padding: 24px; border-radius: 12px; background: rgba(10, 13, 20, 0.96); border: 1px solid var(--accent-cyan); box-shadow: 0 0 30px rgba(0, 242, 254, 0.3);">
-      <div style="font-family: var(--font-heading); font-size: 16px; font-weight: 800; color: #fff; margin-bottom: 6px;">
-        💾 Salvar Curva no Banco SQLite DB
+  <div id="saveVelCurveModal" class="modal-backdrop" style="display: none; align-items: center; justify-content: center; z-index: 10000;" aria-hidden="true">
+    <div class="glass-modal-card" role="dialog" aria-modal="true" aria-labelledby="velocityModalTitle" tabindex="-1" style="width: 400px; padding: 24px; border-radius: 12px; background: rgba(10, 13, 20, 0.96); border: 1px solid var(--accent-cyan); box-shadow: 0 0 30px rgba(0, 242, 254, 0.3);">
+      <div id="velocityModalTitle" style="font-family: var(--font-heading); font-size: 16px; font-weight: 800; color: #fff; margin-bottom: 6px;">
+        💾 Salvar Curva no Armazenamento do App
       </div>
       <div style="font-size: 12px; color: var(--text-muted); margin-bottom: 16px;">
-        Digite um nome para armazenar esta curva de velocidade no banco de dados SQLite:
+        Digite um nome para armazenar esta curva de velocity localmente:
       </div>
-      <input type="text" id="inputVelCurveName" placeholder="Ex: Roland Piano Touch Sensível" style="width: 100%; padding: 10px 12px; font-size: 13px; background: rgba(255,255,255,0.06); border: 1px solid rgba(0, 242, 254, 0.4); border-radius: 6px; color: #fff; outline: none; margin-bottom: 20px;">
+      <label class="sr-only" for="inputVelCurveName">Nome da curva de velocity</label>
+      <input type="text" id="inputVelCurveName" maxlength="120" placeholder="Ex: Piano Touch Sensível" style="width: 100%; padding: 10px 12px; font-size: 13px; background: rgba(255,255,255,0.06); border: 1px solid rgba(0, 242, 254, 0.4); border-radius: 6px; color: #fff; outline: none; margin-bottom: 20px;">
       <div style="display: flex; justify-content: flex-end; gap: 10px;">
         <button id="btnCancelVelCurveModal" class="btn" style="padding: 6px 16px; font-size: 12px;">Cancelar</button>
-        <button id="btnConfirmVelCurveModal" class="btn btn-accent" style="padding: 6px 20px; font-size: 12px; font-weight: 800;">Salvar no SQLite DB</button>
+        <button id="btnConfirmVelCurveModal" class="btn btn-accent" style="padding: 6px 20px; font-size: 12px; font-weight: 800;">Salvar no App</button>
       </div>
     </div>
   </div>
 
   <!-- Modal para Adicionar Música ao Setlist -->
-  <div id="addSongModal" class="modal-backdrop" style="display: none; align-items: center; justify-content: center; z-index: 10000;">
-    <div class="glass-modal-card" style="width: 440px; padding: 24px; border-radius: 12px; background: rgba(10, 13, 20, 0.96); border: 1px solid var(--accent-cyan); box-shadow: 0 0 30px rgba(0, 242, 254, 0.3);">
-      <div style="font-family: var(--font-heading); font-size: 16px; font-weight: 800; color: #fff; margin-bottom: 6px;">
+  <div id="addSongModal" class="modal-backdrop" style="display: none; align-items: center; justify-content: center; z-index: 10000;" aria-hidden="true">
+    <div class="glass-modal-card" role="dialog" aria-modal="true" aria-labelledby="addSongModalTitle" tabindex="-1" style="width: 440px; padding: 24px; border-radius: 12px; background: rgba(10, 13, 20, 0.96); border: 1px solid var(--accent-cyan); box-shadow: 0 0 30px rgba(0, 242, 254, 0.3);">
+      <div id="addSongModalTitle" style="font-family: var(--font-heading); font-size: 16px; font-weight: 800; color: #fff; margin-bottom: 6px;">
         🎤 Adicionar Música ao Setlist
       </div>
       <div style="font-size: 12px; color: var(--text-muted); margin-bottom: 16px;">
@@ -682,8 +684,8 @@
       
       <div style="display: flex; flex-direction: column; gap: 12px; margin-bottom: 20px;">
         <div>
-          <label style="font-size: 11px; color: var(--text-muted); font-weight: 700; display: block; margin-bottom: 4px;">Nome da Música / Bloco:</label>
-          <input type="text" id="inputSongTitle" placeholder="Ex: 01. Intro Culto - Piano + Pad" style="width: 100%; padding: 8px 10px; font-size: 12px; background: rgba(255,255,255,0.06); border: 1px solid rgba(0, 242, 254, 0.4); border-radius: 6px; color: #fff; outline: none;">
+          <label for="inputSongTitle" style="font-size: 11px; color: var(--text-muted); font-weight: 700; display: block; margin-bottom: 4px;">Nome da Música / Bloco:</label>
+          <input type="text" id="inputSongTitle" maxlength="120" placeholder="Ex: 01. Intro - Piano + Pad" style="width: 100%; padding: 8px 10px; font-size: 12px; background: rgba(255,255,255,0.06); border: 1px solid rgba(0, 242, 254, 0.4); border-radius: 6px; color: #fff; outline: none;">
         </div>
 
         <div style="background: rgba(255,255,255,0.03); padding: 10px; border-radius: 6px; border: 1px solid rgba(255,255,255,0.06); display: flex; flex-direction: column; gap: 8px;">
@@ -705,8 +707,8 @@
         </div>
 
         <div>
-          <label style="font-size: 11px; color: var(--text-muted); font-weight: 700; display: block; margin-bottom: 4px;">Anotações / BPM / Tom (Opcional):</label>
-          <input type="text" id="inputSongNotes" placeholder="Ex: Tom: C | BPM: 72 | Solos no CH02" style="width: 100%; padding: 8px 10px; font-size: 12px; background: rgba(255,255,255,0.06); border: 1px solid rgba(0, 242, 254, 0.4); border-radius: 6px; color: #fff; outline: none;">
+          <label for="inputSongNotes" style="font-size: 11px; color: var(--text-muted); font-weight: 700; display: block; margin-bottom: 4px;">Anotações / BPM / Tom (Opcional):</label>
+          <input type="text" id="inputSongNotes" maxlength="240" placeholder="Ex: Tom: C | BPM: 72 | Solos no CH02" style="width: 100%; padding: 8px 10px; font-size: 12px; background: rgba(255,255,255,0.06); border: 1px solid rgba(0, 242, 254, 0.4); border-radius: 6px; color: #fff; outline: none;">
         </div>
       </div>
 
@@ -717,11 +719,14 @@
     </div>
   </div>
 
+  <div class="toast-notification-container" role="status" aria-live="polite" aria-atomic="false"></div>
+
   <!-- Scripts JavaScript -->
   <script src="js/database.js"></script>
   <script src="js/audio-context.js"></script>
   <script src="js/sf2-parser.js"></script>
   <script src="js/synth-engine.js"></script>
+  <script src="js/performance-input.js"></script>
   <script src="js/fx-rack.js"></script>
   <script src="js/vu-meter.js"></script>
   <script src="js/mixer.js"></script>

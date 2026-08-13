@@ -10,7 +10,7 @@ class RotaryKnob {
     this.title = options.title || 'KNOB';
     this.min = options.min !== undefined ? options.min : 0;
     this.max = options.max !== undefined ? options.max : 100;
-    this.step = options.step || 1;
+    this.step = options.step !== undefined ? Math.abs(Number(options.step)) : 1;
     this.value = options.value !== undefined ? options.value : this.min;
     this.unit = options.unit || '';
     this.onChange = options.onChange || null;
@@ -18,23 +18,35 @@ class RotaryKnob {
     this.isDragging = false;
     this.startY = 0;
     this.startValue = 0;
+    this.cleanupCallbacks = [];
 
     this.render();
   }
 
   render() {
     this.container.className = 'knob-container';
-    this.container.innerHTML = `
-      <div class="knob-element">
-        <div class="knob-pointer"></div>
-      </div>
-      <div class="knob-value-text">${this.formatValue()}</div>
-      <div class="knob-title">${this.title}</div>
-    `;
+    this.container.replaceChildren();
 
-    this.pointerEl = this.container.querySelector('.knob-pointer');
-    this.valueEl = this.container.querySelector('.knob-value-text');
-    this.knobEl = this.container.querySelector('.knob-element');
+    this.knobEl = document.createElement('div');
+    this.knobEl.className = 'knob-element';
+    this.knobEl.setAttribute('role', 'slider');
+    this.knobEl.tabIndex = 0;
+    this.knobEl.setAttribute('aria-label', this.title);
+    this.knobEl.setAttribute('aria-valuemin', String(this.min));
+    this.knobEl.setAttribute('aria-valuemax', String(this.max));
+
+    this.pointerEl = document.createElement('div');
+    this.pointerEl.className = 'knob-pointer';
+    this.knobEl.appendChild(this.pointerEl);
+
+    this.valueEl = document.createElement('div');
+    this.valueEl.className = 'knob-value-text';
+
+    const titleEl = document.createElement('div');
+    titleEl.className = 'knob-title';
+    titleEl.textContent = this.title;
+
+    this.container.append(this.knobEl, this.valueEl, titleEl);
 
     this.updateRotation();
     this.attachEvents();
@@ -57,10 +69,21 @@ class RotaryKnob {
     if (this.valueEl) {
       this.valueEl.textContent = this.formatValue();
     }
+    if (this.knobEl) {
+      this.knobEl.setAttribute('aria-valuenow', String(this.value));
+      this.knobEl.setAttribute('aria-valuetext', this.formatValue());
+    }
   }
 
   setValue(newVal) {
-    this.value = Math.max(this.min, Math.min(this.max, newVal));
+    let normalized = Math.max(this.min, Math.min(this.max, Number(newVal)));
+    if (!Number.isFinite(normalized)) normalized = this.min;
+    if (this.step > 0) {
+      normalized = this.min + Math.round((normalized - this.min) / this.step) * this.step;
+      const decimals = (String(this.step).split('.')[1] || '').length;
+      normalized = Number(normalized.toFixed(Math.min(8, decimals)));
+    }
+    this.value = Math.max(this.min, Math.min(this.max, normalized));
     this.updateRotation();
     if (this.onChange) {
       this.onChange(this.value);
@@ -68,6 +91,11 @@ class RotaryKnob {
   }
 
   attachEvents() {
+    const on = (target, type, listener, options) => {
+      target.addEventListener(type, listener, options);
+      this.cleanupCallbacks.push(() => target.removeEventListener(type, listener, options));
+    };
+
     const handleStart = (clientY) => {
       this.isDragging = true;
       this.startY = clientY;
@@ -82,10 +110,6 @@ class RotaryKnob {
       const sensitivity = range / 150.0;
       let newVal = this.startValue + deltaY * sensitivity;
 
-      if (this.step >= 1) {
-        newVal = Math.round(newVal / this.step) * this.step;
-      }
-
       this.setValue(newVal);
     };
 
@@ -96,26 +120,44 @@ class RotaryKnob {
       }
     };
 
-    this.knobEl.addEventListener('mousedown', (e) => handleStart(e.clientY));
-    window.addEventListener('mousemove', (e) => handleMove(e.clientY));
-    window.addEventListener('mouseup', handleEnd);
-
-    this.knobEl.addEventListener('touchstart', (e) => {
-      if (e.touches.length > 0) handleStart(e.touches[0].clientY);
-    }, { passive: true });
-
-    window.addEventListener('touchmove', (e) => {
-      if (e.touches.length > 0) handleMove(e.touches[0].clientY);
-    }, { passive: true });
-
-    window.addEventListener('touchend', handleEnd);
+    on(this.knobEl, 'pointerdown', (e) => {
+      if (e.pointerType === 'mouse' && e.button !== 0) return;
+      e.preventDefault();
+      handleStart(e.clientY);
+      try { this.knobEl.setPointerCapture(e.pointerId); } catch (error) {}
+    });
+    on(this.knobEl, 'pointermove', (e) => {
+      if (!this.isDragging) return;
+      e.preventDefault();
+      handleMove(e.clientY);
+    });
+    on(this.knobEl, 'pointerup', handleEnd);
+    on(this.knobEl, 'pointercancel', handleEnd);
+    on(this.knobEl, 'lostpointercapture', handleEnd);
 
     // Suporte a Roda do Mouse (Wheel)
-    this.knobEl.addEventListener('wheel', (e) => {
+    on(this.knobEl, 'wheel', (e) => {
       e.preventDefault();
       const delta = e.deltaY < 0 ? this.step || 0.05 : -(this.step || 0.05);
       this.setValue(this.value + delta);
     }, { passive: false });
+
+    on(this.knobEl, 'keydown', (e) => {
+      const step = this.step || (this.max - this.min) / 100;
+      const changes = { ArrowUp: step, ArrowRight: step, ArrowDown: -step, ArrowLeft: -step, PageUp: step * 10, PageDown: -step * 10 };
+      if (e.key === 'Home' || e.key === 'End') {
+        e.preventDefault();
+        this.setValue(e.key === 'Home' ? this.min : this.max);
+      } else if (changes[e.key] !== undefined) {
+        e.preventDefault();
+        this.setValue(this.value + changes[e.key]);
+      }
+    });
+  }
+
+  dispose() {
+    this.cleanupCallbacks.splice(0).forEach((cleanup) => cleanup());
+    this.isDragging = false;
   }
 }
 
